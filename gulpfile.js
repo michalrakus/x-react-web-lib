@@ -36,7 +36,7 @@ function generateApi(cb) {
 
     for (const apiFile of apiFileList) {
         const posSlash = apiFile.lastIndexOf('/');
-        var fileName;
+        let fileName;
         if (posSlash !== -1) {
             fileName = apiFile.substring(posSlash + 1);
         }
