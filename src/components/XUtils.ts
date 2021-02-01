@@ -7,9 +7,7 @@ export class XUtils {
 
     static dropdownEmptyOptionValue: string = " ";
 
-    // zatial len takto
-    static xServerUrl: string = 'http://localhost:8081/';
-    //static xServerUrl: string = 'https://x-dev-nest-server-app.herokuapp.com/';
+    static xServerUrl: string | null = null;
 
     // nacachovany XToken - na rozlicnych miestach potrebujeme vediet uzivatela
     static xToken: XToken | null = null;
@@ -56,7 +54,7 @@ export class XUtils {
             'Content-Type': 'application/json',
             'Authorization': `Basic ${Buffer.from(xToken.username + ':' + xToken.password).toString('base64')}`
         };
-        return fetch(XUtils.xServerUrl + path, {
+        return fetch(XUtils.getXServerUrl() + path, {
             method: 'POST',
             headers: headers,
             body: XUtils.objectAsJSON(value)
@@ -139,6 +137,17 @@ export class XUtils {
 
     static getUsername(): string | undefined {
         return XUtils.getXToken()?.username;
+    }
+
+    static getXServerUrl(): string {
+        if (XUtils.xServerUrl === null) {
+            throw "XUtils.xServerUrl is null";
+        }
+        return XUtils.xServerUrl;
+    }
+
+    static setXServerUrl(xServerUrl: string) {
+        XUtils.xServerUrl = xServerUrl;
     }
 
     // funkcionalita ktoru by bolo dobre dat do servisov

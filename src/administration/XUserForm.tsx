@@ -13,10 +13,8 @@ export class XUserForm extends XFormBase<XUser> {
                 <XInputText form={this} field="username" label="Username"/>
                 <XInputText form={this} field="password" label="Password"/>
                 <XInputText form={this} field="name" label="Name"/>
-                <div className="p-field p-grid">
-                    <Button label="Save" onClick={this.onClickSave} />
-                    <Button label="Cancel" onClick={this.onClickCancel} />
-                </div>
+                <Button label="Save" onClick={this.onClickSave} />
+                <Button label="Cancel" onClick={this.onClickCancel} />
             </div>
         );
     }

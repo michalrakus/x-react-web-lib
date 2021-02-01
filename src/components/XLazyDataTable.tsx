@@ -1,8 +1,3 @@
-import 'primeicons/primeicons.css';
-import 'primereact/resources/themes/saga-blue/theme.css';
-import 'primereact/resources/primereact.css';
-import 'primeflex/primeflex.css';
-
 import React, {useState, useEffect, useRef, ReactChild} from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
