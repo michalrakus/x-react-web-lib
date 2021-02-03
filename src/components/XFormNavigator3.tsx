@@ -13,7 +13,7 @@ export class XFormNavigator3 extends Component<XFormNavigator3Props> {
         this.state = {
             formElements: (props.initFormElement !== undefined ? [props.initFormElement] : [])
         };
-        this.onOpenForm = this.onOpenForm.bind(this);
+        this.openForm = this.openForm.bind(this);
     }
 
     openRootForm(newFormElement: any): void {
@@ -22,8 +22,8 @@ export class XFormNavigator3 extends Component<XFormNavigator3Props> {
         this.setState({formElements: formElements});
     }
 
-    onOpenForm(newFormElement: any): void {
-        console.log("zavolany XFormNavigator3.onOpenForm");
+    openForm(newFormElement: any): void {
+        //console.log("zavolany XFormNavigator3.openForm");
         //console.log(newFormElement);
 
         // vzdy treba vytvorit novy objekt a ten set-nut do stavu, ak len pridame prvok do pola, tak react nevyvola render!
@@ -51,8 +51,8 @@ export class XFormNavigator3 extends Component<XFormNavigator3Props> {
         const formElements = this.state.formElements;
         const forms = formElements.map((formElement, index) => {
                 const displayed: boolean = (index === formElements.length - 1);
-                // klonovanim elementu pridame atribut onExitForm={onOpenForm} (nemusime tento atribut pridavat pri vytvarani elementu)
-                const formElementCloned = React.cloneElement(formElement, {onExitForm: this.onOpenForm, displayed: displayed}, formElement.children)
+                // klonovanim elementu pridame atribut openForm={this.openForm} (nemusime tento atribut pridavat pri vytvarani elementu)
+                const formElementCloned = React.cloneElement(formElement, {openForm: this.openForm, displayed: displayed}, formElement.children)
                 // prvych n - 1 komponentov skryjeme cez display: "none" a az posledny vyrenderujeme naozaj (cez display: "block")
                 // TODO - do buducnosti - ak nechceme drzat stav componentu cez display: "none", staci vratit null (komponent vobec nevyrenderujeme)
                 const display: string = (displayed ? "block" : "none");

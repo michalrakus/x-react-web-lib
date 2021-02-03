@@ -4,7 +4,7 @@ import { XObject } from "./XObject";
 import {Dropdown} from "primereact/dropdown";
 import {XUtils} from "./XUtils";
 
-export const XDropdown = (props: {form: XFormBase<XObject>; assocField: string; displayField: string, label?: string; readOnly?: boolean}) => {
+export const XDropdown = (props: {form: XFormBase; assocField: string; displayField: string, label?: string; readOnly?: boolean}) => {
 
     props.form.addField(props.assocField + '.' + props.displayField);
 
@@ -13,10 +13,7 @@ export const XDropdown = (props: {form: XFormBase<XObject>; assocField: string; 
 
     // parameter [] zabezpeci ze sa metoda zavola len po prvom renderingu (a nie po kazdej zmene stavu (zavolani setNieco()))
     useEffect(() => {
-        if (props.form.entity === undefined) {
-            throw "props.form.entity is undefined";
-        }
-        findOptions(props.form.entity, props.assocField);
+        findOptions(props.form.getEntity(), props.assocField);
     },[]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const label = props.label !== undefined ? props.label : props.assocField;

@@ -5,7 +5,7 @@ import { XObject } from "./XObject";
 import {stringAsUI, stringFromUI} from "./XUtilsConversions";
 import {XUtils} from "./XUtils";
 
-export const XInputText = (props: {form: XFormBase<XObject>; field: string; label?: string; readOnly?: boolean}) => {
+export const XInputText = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean}) => {
 
     props.form.addField(props.field);
 

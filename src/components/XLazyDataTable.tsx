@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useRef, ReactChild} from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import {Button} from "primereact/button";
+import {XButton} from "./XButton";
 import {XUtils} from "./XUtils";
 import {SearchTableParams} from "./SearchTableParams";
 import {XUtilsMetadata} from "./XUtilsMetadata";
@@ -158,7 +158,7 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
             }
         }
         else {
-            console.log("Nie je vyselectovany ziaden zaznam.");
+            alert("Please select the row.");
         }
     }
 
@@ -170,13 +170,14 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
             //if (props.onRemoveRow !== undefined) {
             //    props.onRemoveRow(selectedRow);
             //}
-            if (window.confirm('Are you sure to remove selected row?')) {
+            if (window.confirm('Are you sure to remove the selected row?')) {
+                // poznamka: vdaka await bude loadData() bezat az po dobehnuti requestu removeRow
                 await XUtils.removeRow(props.entity, selectedRow);
                 loadData();
             }
         }
         else {
-            console.log("Nie je vyselectovany ziaden zaznam.");
+            alert("Please select the row.");
         }
     }
 
@@ -258,7 +259,7 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
 
     return (
         <div>
-            <Button label="Filter" onClick={onClickFilter} />
+            <XButton label="Filter" onClick={onClickFilter} />
             <DataTable value={value.rowList} dataKey={dataKey} paginator={true} rows={rows} totalRecords={value.totalRecords}
                        lazy={true} first={first} onPage={onPage} loading={loading}
                        filters={filters} onFilter={onFilter}
@@ -316,10 +317,10 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                     }
                 )}
             </DataTable>
-            {props.onAddRow !== undefined ? <Button label="Add row" onClick={onClickAddRow}/> : null}
-            {props.onEdit !== undefined ? <Button label="Edit" onClick={onClickEdit}/> : null}
-            {props.removeRow === true ? <Button label="Remove row" onClick={onClickRemoveRow}/> : null}
-            {props.searchTableParams !== undefined ? <Button label="Choose" onClick={onClickChoose}/> : null}
+            {props.onAddRow !== undefined ? <XButton label="Add row" onClick={onClickAddRow}/> : null}
+            {props.onEdit !== undefined ? <XButton label="Edit" onClick={onClickEdit}/> : null}
+            {props.removeRow === true ? <XButton label="Remove row" onClick={onClickRemoveRow}/> : null}
+            {props.searchTableParams !== undefined ? <XButton label="Choose" onClick={onClickChoose}/> : null}
         </div>
     );
 }

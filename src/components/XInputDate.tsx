@@ -7,7 +7,7 @@ import {dateFormatCalendar} from "./XUtilsConversions";
 import {XField} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 
-export const XInputDate = (props: {form: XFormBase<XObject>; field: string; label?: string; readOnly?: boolean}) => {
+export const XInputDate = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean}) => {
 
     props.form.addField(props.field);
 

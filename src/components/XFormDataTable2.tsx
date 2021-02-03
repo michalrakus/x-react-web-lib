@@ -4,7 +4,7 @@ import React, {Component, ReactChild} from "react";
 import {XDropdownDT} from "./XDropdownDT";
 import {DataTable} from "primereact/datatable";
 import {Column} from "primereact/column";
-import {Button} from "primereact/button";
+import {XButton} from "./XButton";
 import {XInputTextDT} from "./XInputTextDT";
 import {XSearchButtonDT} from "./XSearchButtonDT";
 import {Filters, FilterValue} from "../serverApi/FindParam";
@@ -20,7 +20,7 @@ export interface XDropdownOptionsMap {
 }
 
 export interface XFormDataTableProps {
-    form: XFormBase<XObject>;
+    form: XFormBase;
     assocField: string;
     dataKey?: string;
     paginator?: boolean;
@@ -48,15 +48,12 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
     constructor(props: XFormDataTableProps) {
         super(props);
         this.props = props;
-        // entity moze byt undefined na formularoch ktore boli zadane v assoc buttonoch cez prop assocForm={<formXYZ/>} ale pri klonovani sa entity doplni
         this.dataKey = props.dataKey;
-        if (props.form.entity !== undefined) {
-            const xEntityForm: XEntity = XUtilsMetadata.getXEntity(props.form.entity);
-            const xAssocToMany: XAssoc = XUtilsMetadata.getXAssocToMany(xEntityForm, props.assocField);
-            this.entity = xAssocToMany.entityName;
-            if (this.dataKey === undefined) {
-                this.dataKey = XUtilsMetadata.getXEntity(this.entity).idField;
-            }
+        const xEntityForm: XEntity = XUtilsMetadata.getXEntity(props.form.getEntity());
+        const xAssocToMany: XAssoc = XUtilsMetadata.getXAssocToMany(xEntityForm, props.assocField);
+        this.entity = xAssocToMany.entityName;
+        if (this.dataKey === undefined) {
+            this.dataKey = XUtilsMetadata.getXEntity(this.entity).idField;
         }
         this.state = {
             selectedRow: undefined,
@@ -197,7 +194,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             this.props.form.onTableRemoveRow(this.props.assocField, this.state.selectedRow);
         }
         else {
-            console.log("Nie je vyselectovany ziaden zaznam.");
+            alert("Please select the row.");
         }
     };
 
@@ -230,7 +227,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             <div className="p-field p-grid">
                 <div>
                     <label style={{paddingRight: '15px'}}>{label}</label>
-                    {/*<Button label="Filter" onClick={onClickFilter} />*/}
+                    {/*<XButton label="Filter" onClick={onClickFilter} />*/}
                     <DataTable ref={(el) => this.dt = el} value={valueList} dataKey={this.dataKey} paginator={paginator} rows={rows}
                                totalRecords={valueList.length}
                                filters={this.state.filters} onFilter={this.onFilter}
@@ -258,8 +255,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                             }
                         )}
                     </DataTable>
-                    <Button label="Add row" onClick={onClickAddRow}/>
-                    <Button label="Remove row" onClick={onClickRemoveRow}/>
+                    <XButton label="Add row" onClick={onClickAddRow}/>
+                    <XButton label="Remove row" onClick={onClickRemoveRow}/>
                 </div>
             </div>
         );

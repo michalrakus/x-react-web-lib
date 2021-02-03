@@ -1,10 +1,11 @@
-import {XFormBase} from "../components/XFormBase";
+import {Form, XFormBase} from "../components/XFormBase";
 import {XInputText} from "../components/XInputText";
-import {Button} from "primereact/button";
+import {XButton} from "../components/XButton";
 import React from "react";
 import {XUser} from "../serverApi/XUser";
 
-export class XUserForm extends XFormBase<XUser> {
+@Form("XUser")
+export class XUserForm extends XFormBase {
 
     render() {
         return (
@@ -13,8 +14,8 @@ export class XUserForm extends XFormBase<XUser> {
                 <XInputText form={this} field="username" label="Username"/>
                 <XInputText form={this} field="password" label="Password"/>
                 <XInputText form={this} field="name" label="Name"/>
-                <Button label="Save" onClick={this.onClickSave} />
-                <Button label="Cancel" onClick={this.onClickCancel} />
+                <XButton label="Save" onClick={this.onClickSave} />
+                <XButton label="Cancel" onClick={this.onClickCancel} />
             </div>
         );
     }

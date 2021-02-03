@@ -1,12 +1,11 @@
 import {XFormBase} from "./XFormBase";
-import {XObject} from "./XObject";
 import {XUtils} from "./XUtils";
 import {dateFormatCalendar} from "./XUtilsConversions";
 import {XField} from "../serverApi/XEntityMetadata";
 import {Calendar} from "primereact/calendar";
 import React from "react";
 
-export const XInputDateDT = (props: {form: XFormBase<XObject>; xField: XField; field: string; rowData: any; readOnly?: boolean}) => {
+export const XInputDateDT = (props: {form: XFormBase; xField: XField; field: string; rowData: any; readOnly?: boolean}) => {
 
     const showTime: boolean = (props.xField.type === 'datetime');
 

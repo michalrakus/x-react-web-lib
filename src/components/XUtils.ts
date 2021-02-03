@@ -36,12 +36,15 @@ export class XUtils {
 
     static async fetch(path: string, value: any): Promise<any> {
         const response = await XUtils.fetchBasic(path, value);
+        if (!response.ok) {
+            const errorMessage = `Http request "${path}" failed. Status: ${response.status}, status text: ${response.statusText}`;
+            console.log(errorMessage);
+            throw errorMessage;
+        }
         return await response.json();
     }
 
     static post(path: string, value: any): Promise<Response> {
-        // TODO - treba cakat nejaku odpoved? ak nedame, tak pri error-e sa o chybe nedozvieme
-        // zatial necakame na odpoved
         return XUtils.fetchBasic(path, value);
     }
 
@@ -152,9 +155,14 @@ export class XUtils {
 
     // funkcionalita ktoru by bolo dobre dat do servisov
 
-    static removeRow(entity: string, row: any): Promise<Response> {
+    static async removeRow(entity: string, row: any) {
         const xEntity: XEntity = XUtilsMetadata.getXEntity(entity);
         const id = row[xEntity.idField];
-        return XUtils.post('removeRow', {entity: entity, id: id});
+        const response = await XUtils.post('removeRow', {entity: entity, id: id});
+        if (!response.ok) {
+            const errorMessage = `Remove row failed. Status: ${response.status}, status text: ${response.statusText}`;
+            console.log(errorMessage);
+            alert(errorMessage);
+        }
     }
 }

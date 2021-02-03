@@ -1,10 +1,9 @@
 import {XFormBase} from "./XFormBase";
-import {XObject} from "./XObject";
 import {XUtils} from "./XUtils";
 import React from "react";
 import {InputNumber} from "primereact/inputnumber";
 
-export const XInputDecimalDT = (props: {form: XFormBase<XObject>; field: string; rowData: any; readOnly?: boolean}) => {
+export const XInputDecimalDT = (props: {form: XFormBase; field: string; rowData: any; readOnly?: boolean}) => {
 
     // ak mame path, field je vzdy readOnly
     let readOnly: boolean;

@@ -1,11 +1,10 @@
 import {XFormBase} from "./XFormBase";
-import {XObject} from "./XObject";
 import React, {useEffect} from "react";
 import {XUtils} from "./XUtils";
 import {Dropdown} from "primereact/dropdown";
 import {XDropdownOptionsMap} from "./XFormDataTable2";
 
-export const XDropdownDT = (props: {form: XFormBase<XObject>; entity: string; assocField: string; displayField: string; dropdownOptionsMap: XDropdownOptionsMap; onDropdownOptionsMapChange: (dropdownOptionsMap: XDropdownOptionsMap) => void; rowData: any; readOnly?: boolean}) => {
+export const XDropdownDT = (props: {form: XFormBase; entity: string; assocField: string; displayField: string; dropdownOptionsMap: XDropdownOptionsMap; onDropdownOptionsMapChange: (dropdownOptionsMap: XDropdownOptionsMap) => void; rowData: any; readOnly?: boolean}) => {
 
     // poznamka: nacitanie/ulozenie options je vytiahnute do parent komponentu XFormDataTable koli tomu aby sme nenacitavali options pre kazdy riadok tabulky
 

@@ -1,5 +1,4 @@
 import {XFormBase} from "./XFormBase";
-import {XObject} from "./XObject";
 import React, {useRef, useState} from "react";
 import {XUtils} from "./XUtils";
 import {InputText} from "primereact/inputtext";
@@ -7,7 +6,7 @@ import {Button} from "primereact/button";
 import {Dialog} from "primereact/dialog";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 
-export const XSearchButtonDT = (props: {form: XFormBase<XObject>; entity: string; assocField: string; displayField: string, searchTable: any; assocForm?: any; rowData: any; readOnly?: boolean}) => {
+export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocField: string; displayField: string, searchTable: any; assocForm?: any; rowData: any; readOnly?: boolean}) => {
 
     const inputTextEl = useRef<any>(null);
 
@@ -84,12 +83,9 @@ export const XSearchButtonDT = (props: {form: XFormBase<XObject>; entity: string
                     const assocObject = props.rowData[props.assocField];
                     // OTAZKA - ziskavat id priamo z root objektu? potom ho vsak treba do root objektu pridat
                     const id = (assocObject !== null && assocObject !== undefined) ? assocObject[xEntityAssoc.idField] : null;
-                    // klonovanim elementu pridame atributy entity a id
-                    const assocForm = React.cloneElement(props.assocForm, {
-                        entity: xEntityAssoc.name,
-                        id: id
-                    }, props.assocForm.children);
-                    (props.form.props as any).onExitForm(assocForm);
+                    // klonovanim elementu pridame atribut id
+                    const assocForm = React.cloneElement(props.assocForm, {id: id}, props.assocForm.children);
+                    (props.form.props as any).openForm(assocForm);
                 }
             }
         }

@@ -14,8 +14,10 @@ function generateApi(cb) {
 
     const apiFileList = [
         "./lib/components/useXToken",
+        "./lib/components/XButton",
         "./lib/components/XDropdown",
         "./lib/components/XFormBase",
+        "./lib/components/XFormBaseT",
         "./lib/components/XFormDataTable2",
         "./lib/components/XFormNavigator3",
         "./lib/components/XInputDate",

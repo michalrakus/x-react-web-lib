@@ -4,7 +4,7 @@ import React from "react";
 import {Button} from "primereact/button";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 
-export const XToOneAssocButton = (props: {form: XFormBase<XObject>; assocField: string; assocForm: any; label?: string;}) => {
+export const XToOneAssocButton = (props: {form: XFormBase; assocField: string; assocForm: any; label?: string;}) => {
 
     // mozno lepsie by bolo sem dat xEntityAssoc.idField ale postaci aj *FAKE*
     props.form.addField(props.assocField + '.*FAKE*');
@@ -19,9 +19,9 @@ export const XToOneAssocButton = (props: {form: XFormBase<XObject>; assocField: 
         const xEntityAssoc = XUtilsMetadata.getXEntityForAssocToOne(xEntity, props.assocField)
         // OTAZKA - ziskavat id priamo z root objektu? potom ho vsak treba do root objektu pridat
         const id = assocObject !== null ? assocObject[xEntityAssoc.idField] : null;
-        // klonovanim elementu pridame atributy entity a id
-        const assocForm = React.cloneElement(props.assocForm, {entity: xEntityAssoc.name, id: id}, props.assocForm.children);
-        (props.form.props as any).onExitForm(assocForm);
+        // klonovanim elementu pridame atribut id
+        const assocForm = React.cloneElement(props.assocForm, {id: id}, props.assocForm.children);
+        (props.form.props as any).openForm(assocForm);
     }
 
     return (

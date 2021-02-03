@@ -1,11 +1,10 @@
 import {XFormBase} from "./XFormBase";
-import {XObject} from "./XObject";
 import React from "react";
 import {XUtils} from "./XUtils";
 import {InputText} from "primereact/inputtext";
 import {stringAsUI, stringFromUI} from "./XUtilsConversions";
 
-export const XInputTextDT = (props: {form: XFormBase<XObject>; field: string; rowData: any; readOnly?: boolean}) => {
+export const XInputTextDT = (props: {form: XFormBase; field: string; rowData: any; readOnly?: boolean}) => {
 
     // ak mame path, field je vzdy readOnly
     let readOnly: boolean;

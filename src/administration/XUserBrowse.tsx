@@ -6,16 +6,16 @@ import {XUtils} from "../components/XUtils";
 
 export const XUserBrowse = (props: {}) => {
 
-    const onEdit = (selectedRow: XUser) => {
-
-        // onExitForm pridavame automaticky v XFormNavigator3 pri renderovani komponentu
-        (props as any).onExitForm(<XUserForm entity="XUser" id={selectedRow.idXUser}/>);
-    }
-
     const onAddRow = () => {
 
-        // onExitForm pridavame automaticky v XFormNavigator3 pri renderovani komponentu
-        (props as any).onExitForm(<XUserForm entity="XUser"/>);
+        // openForm pridavame automaticky v XFormNavigator3 pri renderovani komponentu
+        (props as any).openForm(<XUserForm/>);
+    }
+
+    const onEdit = (selectedRow: XUser) => {
+
+        // openForm pridavame automaticky v XFormNavigator3 pri renderovani komponentu
+        (props as any).openForm(<XUserForm id={selectedRow.idXUser}/>);
     }
 
     return (

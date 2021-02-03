@@ -4,7 +4,7 @@ import {XUtils} from "./XUtils";
 import React from "react";
 import {InputNumber} from "primereact/inputnumber";
 
-export const XInputDecimal = (props: {form: XFormBase<XObject>; field: string; label?: string; readOnly?: boolean}) => {
+export const XInputDecimal = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean}) => {
 
     props.form.addField(props.field);
 

@@ -3,22 +3,34 @@ import {XObject} from "./XObject";
 import {XUtils} from "./XUtils";
 
 // poznamka - v assoc button-e (XSearchButton, XToOneAssocButton, XFormSearchButtonColumn) je mozne zadat nazov formulara cez property assocForm={<BrandForm/>}
-// pri tomto zapise sa nezadavaju propertiesy entity a id (tie sa doplnia automaticky pri otvoreni assoc formularu cez klonovanie elementu)
-// preto umoznujeme aby entity a id mohli byt undefined
+// pri tomto zapise sa nezadava property id (id sa doplni automaticky pri otvoreni assoc formularu cez klonovanie elementu)
+// preto umoznujeme aby id mohlo byt undefined
 export interface FormProps {
-    entity?: string;
     id?: number | null;
 }
 
-export abstract class XFormBase<T extends XObject> extends Component<FormProps> {
+// class decorator ktory nastavuje property entity (dalo by sa to nastavovat v konstruktore ale decorator je menej ukecany)
+// ma sa pouzivat len na triedach odvodenych od XFormBase - obmedzenie som vsak nevedel nakodit
+// property sa nastavi az po zbehnuti konstruktora
+// pozor - decorator je vykopirovany do projektoveho suboru XLibItems.ts, lebo ked je umiestneny tu tak nefunguje pre class-y v projekte!
+export function Form(entity: string) {
+    // sem (mozno) moze prist registracia formu-u
+    return function <T extends { new(...args: any[]): {} }>(constructor: T) {
+        return class extends constructor {
+            entity = entity;
+        }
+    }
+}
+
+export abstract class XFormBase extends Component<FormProps> {
 
     entity?: string; // typ objektu, napr. Car, pouziva sa pri citani objektu z DB
     fields: Set<string>; // zoznam zobrazovanych fieldov (vcetne asoc. objektov) - potrebujeme koli nacitavaniu root objektu
-    state: {object: T | null;};
+    state: {object: XObject | null;}; // poznamka: mohli by sme sem dat aj typ any...
 
     constructor(props: FormProps) {
         super(props);
-        this.entity = props.entity;
+        //this.entity = props.entity; - nastavuje sa cez decorator @Form
         this.fields = new Set<string>();
         this.state = {
             object: null
@@ -33,8 +45,12 @@ export abstract class XFormBase<T extends XObject> extends Component<FormProps> 
     }
 
     async componentDidMount() {
-        let object: T;
-        if (this.entity !== undefined && this.props.id !== undefined && this.props.id !== null) {
+        let object: XObject;
+        // kontrola (musi byt tu, v konstruktore este property nie je nastavena)
+        if (this.entity === undefined) {
+            throw "XFormBase: Property entity is not defined - use decorator @Form.";
+        }
+        if (this.props.id !== undefined && this.props.id !== null) {
             console.log('XFormBase.componentDidMount ide nacitat objekt');
             console.log(this.fields);
             object = await XUtils.fetchById(this.entity, Array.from(this.fields), this.props.id);
@@ -60,30 +76,41 @@ export abstract class XFormBase<T extends XObject> extends Component<FormProps> 
         return this.entity;
     }
 
+    getXObject(): XObject {
+        if (this.state.object === null) {
+            throw "XFormBase: this.state.object is null";
+        }
+        return this.state.object;
+    }
+
+    getObject(): any {
+        return this.getXObject() as any;
+    }
+
     onFieldChange(field: string, value: any) {
-        const object: T | null = this.state.object;
-        (object as XObject)[field] = value;
+        const object: XObject = this.getXObject();
+        object[field] = value;
         // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
         this.setState({object: object});
     }
 
     onTableFieldChange(assocField: string, rowIndex: number, field: string, value: any) {
-        const object: T | null = this.state.object;
-        const rowList: any[] = (object as XObject)[assocField];
+        const object: XObject = this.getXObject();
+        const rowList: any[] = object[assocField];
         rowList[rowIndex][field] = value;
         // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
         this.setState({object: object});
     }
 
     onObjectDataChange() {
-        const object: T | null = this.state.object;
+        const object: XObject | null = this.state.object;
         // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
         this.setState({object: object});
     }
 
     onTableAddRow(assocField: string, newRow: any, dataKey?: string, selectedRow?: {}) {
-        const object: T | null = this.state.object;
-        const rowList: any[] = (object as XObject)[assocField];
+        const object: XObject = this.getXObject();
+        const rowList: any[] = object[assocField];
         // ak vieme id-cko a id-cko nie je vyplnene, tak ho vygenerujeme (predpokladame ze id-cko je vzdy number)
         // id-cka potrebujeme, lebo by nam bez nich nekorektne fungovala tabulka
         // asi cistejsie by bolo citat id-cka zo sekvencie z DB, ale MySql nema sekvencie na styl Oracle
@@ -123,8 +150,8 @@ export abstract class XFormBase<T extends XObject> extends Component<FormProps> 
     }
 
     onTableRemoveRow(assocField: string, row: {}) {
-        const object: T | null = this.state.object;
-        const rowList: any[] = (object as XObject)[assocField];
+        const object: XObject = this.getXObject();
+        const rowList: any[] = object[assocField];
         // poznamka: indexOf pri vyhladavani pouziva strict equality (===), 2 objekty su rovnake len ak porovnavame 2 smerniky na totozny objekt
         const index = rowList.indexOf(row);
         if (index > -1) {
@@ -141,7 +168,7 @@ export abstract class XFormBase<T extends XObject> extends Component<FormProps> 
         this.fields.add(field);
     }
 
-    onClickSave() {
+    async onClickSave() {
         console.log("zavolany onClickSave");
 
         // docasne na testovanie
@@ -158,17 +185,24 @@ export abstract class XFormBase<T extends XObject> extends Component<FormProps> 
         // }
 
         console.log(this.state.object);
-        XUtils.post(this.addRowOperation() ? 'addRow' : 'saveRow', {entity: this.props.entity, object: this.state.object});
-        (this.props as any).onExitForm(null);
+        const response = await XUtils.post(this.addRowOperation() ? 'addRow' : 'saveRow', {entity: this.getEntity(), object: this.state.object});
+        if (!response.ok) {
+            const errorMessage = `Save row failed. Status: ${response.status}, status text: ${response.statusText}`;
+            console.log(errorMessage);
+            alert(errorMessage);
+        }
+        else {
+            (this.props as any).openForm(null);
+        }
     }
 
     onClickCancel() {
         console.log("zavolany onClickCancel");
 
         // pre XFormNavigator:
-        //this.props.onExitForm(<CarBrowse onExitForm={this.props.onExitForm}/>);
-        // onExitForm pridavame automaticky v XFormNavigator2 pri renderovani komponentu
+        //this.props.openForm(<CarBrowse openForm={this.props.openForm}/>);
+        // openForm pridavame automaticky v XFormNavigator2 pri renderovani komponentu
         // null - vrati sa do predchadzajuceho formularu, z ktoreho bol otvoreny
-        (this.props as any).onExitForm(null);
+        (this.props as any).openForm(null);
     }
 }
