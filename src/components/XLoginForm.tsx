@@ -32,7 +32,7 @@ export const XLoginForm = (props: {setXToken: (xToken: XToken | null) => void;})
 
     return(
         <div>
-            <h1>Please log in</h1>
+            <h2>Please log in</h2>
             <div className="p-field p-grid">
                 <label htmlFor="userName" className="p-col-fixed" style={{width:'150px'}}>Username</label>
                 <InputText id="userName" value={username} onChange={(e: any) => setUsername(e.target.value)}/>

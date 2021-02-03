@@ -61,7 +61,7 @@ export class XFormNavigator3 extends Component<XFormNavigator3Props> {
             }
         );
         return (
-            <div>
+            <div className="App-form">
                 {forms}
             </div>
         );
