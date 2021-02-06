@@ -4,10 +4,13 @@ import {XFormBase} from "./XFormBase";
 import { XObject } from "./XObject";
 import {stringAsUI, stringFromUI} from "./XUtilsConversions";
 import {XUtils} from "./XUtils";
+import {XUtilsMetadata} from "./XUtilsMetadata";
 
 export const XInputText = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean}) => {
 
     props.form.addField(props.field);
+
+    const xField = XUtilsMetadata.getXFieldByPathStr(props.form.getEntity(), props.field);
 
     const label = props.label !== undefined ? props.label : props.field;
     // ak mame path, field je vzdy readOnly
@@ -39,7 +42,7 @@ export const XInputText = (props: {form: XFormBase; field: string; label?: strin
     return (
         <div className="p-field p-grid">
             <label htmlFor={props.field} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
-            <InputText id={props.field} value={fieldValue} onChange={onValueChange} readOnly={readOnly}/>
+            <InputText id={props.field} value={fieldValue} onChange={onValueChange} readOnly={readOnly} maxLength={xField.length}/>
         </div>
     );
 }

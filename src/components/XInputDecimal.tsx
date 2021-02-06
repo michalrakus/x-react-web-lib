@@ -3,10 +3,14 @@ import {XObject} from "./XObject";
 import {XUtils} from "./XUtils";
 import React from "react";
 import {InputNumber} from "primereact/inputnumber";
+import {XUtilsMetadata} from "./XUtilsMetadata";
 
 export const XInputDecimal = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean}) => {
 
     props.form.addField(props.field);
+
+    const xField = XUtilsMetadata.getXFieldByPathStr(props.form.getEntity(), props.field);
+    const {useGrouping, fractionDigits, min, max} = XUtilsMetadata.getParamsForInputNumber(xField);
 
     const label = props.label !== undefined ? props.label : props.field;
     // ak mame path, field je vzdy readOnly
@@ -50,7 +54,8 @@ export const XInputDecimal = (props: {form: XFormBase; field: string; label?: st
     return (
         <div className="p-field p-grid">
             <label htmlFor={props.field} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
-            <InputNumber id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} mode="decimal" locale="de-DE" minFractionDigits={2} maxFractionDigits={2}/>
+            <InputNumber id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} mode="decimal" locale="de-DE"
+                         useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}/>
         </div>
     );
 }

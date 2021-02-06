@@ -2,8 +2,12 @@ import {XFormBase} from "./XFormBase";
 import {XUtils} from "./XUtils";
 import React from "react";
 import {InputNumber} from "primereact/inputnumber";
+import {XUtilsMetadata} from "./XUtilsMetadata";
 
-export const XInputDecimalDT = (props: {form: XFormBase; field: string; rowData: any; readOnly?: boolean}) => {
+export const XInputDecimalDT = (props: {form: XFormBase; entity: string; field: string; rowData: any; readOnly?: boolean}) => {
+
+    const xField = XUtilsMetadata.getXFieldByPathStr(props.entity, props.field);
+    const {useGrouping, fractionDigits, min, max} = XUtilsMetadata.getParamsForInputNumber(xField);
 
     // ak mame path, field je vzdy readOnly
     let readOnly: boolean;
@@ -48,6 +52,7 @@ export const XInputDecimalDT = (props: {form: XFormBase; field: string; rowData:
     }
 
     return (
-        <InputNumber id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.value)} disabled={readOnly} mode="decimal" locale="de-DE" minFractionDigits={2} maxFractionDigits={2}/>
+        <InputNumber id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.value)} disabled={readOnly} mode="decimal" locale="de-DE"
+                     useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}/>
     );
 }

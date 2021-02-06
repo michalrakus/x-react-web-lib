@@ -159,15 +159,15 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         if (columnProps.type === "inputSimple") {
             const columnPropsInputSimple = (columnProps as XFormInputSimpleColumnProps);
             const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, columnPropsInputSimple.field);
-            if (xField.type === "decimal") {
-                body = <XInputDecimalDT form={this.props.form} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
+            if (xField.type === "decimal" || xField.type === "number") {
+                body = <XInputDecimalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
             }
             else if (xField.type === "date" || xField.type === "datetime") {
                 body = <XInputDateDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
             }
             else {
                 // xField.type === "string", pripadne ine jednoduche typy
-                body = <XInputTextDT form={this.props.form} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
+                body = <XInputTextDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
             }
         }
         else if (columnProps.type === "dropdown") {

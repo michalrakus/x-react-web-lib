@@ -3,8 +3,11 @@ import React from "react";
 import {XUtils} from "./XUtils";
 import {InputText} from "primereact/inputtext";
 import {stringAsUI, stringFromUI} from "./XUtilsConversions";
+import {XUtilsMetadata} from "./XUtilsMetadata";
 
-export const XInputTextDT = (props: {form: XFormBase; field: string; rowData: any; readOnly?: boolean}) => {
+export const XInputTextDT = (props: {form: XFormBase; entity: string; field: string; rowData: any; readOnly?: boolean}) => {
+
+    const xField = XUtilsMetadata.getXFieldByPathStr(props.entity, props.field);
 
     // ak mame path, field je vzdy readOnly
     let readOnly: boolean;
@@ -37,7 +40,7 @@ export const XInputTextDT = (props: {form: XFormBase; field: string; rowData: an
         fieldValue = stringAsUI(rowDataValue);
     }
     return (
-        <InputText id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.target.value)} readOnly={readOnly}/>
+        <InputText id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.target.value)} readOnly={readOnly} maxLength={xField.length}/>
     );
 
 }

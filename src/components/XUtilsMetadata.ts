@@ -63,6 +63,38 @@ export class XUtilsMetadata {
         return XUtilsMetadata.getXEntityForAssoc(XUtilsMetadata.getXAssocToMany(xEntity, assocField));
     }
 
+    // docasne sem, kym nemame jednotny XInputDecimal/XInputDecimalDT
+    static getParamsForInputNumber(xField: XField): {useGrouping: boolean; fractionDigits?: number; min?: number; max?: number;} {
+        let useGrouping: boolean = true;
+        let fractionDigits: number | undefined = undefined;
+        let precision: number | undefined; // total number of digits (before + after decimal point (scale))
+        if (xField.type === "decimal") {
+            useGrouping = true;
+            fractionDigits = xField.scale;
+            precision = xField.precision;
+        }
+        else if (xField.type === "number") {
+            useGrouping = false;
+            fractionDigits = 0;
+            precision = xField.width; // number pouziva width
+            if (precision === undefined) {
+                precision = xField.precision; // nech to aj takto zafunguje...
+            }
+        }
+        else {
+            throw `XInputDecimal: field ${xField.name} has unsupported type ${xField.type}. Supported types are decimal and number.`;
+        }
+        let min: number | undefined = undefined;
+        let max: number | undefined = undefined;
+        if (precision !== undefined && fractionDigits !== undefined) {
+            const digits = precision - fractionDigits;
+            min = -(Math.pow(10, digits) - 1);
+            max = Math.pow(10, digits) - 1;
+        }
+
+        return {useGrouping: useGrouping, fractionDigits: fractionDigits, min: min, max: max};
+    }
+
     private static getXAssoc(xEntity: XEntity, assocMap: XAssocMap, assocField: string): XAssoc {
         const xAssoc: XAssoc = assocMap[assocField];
         if (xAssoc === undefined) {
