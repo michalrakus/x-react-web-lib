@@ -8,6 +8,7 @@ import React from "react";
 export const XInputDateDT = (props: {form: XFormBase; xField: XField; field: string; rowData: any; readOnly?: boolean}) => {
 
     const showTime: boolean = (props.xField.type === 'datetime');
+    const cssClassName = showTime ? 'x-input-datetime' : 'x-input-date';
 
     // ak mame path, field je vzdy readOnly
     let readOnly: boolean;
@@ -55,6 +56,7 @@ export const XInputDateDT = (props: {form: XFormBase; xField: XField; field: str
     // test mame na TestovaciForm
 
     return (
-        <Calendar id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.value)} disabled={readOnly} showIcon={true} dateFormat={dateFormatCalendar()} showTime={showTime} showSeconds={showTime}/>
+        <Calendar id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.value)} disabled={readOnly} showIcon={true}
+                  dateFormat={dateFormatCalendar()} showTime={showTime} showSeconds={showTime} inputClassName={cssClassName} />
     );
 }

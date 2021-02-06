@@ -7,9 +7,13 @@ import {XUtils} from "./XUtils";
 import {Dialog} from "primereact/dialog";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 
-export const XSearchButton = (props: {form: XFormBase; assocField: string; displayField: string, searchTable: any; assocForm?: any; label?: string; readOnly?: boolean;}) => {
+export const XSearchButton = (props: {form: XFormBase; assocField: string; displayField: string, searchTable: any; assocForm?: any; label?: string; readOnly?: boolean; size?: number; inputStyle?: React.CSSProperties;}) => {
 
     props.form.addField(props.assocField + '.' + props.displayField);
+
+    const xEntity = XUtilsMetadata.getXEntity(props.form.getEntity());
+    const xEntityAssoc = XUtilsMetadata.getXEntityForAssocToOne(xEntity, props.assocField);
+    const xDisplayField = XUtilsMetadata.getXFieldByPath(xEntityAssoc, props.displayField);
 
     // POVODNY KOD
     //const overlayPanelEl = useRef<any>(null);
@@ -40,6 +44,7 @@ export const XSearchButton = (props: {form: XFormBase; assocField: string; displ
 
     const label = props.label !== undefined ? props.label : props.assocField;
     const readOnly = props.readOnly !== undefined ? props.readOnly : false;
+    const size = props.size !== undefined ? props.size : xDisplayField.length;
 
     const onInputValueChange = (e: any) => {
         setInputChanged(true);
@@ -92,8 +97,6 @@ export const XSearchButton = (props: {form: XFormBase; assocField: string; displ
         }
         else {
             if (props.assocForm !== undefined) {
-                const xEntity = XUtilsMetadata.getXEntity(props.form.getEntity());
-                const xEntityAssoc = XUtilsMetadata.getXEntityForAssocToOne(xEntity, props.assocField)
                 const object: XObject | null = props.form.state.object;
                 if (object !== null) {
                     const assocObject = object[props.assocField];
@@ -134,7 +137,7 @@ export const XSearchButton = (props: {form: XFormBase; assocField: string; displ
     return (
         <div className="p-field p-grid">
             <label htmlFor={props.assocField} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
-            <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur} readOnly={readOnly} ref={inputTextEl}/>
+            <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur} readOnly={readOnly} ref={inputTextEl} maxLength={xDisplayField.length} size={size} style={props.inputStyle}/>
             <Button label="..." onClick={onClickSearch} />
             <Dialog header="Header" visible={dialogOpened} style={{ width: '50vw' }} onHide={onHide}>
                 {/* klonovanim elementu pridame atribut searchTableParams */}

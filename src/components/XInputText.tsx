@@ -6,7 +6,7 @@ import {stringAsUI, stringFromUI} from "./XUtilsConversions";
 import {XUtils} from "./XUtils";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 
-export const XInputText = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean}) => {
+export const XInputText = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; size?: number; inputStyle?: React.CSSProperties;}) => {
 
     props.form.addField(props.field);
 
@@ -22,6 +22,8 @@ export const XInputText = (props: {form: XFormBase; field: string; label?: strin
     else {
         readOnly = props.readOnly !== undefined ? props.readOnly : false;
     }
+
+    const size = props.size !== undefined ? props.size : xField.length;
 
     const onValueChange = (e: any) => {
         props.form.onFieldChange(props.field, stringFromUI(e.target.value));
@@ -39,10 +41,11 @@ export const XInputText = (props: {form: XFormBase; field: string; label?: strin
         fieldValue = stringAsUI(objectValue);
     }
 
+    // note: style overrides size (width of the input according to character count)
     return (
         <div className="p-field p-grid">
             <label htmlFor={props.field} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
-            <InputText id={props.field} value={fieldValue} onChange={onValueChange} readOnly={readOnly} maxLength={xField.length}/>
+            <InputText id={props.field} value={fieldValue} onChange={onValueChange} readOnly={readOnly} maxLength={xField.length} size={size} style={props.inputStyle}/>
         </div>
     );
 }

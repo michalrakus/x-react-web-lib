@@ -5,12 +5,12 @@ import React from "react";
 import {InputNumber} from "primereact/inputnumber";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 
-export const XInputDecimal = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean}) => {
+export const XInputDecimal = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; size?: number; inputStyle?: React.CSSProperties;}) => {
 
     props.form.addField(props.field);
 
     const xField = XUtilsMetadata.getXFieldByPathStr(props.form.getEntity(), props.field);
-    const {useGrouping, fractionDigits, min, max} = XUtilsMetadata.getParamsForInputNumber(xField);
+    const {useGrouping, fractionDigits, min, max, size} = XUtilsMetadata.getParamsForInputNumber(xField);
 
     const label = props.label !== undefined ? props.label : props.field;
     // ak mame path, field je vzdy readOnly
@@ -22,6 +22,8 @@ export const XInputDecimal = (props: {form: XFormBase; field: string; label?: st
     else {
         readOnly = props.readOnly !== undefined ? props.readOnly : false;
     }
+
+    const sizeInput = props.size !== undefined ? props.size : size;
 
     const onValueChange = (e: any) => {
         // z InputNumber prichadza e.value - typ number alebo null
@@ -51,11 +53,13 @@ export const XInputDecimal = (props: {form: XFormBase; field: string; label?: st
         // fieldValue zostalo undefined (konvertujeme null -> undefined) - InputNumber pozaduje undefined, nechce null
     }
 
+    // note: style overrides size (width of the input according to character count)
     return (
         <div className="p-field p-grid">
             <label htmlFor={props.field} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
             <InputNumber id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} mode="decimal" locale="de-DE"
-                         useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}/>
+                         useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}
+                         size={sizeInput} style={props.inputStyle}/>
         </div>
     );
 }

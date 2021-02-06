@@ -13,6 +13,7 @@ export const XInputDate = (props: {form: XFormBase; field: string; label?: strin
 
     const xField: XField = XUtilsMetadata.getXFieldByPathStr(props.form.getEntity(), props.field);
     const showTime: boolean = (xField.type === 'datetime');
+    const cssClassName = showTime ? 'x-input-datetime' : 'x-input-date';
 
     const label = props.label !== undefined ? props.label : props.field;
     // ak mame path, field je vzdy readOnly
@@ -60,7 +61,8 @@ export const XInputDate = (props: {form: XFormBase; field: string; label?: strin
     return (
         <div className="p-field p-grid">
             <label htmlFor={props.field} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
-            <Calendar id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} showIcon={true} dateFormat={dateFormatCalendar()} showTime={showTime} showSeconds={showTime}/>
+            <Calendar id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} showIcon={true}
+                      dateFormat={dateFormatCalendar()} showTime={showTime} showSeconds={showTime} inputClassName={cssClassName}/>
         </div>
     );
 }
