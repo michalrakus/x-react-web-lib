@@ -100,6 +100,57 @@ export class XUtilsMetadata {
         return {useGrouping: useGrouping, fractionDigits: fractionDigits, min: min, max: max, size: size};
     }
 
+    static CHAR_SIZE: number = 8;
+
+    static computeColumnWidth(xField: XField, formColumnType?: string): string | undefined {
+        let width: number | undefined;
+        if (xField.type === "string") {
+            if (xField.length !== undefined) {
+                width = xField.length * XUtilsMetadata.CHAR_SIZE + 7 + 7; // character size (8px) and padding left/right (7px + 7px)
+            }
+        }
+        else if (xField.type === "decimal" || xField.type === "number") {
+            const {size} = XUtilsMetadata.getParamsForInputNumber(xField);
+            if (size !== undefined) {
+                width = size * XUtilsMetadata.CHAR_SIZE + 7 + 7;
+            }
+        }
+        else if (xField.type === "date") {
+            width = 85 + 7 + 7; // also in App.css defined
+        }
+        else if (xField.type === "datetime") {
+            width = 145 + 7 + 7; // also in App.css defined
+        }
+        else {
+            throw `XField ${xField.name}: unknown xField.type = ${xField.type}`;
+        }
+        // in form datatable, buttons may add some additional width
+        if (formColumnType !== undefined) {
+            if (formColumnType === "inputSimple") {
+                if (xField.type === "date" || xField.type === "datetime") {
+                    if (width !== undefined) {
+                        width += 33; // button for calendar
+                    }
+                }
+            }
+            else if (formColumnType === "dropdown") {
+                if (width !== undefined) {
+                    width += 33; // button for dropdown
+                }
+            }
+            else if (formColumnType === "searchButton") {
+                if (width !== undefined) {
+                    width += 39; // button for search button
+                }
+            }
+            else {
+                throw "Unknown prop type = " + formColumnType;
+            }
+        }
+        return width !== undefined ? width.toString() + 'px' : undefined;
+    }
+
+
     private static getXAssoc(xEntity: XEntity, assocMap: XAssocMap, assocField: string): XAssoc {
         const xAssoc: XAssoc = assocMap[assocField];
         if (xAssoc === undefined) {

@@ -11,7 +11,7 @@ import {dateAsUI, datetimeAsUI, numberAsUI} from "./XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
 import {Filters, FilterValue, FindParam, SortMeta} from "../serverApi/FindParam";
 
-export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: number; onAddRow?: () => void; onEdit?: (selectedRow: any) => void; removeRow?: boolean; searchTableParams?: SearchTableParams; displayed?: boolean; children: ReactChild[];}) => {
+export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: number; onAddRow?: () => void; onEdit?: (selectedRow: any) => void; removeRow?: boolean; searchTableParams?: SearchTableParams; width?: string; displayed?: boolean; children: ReactChild[];}) => {
 
     const dataTableEl = useRef<any>(null);
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0});
@@ -257,8 +257,18 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
 
     const xEntity: XEntity = XUtilsMetadata.getXEntity(props.entity);
 
+    let tableStyle;
+    if (props.width !== undefined) {
+        let width: string = props.width;
+        if (!isNaN(Number(width))) { // if width is number
+            width = width + 'px';
+        }
+        tableStyle = {width: width};
+    }
+
+    // poznamka - resizableColumns su zrusene lebo nefunguje dropdown vo filtri
     return (
-        <div>
+        <div className="x-lazy-datatable">
             <XButton label="Filter" onClick={onClickFilter} />
             <DataTable value={value.rowList} dataKey={dataKey} paginator={true} rows={rows} totalRecords={value.totalRecords}
                        lazy={true} first={first} onPage={onPage} loading={loading}
@@ -266,7 +276,7 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                        sortMode="multiple" removableSort={true} multiSortMeta={multiSortMeta} onSort={onSort}
                        selectionMode="single" selection={selectedRow} onSelectionChange={onSelectionChange}
                        onRowDoubleClick={onRowDoubleClick}
-                       ref={dataTableEl}>
+                       ref={dataTableEl} className="p-datatable-sm" /*resizableColumns columnResizeMode="expand"*/ tableStyle={tableStyle}>
                 {React.Children.map(
                     props.children,
                     function(child) {
@@ -293,6 +303,22 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                             body = (rowData: any) => {return bodyTemplate(childColumn.props, rowData, xField);};
                         }
 
+                        // *********** width/headerStyle ***********
+                        let width: string | undefined;
+                        if (childColumn.props.width !== undefined) {
+                            width = childColumn.props.width;
+                            if (!isNaN(Number(width))) { // if width is number
+                                width = width + 'px';
+                            }
+                        }
+                        else {
+                            width = XUtilsMetadata.computeColumnWidth(xField);
+                        }
+                        let headerStyle;
+                        if (width !== undefined) {
+                            headerStyle = {width: width};
+                        }
+
                         // *********** align ***********
                         let align = "left"; // default
                         if (childColumn.props.align !== undefined) {
@@ -310,10 +336,11 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                         // TODO - pouzit className a nie style
                         if (align === "center" || align === "right") {
                             style = {'text-align': align};
+                            headerStyle = {...headerStyle, ...style}; // headerStyle overrides style in TH cell
                         }
 
                         return <Column field={childColumn.props.field} header={header} filter={true} sortable={true}
-                                       filterElement={filterElement} body={body} style={style}/>;
+                                       filterElement={filterElement} body={body} headerStyle={headerStyle} style={style}/>;
                     }
                 )}
             </DataTable>
@@ -330,6 +357,7 @@ export interface XLazyColumnProps {
     header?: any;
     align?: "left" | "center" | "right";
     dropdownInFilter?: boolean;
+    width?: string; // for example 150px or 10% (value 150 means 150px)
 }
 
 // TODO - XLazyColumn neni idealny nazov, lepsi je XColumn (ale zatial nechame XLazyColumn)

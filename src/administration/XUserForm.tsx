@@ -12,9 +12,9 @@ export class XUserForm extends XFormBase {
         return (
             <div>
                 <XInputDecimal form={this} field="idXUser" label="ID" readOnly={true}/>
-                <XInputText form={this} field="username" label="Username"/>
-                <XInputText form={this} field="password" label="Password"/>
-                <XInputText form={this} field="name" label="Name"/>
+                <XInputText form={this} field="username" label="Username" size={20}/>
+                <XInputText form={this} field="password" label="Password" size={20}/>
+                <XInputText form={this} field="name" label="Name" size={30}/>
                 <XButton label="Save" onClick={this.onClickSave} />
                 <XButton label="Cancel" onClick={this.onClickCancel} />
             </div>

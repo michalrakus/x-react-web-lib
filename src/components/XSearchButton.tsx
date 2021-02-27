@@ -139,7 +139,7 @@ export const XSearchButton = (props: {form: XFormBase; assocField: string; displ
             <label htmlFor={props.assocField} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
             <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur} readOnly={readOnly} ref={inputTextEl} maxLength={xDisplayField.length} size={size} style={props.inputStyle}/>
             <Button label="..." onClick={onClickSearch} />
-            <Dialog header="Header" visible={dialogOpened} style={{ width: '50vw' }} onHide={onHide}>
+            <Dialog visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>
                 {/* klonovanim elementu pridame atribut searchTableParams */}
                 {React.cloneElement(props.searchTable, {searchTableParams: {onChoose: onChoose, displayField: props.displayField, filter: (inputChanged ? inputValueState : undefined)}}, props.searchTable.children)}
             </Dialog>

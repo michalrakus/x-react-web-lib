@@ -21,9 +21,9 @@ export const XUserBrowse = (props: {}) => {
     return (
         <XLazyDataTable entity="XUser" rows={10} onAddRow={onAddRow} onEdit={onEdit} removeRow={true} displayed={(props as any).displayed}>
             <XLazyColumn field="idXUser" header="ID"/>
-            <XLazyColumn field="username" header="Username"/>
-            <XLazyColumn field="password" header="Password"/>
-            <XLazyColumn field="name" header="Name"/>
+            <XLazyColumn field="username" header="Username" width="160"/>
+            <XLazyColumn field="password" header="Password" width="160"/>
+            <XLazyColumn field="name" header="Name" width="240"/>
         </XLazyDataTable>
     );
 }

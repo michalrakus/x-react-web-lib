@@ -29,6 +29,7 @@ export interface XFormDataTableProps {
     readOnly?: boolean;
     onClickAddRow?: () => void;
     onClickRemoveRow?: () => void;
+    width?: string;
     children: ReactChild[];
 }
 
@@ -223,6 +224,16 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
         const xEntity: XEntity = XUtilsMetadata.getXEntity(this.getEntity());
 
+        let tableStyle;
+        if (this.props.width !== undefined) {
+            let width: string = this.props.width;
+            if (!isNaN(Number(width))) { // if width is number
+                width = width + 'px';
+            }
+            tableStyle = {width: width};
+        }
+
+        // poznamka - resizableColumns su zrusene lebo nefunguje dropdown vo filtri
         return (
             <div className="p-field p-grid">
                 <div>
@@ -232,7 +243,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                                totalRecords={valueList.length}
                                filters={this.state.filters} onFilter={this.onFilter}
                                sortMode="multiple" removableSort={true}
-                               selectionMode="single" selection={this.state.selectedRow} onSelectionChange={this.onSelectionChange}>
+                               selectionMode="single" selection={this.state.selectedRow} onSelectionChange={this.onSelectionChange}
+                               className="p-datatable-sm x-form-datatable" /*resizableColumns columnResizeMode="expand"*/ tableStyle={tableStyle}>
                         {React.Children.map(
                             this.props.children,
                             function (child) {
@@ -250,7 +262,26 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                                     const dropdownValue = thisLocal.getDropdownFilterValue(field);
                                     filterElement = <XDropdownDTFilter entity={thisLocal.getEntity()} path={field} value={dropdownValue} onValueChange={thisLocal.onDropdownFilterChange}/>
                                 }
-                                return <Column field={field} header={header} filter={true} sortable={true} filterElement={filterElement}
+
+                                // *********** width/headerStyle ***********
+                                let width: string | undefined;
+                                if (childColumnProps.width !== undefined) {
+                                    let width: string = childColumnProps.width;
+                                    if (!isNaN(Number(width))) { // if width is number
+                                        width = width + 'px';
+                                    }
+                                }
+                                else {
+                                    // TODO - toto by sa mohlo vytiahnut vyssie, aj v bodyTemplate sa vola metoda XUtilsMetadata.getXFieldByPath
+                                    const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
+                                    width = XUtilsMetadata.computeColumnWidth(xField, childColumnProps.type);
+                                }
+                                let headerStyle;
+                                if (width !== undefined) {
+                                    headerStyle = {width: width};
+                                }
+
+                                return <Column field={field} header={header} filter={true} sortable={true} filterElement={filterElement} headerStyle={headerStyle}
                                                body={(rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, rowData, xEntity);}}/>;
                             }
                         )}
@@ -268,6 +299,7 @@ export interface XFormColumnProps {
     header?: any;
     readOnly?: boolean;
     dropdownInFilter?: boolean; // moze byt len na stlpcoch ktore zobrazuju asociavany atribut (dlzka path >= 2)
+    width?: string; // for example 150px or 10% (value 150 means 150px)
 }
 
 export interface XFormInputSimpleColumnProps extends XFormColumnProps {

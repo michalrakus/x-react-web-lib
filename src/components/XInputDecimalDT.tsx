@@ -53,6 +53,6 @@ export const XInputDecimalDT = (props: {form: XFormBase; entity: string; field: 
 
     return (
         <InputNumber id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.value)} disabled={readOnly} mode="decimal" locale="de-DE"
-                     useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}/>
+                     useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max} className="x-input-to-resize"/>
     );
 }

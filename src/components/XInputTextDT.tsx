@@ -40,7 +40,8 @@ export const XInputTextDT = (props: {form: XFormBase; entity: string; field: str
         fieldValue = stringAsUI(rowDataValue);
     }
     return (
-        <InputText id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.target.value)} readOnly={readOnly} maxLength={xField.length}/>
+        <InputText id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.target.value)}
+                   readOnly={readOnly} maxLength={xField.length} className="x-input-to-resize"/>
     );
 
 }
