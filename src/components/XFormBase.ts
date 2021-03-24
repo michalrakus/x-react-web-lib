@@ -6,7 +6,8 @@ import {XUtils} from "./XUtils";
 // pri tomto zapise sa nezadava property id (id sa doplni automaticky pri otvoreni assoc formularu cez klonovanie elementu)
 // preto umoznujeme aby id mohlo byt undefined
 export interface FormProps {
-    id?: number | null;
+    id?: number;
+    object?: XObject; // pri inserte (id je undefined) mozme cez tuto property poslat do formulara objekt s uz nastavenymi niektorymi hodnotami
 }
 
 // class decorator ktory nastavuje property entity (dalo by sa to nastavovat v konstruktore ale decorator je menej ukecany)
@@ -30,30 +31,38 @@ export abstract class XFormBase extends Component<FormProps> {
 
     constructor(props: FormProps) {
         super(props);
+        // check
+        if (props.id !== undefined && props.object !== undefined) {
+            throw "Form cannot have both props id and object defined. Only one of them can be defined.";
+        }
         //this.entity = props.entity; - nastavuje sa cez decorator @Form
+        let object = null;
+        if (props.id === undefined) {
+            // add row operation
+            if (props.object !== undefined) {
+                object = props.object;
+            }
+            else {
+                object = {}; // empty new object
+            }
+        }
         this.fields = new Set<string>();
         this.state = {
-            object: null
+            object: object
         };
         this.onClickSave = this.onClickSave.bind(this);
         this.onClickCancel = this.onClickCancel.bind(this);
     }
 
-    addRowOperation(): boolean {
-        // formular je otvoreny na insert, ak nie je zadane id-cko
-        return this.props.id === undefined || this.props.id === null;
-    }
-
     async componentDidMount() {
-        let object: XObject;
         // kontrola (musi byt tu, v konstruktore este property nie je nastavena)
         if (this.entity === undefined) {
             throw "XFormBase: Property entity is not defined - use decorator @Form.";
         }
-        if (this.props.id !== undefined && this.props.id !== null) {
+        if (this.props.id !== undefined) {
             console.log('XFormBase.componentDidMount ide nacitat objekt');
             console.log(this.fields);
-            object = await XUtils.fetchById(this.entity, Array.from(this.fields), this.props.id);
+            const object: XObject = await XUtils.fetchById(this.entity, Array.from(this.fields), this.props.id);
             console.log('XFormBase.componentDidMount nacital objekt:');
             console.log(object);
             // const price = (object as any).price;
@@ -62,11 +71,8 @@ export abstract class XFormBase extends Component<FormProps> {
             // const date = (object as any).carDate;
             // console.log(typeof date);
             // console.log(date);
+            this.setState({object: object});
         }
-        else {
-            object = {} as any; // TODO - docasne, jedna sa o insert
-        }
-        this.setState({object: object});
     }
 
     getEntity(): string {
@@ -185,7 +191,7 @@ export abstract class XFormBase extends Component<FormProps> {
         // }
 
         console.log(this.state.object);
-        const response = await XUtils.post(this.addRowOperation() ? 'addRow' : 'saveRow', {entity: this.getEntity(), object: this.state.object});
+        const response = await XUtils.post('saveRow', {entity: this.getEntity(), object: this.state.object});
         if (!response.ok) {
             const errorMessage = `Save row failed. Status: ${response.status}, status text: ${response.statusText}`;
             console.log(errorMessage);

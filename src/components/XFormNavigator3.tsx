@@ -1,25 +1,20 @@
 import React, {Component} from "react";
 
 export interface XFormNavigator3Props {
-    initFormElement?: any;
+    rootFormElement?: any;
 }
 
 export class XFormNavigator3 extends Component<XFormNavigator3Props> {
 
+    // formElements after rootFormElement
     state: {formElements: any[];};
 
     constructor(props: XFormNavigator3Props) {
         super(props);
         this.state = {
-            formElements: (props.initFormElement !== undefined ? [props.initFormElement] : [])
+            formElements: []
         };
         this.openForm = this.openForm.bind(this);
-    }
-
-    openRootForm(newFormElement: any): void {
-        // otvori uplne novy form (napr. CarBrowse kliknuty v menu)
-        const formElements = (newFormElement !== null ? [newFormElement] : []);
-        this.setState({formElements: formElements});
     }
 
     openForm(newFormElement: any): void {
@@ -48,7 +43,7 @@ export class XFormNavigator3 extends Component<XFormNavigator3Props> {
     }
 
     render() {
-        const formElements = this.state.formElements;
+        const formElements = this.props.rootFormElement !== null ? [this.props.rootFormElement, ...this.state.formElements] : this.state.formElements;
         const forms = formElements.map((formElement, index) => {
                 const displayed: boolean = (index === formElements.length - 1);
                 // klonovanim elementu pridame atribut openForm={this.openForm} (nemusime tento atribut pridavat pri vytvarani elementu)

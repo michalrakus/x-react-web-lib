@@ -14,6 +14,7 @@ import {XUtils} from "./XUtils";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XInputDecimalDT} from "./XInputDecimalDT";
 import {XInputDateDT} from "./XInputDateDT";
+import {XCheckboxDT} from "./XCheckboxDT";
 
 export interface XDropdownOptionsMap {
     [assocField: string]: any[];
@@ -166,6 +167,9 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             else if (xField.type === "date" || xField.type === "datetime") {
                 body = <XInputDateDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
             }
+            else if (xField.type === "boolean") {
+                body = <XCheckboxDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
+            }
             else {
                 // xField.type === "string", pripadne ine jednoduche typy
                 body = <XInputTextDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
@@ -263,17 +267,18 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                                     filterElement = <XDropdownDTFilter entity={thisLocal.getEntity()} path={field} value={dropdownValue} onValueChange={thisLocal.onDropdownFilterChange}/>
                                 }
 
+                                // TODO - toto by sa mohlo vytiahnut vyssie, aj v bodyTemplate sa vola metoda XUtilsMetadata.getXFieldByPath
+                                const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
+
                                 // *********** width/headerStyle ***********
                                 let width: string | undefined;
                                 if (childColumnProps.width !== undefined) {
-                                    let width: string = childColumnProps.width;
+                                    width = childColumnProps.width;
                                     if (!isNaN(Number(width))) { // if width is number
                                         width = width + 'px';
                                     }
                                 }
                                 else {
-                                    // TODO - toto by sa mohlo vytiahnut vyssie, aj v bodyTemplate sa vola metoda XUtilsMetadata.getXFieldByPath
-                                    const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
                                     width = XUtilsMetadata.computeColumnWidth(xField, childColumnProps.type);
                                 }
                                 let headerStyle;
@@ -281,7 +286,33 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                                     headerStyle = {width: width};
                                 }
 
-                                return <Column field={field} header={header} filter={true} sortable={true} filterElement={filterElement} headerStyle={headerStyle}
+                                // *********** align ***********
+                                let align = "left"; // default
+                                // do buducna
+                                // if (childColumnProps.align !== undefined) {
+                                //     align = childColumnProps.align;
+                                // }
+                                // else {
+                                    // decimal defaultne zarovnavame doprava
+                                    // if (xField.type === "decimal") {
+                                    //     align = "right";
+                                    // }
+                                    // else
+                                        if (xField.type === "boolean") {
+                                            align = "center";
+                                        }
+                                // }
+
+                                // *********** style ***********
+                                let style;
+                                // TODO - pouzit className a nie style
+                                if (align === "center" || align === "right") {
+                                    style = {'textAlign': align};
+                                    headerStyle = {...headerStyle, ...style}; // headerStyle overrides style in TH cell
+                                }
+
+                                return <Column field={field} header={header} filter={true} sortable={true} filterElement={filterElement}
+                                               headerStyle={headerStyle} style={style}
                                                body={(rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, rowData, xEntity);}}/>;
                             }
                         )}

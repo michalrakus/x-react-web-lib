@@ -29,4 +29,4 @@ export const XUserBrowse = (props: {}) => {
 }
 // zatial nepouzivane - prichystane do buducnosti
 // ak by sme mali class komponenty, dal by sa pouzit decorator, pri formularoch mame class komponenty
-XUtils.registerBrowse(<XUserBrowse/>, "XUser");
+XUtils.registerAppBrowse(<XUserBrowse/>, "XUser");

@@ -15,11 +15,13 @@ function generateApi(cb) {
     const apiFileList = [
         "./lib/components/useXToken",
         "./lib/components/XButton",
+        "./lib/components/XBrowse",
         "./lib/components/XDropdown",
         "./lib/components/XFormBase",
         "./lib/components/XFormBaseT",
         "./lib/components/XFormDataTable2",
         "./lib/components/XFormNavigator3",
+        "./lib/components/XHolders",
         "./lib/components/XInputDate",
         "./lib/components/XInputDecimal",
         "./lib/components/XInputText",
@@ -33,7 +35,9 @@ function generateApi(cb) {
         "./lib/components/XUtilsMetadata",
 
         "./lib/administration/XUserBrowse",
-        "./lib/administration/XUserForm"
+        "./lib/administration/XUserForm",
+        "./lib/administration/XBrowseMetaBrowse",
+        "./lib/administration/XBrowseMetaForm"
     ];
 
     for (const apiFile of apiFileList) {

@@ -2,6 +2,7 @@
 {
   "compilerOptions": {
     "target": "es5",
+    "downlevelIteration": true, // aby zafungovalo pouzitie .entries() (for (const [index, value] of array.entries()))
     "lib": [
       "dom",
       "dom.iterable",

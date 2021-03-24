@@ -1,16 +1,25 @@
 import {XAssoc, XAssocMap, XEntity, XEntityMap, XField} from "../serverApi/XEntityMetadata";
 import {XUtils} from "./XUtils";
+import {XBrowseMeta, XBrowseMetaMap} from "../serverApi/XBrowseMetadata";
 
 // idelany nazov: UtilsEntityMetadata - ale strasne dlhy
 // tato funkcionalita by mala ist bud do tried XEntity, XField alebo lepsie do nejakeho servisu
 export class XUtilsMetadata {
-    // nacachovane metadata (setuju sa v App.fetchAndSetXEntityMap)
-    static xEntityMap: XEntityMap;
+    // nacachovane metadata (setuju sa v App.fetchAndSetXMetadata)
+    private static xEntityMap: XEntityMap;
+    // nacachovane metadata (setuju sa v App.fetchAndSetXMetadata)
+    private static xBrowseMetaMap: XBrowseMetaMap;
 
     static async fetchAndSetXEntityMap(): Promise<any> {
         if (XUtilsMetadata.xEntityMap === undefined) {
             XUtilsMetadata.xEntityMap = await XUtils.fetch("getXEntityMap", {dummy: "dummy"});
             //console.log(XUtilsMetadata.xEntityMap);
+        }
+    }
+
+    static async fetchAndSetXBrowseMetaMap(): Promise<any> {
+        if (XUtilsMetadata.xBrowseMetaMap === undefined) {
+            XUtilsMetadata.xBrowseMetaMap = await XUtils.fetch("getXBrowseMetaMap", {dummy: "dummy"});
         }
     }
 
@@ -61,6 +70,17 @@ export class XUtilsMetadata {
 
     static getXEntityForAssocToMany(xEntity: XEntity, assocField: string): XEntity {
         return XUtilsMetadata.getXEntityForAssoc(XUtilsMetadata.getXAssocToMany(xEntity, assocField));
+    }
+
+    static getXFieldList(xEntity: XEntity): XField[] {
+        const xFieldList: XField[] = [];
+        for (const [key, xField] of Object.entries(xEntity.fieldMap)) {
+            // assoc fieldy sa nachadzaju aj v xEntity.fieldMap ako typ number (netusim preco), preto ich vyfiltrujeme
+            if (xEntity.assocToOneMap[xField.name] === undefined) {
+                xFieldList.push(xField);
+            }
+        }
+        return xFieldList;
     }
 
     // docasne sem, kym nemame jednotny XInputDecimal/XInputDecimalDT
@@ -121,6 +141,9 @@ export class XUtilsMetadata {
         else if (xField.type === "datetime") {
             width = 145 + 7 + 7; // also in App.css defined
         }
+        else if (xField.type === "boolean") {
+            width = 7 + 7 + 7; // zatial takto provizorne
+        }
         else {
             throw `XField ${xField.name}: unknown xField.type = ${xField.type}`;
         }
@@ -150,6 +173,24 @@ export class XUtilsMetadata {
         return width !== undefined ? width.toString() + 'px' : undefined;
     }
 
+    static getXBrowseMeta(entity: string, browseId?: string): XBrowseMeta {
+        const key = XUtilsMetadata.getXBrowseFormMetaKey(entity, browseId);
+        const xBrowseMeta: XBrowseMeta = XUtilsMetadata.xBrowseMetaMap[key];
+        return xBrowseMeta;
+    }
+
+    static setXBrowseMeta(entity: string, browseId: string | undefined, xBrowseMeta: XBrowseMeta) {
+        const key = XUtilsMetadata.getXBrowseFormMetaKey(entity, browseId);
+        XUtilsMetadata.xBrowseMetaMap[key] = xBrowseMeta;
+    }
+
+    static getXBrowseFormMetaKey(entity: string, browseId?: string): string {
+        let key = entity;
+        if (browseId !== undefined) {
+            key = key + '_' + browseId;
+        }
+        return key;
+    }
 
     private static getXAssoc(xEntity: XEntity, assocMap: XAssocMap, assocField: string): XAssoc {
         const xAssoc: XAssoc = assocMap[assocField];

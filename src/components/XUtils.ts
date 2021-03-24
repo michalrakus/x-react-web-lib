@@ -14,11 +14,24 @@ export class XUtils {
     // token pouzivany pre public stranky (napr. XLoginForm), meno/heslo natvrdo (lepsie ako nic)
     static xTokenPublic: XToken = {username: "xPublicUser", password: "xPublicUserPassword123"};
 
+    // nacachovane metadata (setuju sa v App.fetchAndSetXMetadata)
+    private static appFormMap: {[name: string]: any;} = {};
+
     // zatial nepouzivane - v buducnosti sa takto mozu vytvorit registre browsov a formularov, ktore potom budeme vediet otvorit len na zaklade entity
-    static registerBrowse(elem: any, entity: string, formId?: string): void {
-        console.log("***************** sme v register");
-        console.log(elem);
-        console.log(entity);
+    static registerAppBrowse(elem: any, entity: string, formId?: string): void {
+        // console.log("***************** sme v register");
+        // console.log(elem);
+        // console.log(entity);
+    }
+
+    static registerAppForm(elem: any, entity: string, formId?: string): void {
+        const formKey = XUtilsMetadata.getXBrowseFormMetaKey(entity, formId);
+        XUtils.appFormMap[formKey] = elem;
+    }
+
+    static getAppForm(entity: string, formId?: string): any {
+        const formKey = XUtilsMetadata.getXBrowseFormMetaKey(entity, formId);
+        return XUtils.appFormMap[formKey];
     }
 
     static fetchMany(path: string, value: any): Promise<any[]> {
@@ -163,6 +176,21 @@ export class XUtils {
             const errorMessage = `Remove row failed. Status: ${response.status}, status text: ${response.statusText}`;
             console.log(errorMessage);
             alert(errorMessage);
+        }
+    }
+
+    static arrayMoveElement(array: any[], position: number, offset: number) {
+        const element = array[position];
+        array.splice(position, 1);
+        let positionNew = position + offset;
+        if (positionNew > array.length) {
+            positionNew = positionNew - array.length - 1; // element goes to the begin
+        }
+        else if (positionNew < 0) {
+            positionNew = array.length + positionNew + 1; // element goes to the end
+        }
+        if (positionNew >= 0 && positionNew <= array.length) {
+            array.splice(positionNew, 0, element);
         }
     }
 }

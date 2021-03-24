@@ -10,8 +10,20 @@ import {XEntity, XField} from "../serverApi/XEntityMetadata";
 import {dateAsUI, datetimeAsUI, numberAsUI} from "./XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
 import {Filters, FilterValue, FindParam, SortMeta} from "../serverApi/FindParam";
+import {XButtonIconSmall} from "./XButtonIconSmall";
 
-export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: number; onAddRow?: () => void; onEdit?: (selectedRow: any) => void; removeRow?: boolean; searchTableParams?: SearchTableParams; width?: string; displayed?: boolean; children: ReactChild[];}) => {
+export interface XEditModeHandlers {
+    onStart: () => void;
+    onSave: () => void;
+    onCancel: () => void;
+    onAddColumn: (field: string) => void;
+    onEditColumn: (field: string) => void;
+    onRemoveColumn: (field: string) => void;
+    onMoveColumnLeft: (field: string) => void;
+    onMoveColumnRight: (field: string) => void;
+}
+
+export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: number; onAddRow?: () => void; onEdit?: (selectedRow: any) => void; removeRow?: boolean; searchTableParams?: SearchTableParams; width?: string; editMode?: boolean; editModeHandlers?: XEditModeHandlers; displayed?: boolean; children: ReactChild[];}) => {
 
     const dataTableEl = useRef<any>(null);
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0});
@@ -266,6 +278,26 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
         tableStyle = {width: width};
     }
 
+    // check
+    if ((props.editMode === true || props.editMode === false) && props.editModeHandlers === undefined) {
+        throw "XLazyDataTable: for props.editMode = true/false, props.editModeHandlers must be defined.";
+    }
+
+    let paginatorLeft = undefined;
+    let paginatorRight = undefined;
+    if (props.editMode === true) {
+        paginatorLeft = <div/>; // paginatorLeft pouzivame, aby bol default paginator v strede (bez paginatorLeft je default paginator presunuty dolava)
+        paginatorRight = <div>
+                            <XButtonIconSmall icon="pi pi-save" onClick={() => props.editModeHandlers?.onSave()} tooltip="Save form"/>
+                            <XButtonIconSmall icon="pi pi-times" onClick={() => props.editModeHandlers?.onCancel()} tooltip="Cancel editing"/>
+                         </div>;
+    }
+    else if (props.editMode === false) {
+        paginatorLeft = <div/>;
+        paginatorRight = <XButtonIconSmall icon="pi pi-pencil" onClick={() => props.editModeHandlers?.onStart()} tooltip="Edit form"/>;
+    }
+    // else -> editMode is undefined - browse is not editable
+
     // poznamka - resizableColumns su zrusene lebo nefunguje dropdown vo filtri
     return (
         <div className="x-lazy-datatable">
@@ -276,7 +308,8 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                        sortMode="multiple" removableSort={true} multiSortMeta={multiSortMeta} onSort={onSort}
                        selectionMode="single" selection={selectedRow} onSelectionChange={onSelectionChange}
                        onRowDoubleClick={onRowDoubleClick}
-                       ref={dataTableEl} className="p-datatable-sm" /*resizableColumns columnResizeMode="expand"*/ tableStyle={tableStyle}>
+                       ref={dataTableEl} className="p-datatable-sm" /*resizableColumns columnResizeMode="expand"*/ tableStyle={tableStyle}
+                       paginatorLeft={paginatorLeft} paginatorRight={paginatorRight}>
                 {React.Children.map(
                     props.children,
                     function(child) {
@@ -287,7 +320,25 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                         const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, childColumn.props.field);
 
                         // *********** header ***********
-                        const header = childColumn.props.header !== undefined ? childColumn.props.header : childColumn.props.field;
+                        const headerLabel = childColumn.props.header !== undefined ? childColumn.props.header : childColumn.props.field;
+                        let header;
+                        if (props.editMode === true) {
+                            header = <div>
+                                        <div>
+                                            <XButtonIconSmall icon="pi pi-plus" onClick={() => props.editModeHandlers?.onAddColumn(childColumn.props.field)} tooltip="Add column"/>
+                                            <XButtonIconSmall icon="pi pi-pencil" onClick={() => props.editModeHandlers?.onEditColumn(childColumn.props.field)} tooltip="Edit column"/>
+                                            <XButtonIconSmall icon="pi pi-trash" onClick={() => props.editModeHandlers?.onRemoveColumn(childColumn.props.field)} tooltip="Remove column"/>
+                                        </div>
+                                        <div>
+                                            <XButtonIconSmall icon="pi pi-chevron-left" onClick={() => props.editModeHandlers?.onMoveColumnLeft(childColumn.props.field)} tooltip="Move column left"/>
+                                            <XButtonIconSmall icon="pi pi-chevron-right" onClick={() => props.editModeHandlers?.onMoveColumnRight(childColumn.props.field)} tooltip="Move column right"/>
+                                        </div>
+                                        <div>{headerLabel}</div>
+                                    </div>;
+                        }
+                        else {
+                            header = headerLabel;
+                        }
 
                         // *********** filterElement ***********
                         let filterElement;
@@ -329,13 +380,16 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                             if (xField.type === "decimal") {
                                 align = "right";
                             }
+                            else if (xField.type === "boolean") {
+                                align = "center";
+                            }
                         }
 
                         // *********** style ***********
                         let style;
                         // TODO - pouzit className a nie style
                         if (align === "center" || align === "right") {
-                            style = {'text-align': align};
+                            style = {'textAlign': align};
                             headerStyle = {...headerStyle, ...style}; // headerStyle overrides style in TH cell
                         }
 

@@ -33,7 +33,7 @@ export const XSearchButton = (props: {form: XFormBase; assocField: string; displ
                 // TODO - pridat cez generikum typ fieldu (ak sa da)
                 // poznamka: ak assocObject === null tak treba do inputu zapisovat prazdny retazec, ak by sme pouzili null, neprejavila by sa zmena v modeli na null
                 const assocObject = object[props.assocField];
-                inputValue = assocObject !== null ? assocObject[props.displayField] : "";
+                inputValue = (assocObject !== null && assocObject !== undefined) ? assocObject[props.displayField] : "";
             }
         }
         else {
@@ -101,7 +101,7 @@ export const XSearchButton = (props: {form: XFormBase; assocField: string; displ
                 if (object !== null) {
                     const assocObject = object[props.assocField];
                     // OTAZKA - ziskavat id priamo z root objektu? potom ho vsak treba do root objektu pridat
-                    const id = assocObject !== null ? assocObject[xEntityAssoc.idField] : null;
+                    const id = (assocObject !== null && assocObject !== undefined) ? assocObject[xEntityAssoc.idField] : null;
                     // klonovanim elementu pridame atribut id
                     const assocForm = React.cloneElement(props.assocForm, {id: id}, props.assocForm.children);
                     (props.form.props as any).openForm(assocForm);
