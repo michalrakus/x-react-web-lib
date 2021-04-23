@@ -3,8 +3,8 @@ import {Dialog} from "primereact/dialog";
 import {XFieldSelector} from "./XFieldSelector";
 import {InputText} from "primereact/inputtext";
 import {Checkbox} from "primereact/checkbox";
-import {XUtils} from "./XUtils";
 import {XButton} from "./XButton";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 export interface XEditColumnDialogValues {
     field: string;
@@ -39,7 +39,7 @@ export const XEditColumnDialog = (props: {dialogOpened: boolean; addColumn: bool
     }
 
     const setupDropdownInFilter = (field: string) => {
-        const fieldList: string[] = XUtils.getFieldListForPath(field);
+        const fieldList: string[] = XUtilsCommon.getFieldListForPath(field);
         if (fieldList.length < 2) {
             setDropdownInFilter(false);
             setDropdownInFilterReadOnly(true);

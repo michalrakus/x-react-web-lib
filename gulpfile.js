@@ -16,6 +16,8 @@ function generateApi(cb) {
         "./lib/components/useXToken",
         "./lib/components/XButton",
         "./lib/components/XBrowse",
+        "./lib/components/XChangePasswordForm",
+        "./lib/components/XCheckbox",
         "./lib/components/XDropdown",
         "./lib/components/XFormBase",
         "./lib/components/XFormBaseT",

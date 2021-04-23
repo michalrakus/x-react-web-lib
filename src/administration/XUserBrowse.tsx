@@ -18,11 +18,29 @@ export const XUserBrowse = (props: {}) => {
         (props as any).openForm(<XUserForm id={selectedRow.idXUser}/>);
     }
 
+    const onRemoveRow = async (selectedRow: XUser): Promise<boolean> => {
+        if (selectedRow.username === XUtils.getUsername()) {
+            alert("Can not remove current user.");
+            return false;
+        }
+
+        // v deme nedovolime zmenit uzivatelov ktori sa pouzivaju na skusanie dema
+        if (XUtils.demo() && (selectedRow.username === 'jozko' || selectedRow.username === 'xman')) {
+            alert("Users jozko, xman can not be removed.");
+            return false;
+        }
+
+        if (window.confirm('Are you sure to remove the selected row?')) {
+            await XUtils.removeRow("XUser", selectedRow);
+            return true;
+        }
+        return false;
+    }
+
     return (
-        <XLazyDataTable entity="XUser" rows={10} onAddRow={onAddRow} onEdit={onEdit} removeRow={true} displayed={(props as any).displayed}>
+        <XLazyDataTable entity="XUser" rows={10} onAddRow={onAddRow} onEdit={onEdit} removeRow={onRemoveRow} displayed={(props as any).displayed}>
             <XLazyColumn field="idXUser" header="ID"/>
             <XLazyColumn field="username" header="Username" width="160"/>
-            <XLazyColumn field="password" header="Password" width="160"/>
             <XLazyColumn field="name" header="Name" width="240"/>
         </XLazyDataTable>
     );

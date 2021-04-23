@@ -1,3 +1,5 @@
+import {dateFormat} from "../serverApi/XUtilsCommon";
+
 export function stringFromUI(stringValue: string): string | null {
     let value: string | null;
     if (stringValue === '') {
@@ -65,6 +67,3 @@ export function dateFormatCalendar(): string {
 export function datetimeFormatUI(): string {
     return "dd.mm.yyyy HH:MM:ss";
 }
-
-// nevedel som importnut dateFormat, tak som to dal sem aby som nemusel vsade pouzivat require("dateformat")
-export const dateFormat = require("dateformat");

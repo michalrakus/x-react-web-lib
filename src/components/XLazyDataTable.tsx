@@ -1,6 +1,6 @@
-import React, {useState, useEffect, useRef, ReactChild} from 'react';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
+import React, {ReactChild, useEffect, useRef, useState} from 'react';
+import {DataTable} from 'primereact/datatable';
+import {Column} from 'primereact/column';
 import {XButton} from "./XButton";
 import {XUtils} from "./XUtils";
 import {SearchTableParams} from "./SearchTableParams";
@@ -9,8 +9,12 @@ import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XEntity, XField} from "../serverApi/XEntityMetadata";
 import {dateAsUI, datetimeAsUI, numberAsUI} from "./XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
-import {Filters, FilterValue, FindParam, SortMeta} from "../serverApi/FindParam";
+import {Filters, FilterValue, FindParam, ResultType, SortMeta} from "../serverApi/FindParam";
 import {XButtonIconSmall} from "./XButtonIconSmall";
+import {TriStateCheckbox} from "primereact/tristatecheckbox";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {CsvParam, ExportParam, ExportType} from "../serverApi/ExportImportParam";
+import {XExportRowsDialog} from "./XExportRowsDialog";
 
 export interface XEditModeHandlers {
     onStart: () => void;
@@ -23,7 +27,7 @@ export interface XEditModeHandlers {
     onMoveColumnRight: (field: string) => void;
 }
 
-export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: number; onAddRow?: () => void; onEdit?: (selectedRow: any) => void; removeRow?: boolean; searchTableParams?: SearchTableParams; width?: string; editMode?: boolean; editModeHandlers?: XEditModeHandlers; displayed?: boolean; children: ReactChild[];}) => {
+export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: number; onAddRow?: () => void; onEdit?: (selectedRow: any) => void; removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean; appButtons?: any; searchTableParams?: SearchTableParams; width?: string; editMode?: boolean; editModeHandlers?: XEditModeHandlers; displayed?: boolean; children: ReactChild[];}) => {
 
     const dataTableEl = useRef<any>(null);
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0});
@@ -38,13 +42,16 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
     const [multiSortMeta, setMultiSortMeta] = useState<SortMeta[]>([]);
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
+    const [exportRowsDialogOpened, setExportRowsDialogOpened] = useState<boolean>(false);
+    const [exportRowsDialogRowCount, setExportRowsDialogRowCount] = useState<number>(); // param pre dialog
+    const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<Filters>(filtersInit); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
 
     // parameter [] zabezpeci ze sa metoda zavola len po prvom renderingu (a nie po kazdej zmene stavu (zavolani setNieco()))
     useEffect(() => {
         // jednoduchy sposob - nepouzivame parameter props.displayed a priznak dataLoaded
         if (props.displayed === undefined) {
             loadData();
-            console.log("XLazyDataTable - data loaded (simple)");
+            //console.log("XLazyDataTable - data loaded (simple)");
         }
     },[]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -54,7 +61,7 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
             if (props.displayed) {
                 if (!dataLoaded) {
                     loadData();
-                    console.log("XLazyDataTable - data loaded (used displayed)");
+                    //console.log("XLazyDataTable - data loaded (used displayed)");
                     setDataLoaded(true);
                 }
             }
@@ -71,16 +78,16 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
 
     const onPage = async (event: any) => {
 
-        console.log("zavolany onPage");
+        //console.log("zavolany onPage");
 
         setFirst(event.first);
-        loadDataBase({first: event.first, rows: rows, filters: filters, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: event.first, rows: rows, filters: filters, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()});
     }
 
     const onFilter = (event: any) => {
 
-        console.log("zavolany onFilter - this.state.filters = " + JSON.stringify(filters));
-        console.log("zavolany onFilter - event.filters = " + JSON.stringify(event.filters));
+        //console.log("zavolany onFilter - this.state.filters = " + JSON.stringify(filters));
+        //console.log("zavolany onFilter - event.filters = " + JSON.stringify(event.filters));
 
         // tymto zavolanim sa zapise znak zapisany klavesnicou do inputu filtra (ak prikaz zakomentujeme, input filtra zostane prazdny)
         setFilters(event.filters);
@@ -88,30 +95,32 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
 
     const onSort = (event: any) => {
 
-        console.log("zavolany onSort - this.state.multiSortMeta = " + JSON.stringify(multiSortMeta));
-        console.log("zavolany onSort - event.multiSortMeta = " + JSON.stringify(event.multiSortMeta));
+        //console.log("zavolany onSort - this.state.multiSortMeta = " + JSON.stringify(multiSortMeta));
+        //console.log("zavolany onSort - event.multiSortMeta = " + JSON.stringify(event.multiSortMeta));
 
         setMultiSortMeta(event.multiSortMeta);
-        loadDataBase({first: first, rows: rows, filters: filters, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields()});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields()});
     }
 
     const onClickFilter = () => {
 
-        console.log("zavolany onClickFilter");
+        //console.log("zavolany onClickFilter");
 
         loadData();
     };
 
     const loadData = () => {
-        loadDataBase({first: first, rows: rows, filters: filters, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()});
     }
 
     const loadDataBase = async (findParam: FindParam) => {
-        console.log("zavolany loadDataBase - startIndex = " + findParam.first + ", endIndex = " + (findParam.first + findParam.rows) + ", filters = " + JSON.stringify(findParam.filters) + ", multiSortMeta = " + JSON.stringify(findParam.multiSortMeta) + ", fields = " + JSON.stringify(findParam.fields));
+        //console.log("zavolany loadDataBase - startIndex = " + findParam.first + ", endIndex = " + ((findParam.first ?? 0) + (findParam.rows ?? 0)) + ", filters = " + JSON.stringify(findParam.filters) + ", multiSortMeta = " + JSON.stringify(findParam.multiSortMeta) + ", fields = " + JSON.stringify(findParam.fields));
         setLoading(true);
         const findResult = await findByFilter(findParam);
         setValue(findResult);
         setLoading(false);
+        // odlozime si filter hodnoty pre pripadny export - deep cloning vyzera ze netreba
+        setFiltersAfterFiltering(filters);
     }
 
     const findByFilter = async (findParam: FindParam) : Promise<FindResult> => {
@@ -134,16 +143,30 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
         return fields;
     }
 
+    const getHeaders = (): string[] => {
+
+        // krasne zobrazi cely objekt!
+        //console.log(dataTableEl.current);
+
+        let headers = [];
+        let columns = dataTableEl.current.props.children;
+        for (let column of columns) {
+            // pozor! headers tahame z primereact DataTable a napr. pri editacii nemusi byt v atribute header string
+            headers.push(column.props.header);
+        }
+        return headers;
+    }
+
     const onSelectionChange = (event: any) => {
-        console.log("zavolany onSelectionChange");
-        console.log(event.value);
+        //console.log("zavolany onSelectionChange");
+        //console.log(event.value);
 
         setSelectedRow(event.value);
     }
 
     const onRowDoubleClick = (event: any) => {
-        console.log("zavolany onRowDoubleClick");
-        console.log(event.data);
+        //console.log("zavolany onRowDoubleClick");
+        //console.log(event.data);
 
         if (props.onEdit !== undefined) {
             props.onEdit(event.data);
@@ -154,7 +177,7 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
     }
 
     const onClickAddRow = () => {
-        console.log("zavolany onClickAddRow");
+        //console.log("zavolany onClickAddRow");
 
         if (props.onAddRow !== undefined) {
             props.onAddRow();
@@ -162,7 +185,7 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
     }
 
     const onClickEdit = () => {
-        console.log("zavolany onClickEdit");
+        //console.log("zavolany onClickEdit");
 
         if (selectedRow !== null) {
             if (props.onEdit !== undefined) {
@@ -175,17 +198,22 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
     }
 
     const onClickRemoveRow = async () => {
-        console.log("zavolany onClickRemoveRow");
+        //console.log("zavolany onClickRemoveRow");
 
         if (selectedRow !== null) {
             // zatial nemame moznost override-nut
-            //if (props.onRemoveRow !== undefined) {
-            //    props.onRemoveRow(selectedRow);
-            //}
-            if (window.confirm('Are you sure to remove the selected row?')) {
-                // poznamka: vdaka await bude loadData() bezat az po dobehnuti requestu removeRow
-                await XUtils.removeRow(props.entity, selectedRow);
-                loadData();
+            if (props.removeRow instanceof Function) {
+                const reread = await props.removeRow(selectedRow);
+                if (reread) {
+                    loadData();
+                }
+            }
+            else {
+                if (window.confirm('Are you sure to remove the selected row?')) {
+                    // poznamka: vdaka await bude loadData() bezat az po dobehnuti requestu removeRow
+                    await XUtils.removeRow(props.entity, selectedRow);
+                    loadData();
+                }
             }
         }
         else {
@@ -193,8 +221,55 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
         }
     }
 
+    const onClickExport = async () => {
+
+        // exportujeme zaznamy zodpovedajuce filtru
+        // najprv zistime pocet zaznamov
+        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, first: first, rows: rows, filters: filtersAfterFiltering, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()};
+        //setLoading(true); - iba co preblikuje, netreba nam
+        const findResult = await findByFilter(findParam);
+        //setLoading(false);
+
+        setExportRowsDialogRowCount(findResult.totalRecords); // param pre dialog
+        setExportRowsDialogOpened(true);
+    }
+
+    const exportRowsDialogOnHide = async (ok: boolean, exportType: ExportType | undefined, csvParam: CsvParam | undefined) => {
+
+        if (!ok || exportType === undefined) {
+            setExportRowsDialogOpened(false);
+            return;
+        }
+
+        setExportRowsDialogOpened(false);
+
+        // samotny export
+        const path = 'lazyDataTableExport';
+        if (csvParam && csvParam.useHeaderLine) {
+            csvParam.headers = getHeaders();
+        }
+        const exportParam: ExportParam = {exportType: exportType, filters: filtersAfterFiltering, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), csvParam: csvParam};
+        const response = await XUtils.fetchBasicJson(path, exportParam);
+        if (!response.ok) {
+            const errorMessage = `Http request "${path}" failed. Status: ${response.status}, status text: ${response.statusText}`;
+            console.log(errorMessage);
+            throw errorMessage;
+        }
+        const fileExt: string = exportType;
+        const fileName = `${props.entity}.${fileExt}`;
+        // let respJson = await response.json(); - konvertuje do json objektu
+        let respBlob = await response.blob();
+
+        // download blob-u (download by mal fungovat asynchronne a "stream-ovo" v spolupraci so servrom)
+        let url = window.URL.createObjectURL(respBlob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+    }
+
     const onClickChoose = () => {
-        console.log("zavolany onClickChoose");
+        //console.log("zavolany onClickChoose");
 
         if (selectedRow !== null) {
             if (props.searchTableParams !== undefined) {
@@ -204,6 +279,33 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
         else {
             console.log("Nie je vyselectovany ziaden zaznam.");
         }
+    }
+
+    const onCheckboxFilterChange = (field: string, checkboxValue: boolean | null) => {
+        // TODO - treba vyklonovat?
+        const filtersCloned: Filters = {...filters};
+        if (checkboxValue !== null) {
+            filtersCloned[field] = {value: checkboxValue ? "1" : "0", matchMode: "equals"};
+        }
+        else {
+            // pouzivatel zrusil hodnotu vo filtri (vybral prazdny stav v checkboxe), zrusime polozku z filtra
+            delete filtersCloned[field];
+        }
+        setFilters(filtersCloned);
+    }
+
+    const getCheckboxFilterValue = (field: string) : boolean | null => {
+        let checkboxValue: boolean | null = null;
+        const filterValue: FilterValue = filters[field];
+        if (filterValue !== undefined && filterValue !== null) {
+            if (filterValue.value === '1') {
+                checkboxValue = true;
+            }
+            else if (filterValue.value === '0') {
+                checkboxValue = false;
+            }
+        }
+        return checkboxValue;
     }
 
     const onDropdownFilterChange = (field: string, displayValue: any) => {
@@ -229,8 +331,8 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
     }
 
     const bodyTemplate = (columnProps: XLazyColumnProps, rowData: any, xField: XField): any => {
-        const rowDataValue = XUtils.getValueByPath(rowData, columnProps.field);
-        let bodyValue: string = '';
+        const rowDataValue = XUtilsCommon.getValueByPath(rowData, columnProps.field);
+        let bodyValue: any = '';
         if (xField.type === "decimal") {
             // tuto zatial hack, mal by vzdy prist number
             let numberValue: number | null = null;
@@ -263,6 +365,10 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                 dateValue = rowDataValue;
             }
             bodyValue = datetimeAsUI(dateValue);
+        }
+        else if (xField.type === "boolean") {
+            // TODO - efektivnejsie by bolo renderovat len prislusne ikonky
+            bodyValue = <TriStateCheckbox value={rowDataValue} disabled={true}/>
         }
         return bodyValue;
     }
@@ -342,7 +448,11 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
 
                         // *********** filterElement ***********
                         let filterElement;
-                        if (childColumn.props.dropdownInFilter) {
+                        if (xField.type === "boolean") {
+                            const checkboxValue: boolean | null = getCheckboxFilterValue(childColumn.props.field);
+                            filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => onCheckboxFilterChange(childColumn.props.field, e.value)}/>;
+                        }
+                        else if (childColumn.props.dropdownInFilter) {
                             const dropdownValue = getDropdownFilterValue(childColumn.props.field);
                             filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field} value={dropdownValue} onValueChange={onDropdownFilterChange}/>
                         }
@@ -350,13 +460,13 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                         // *********** body ***********
                         // TODO - mozno by bolo dobre vytvarat body pre kazdy field, nech je to vsetko konzistentne
                         let body;
-                        if (xField.type === "decimal" || xField.type === "date" || xField.type === "datetime") {
+                        if (xField.type === "decimal" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
                             body = (rowData: any) => {return bodyTemplate(childColumn.props, rowData, xField);};
                         }
 
                         // *********** width/headerStyle ***********
                         let width: string | undefined;
-                        if (childColumn.props.width !== undefined) {
+                        if (childColumn.props.width !== undefined && childColumn.props.width !== null) {
                             width = childColumn.props.width;
                             if (!isNaN(Number(width))) { // if width is number
                                 width = width + 'px';
@@ -372,7 +482,7 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
 
                         // *********** align ***********
                         let align = "left"; // default
-                        if (childColumn.props.align !== undefined) {
+                        if (childColumn.props.align !== undefined && childColumn.props.align !== null) {
                             align = childColumn.props.align;
                         }
                         else {
@@ -400,7 +510,10 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
             </DataTable>
             {props.onAddRow !== undefined ? <XButton label="Add row" onClick={onClickAddRow}/> : null}
             {props.onEdit !== undefined ? <XButton label="Edit" onClick={onClickEdit}/> : null}
-            {props.removeRow === true ? <XButton label="Remove row" onClick={onClickRemoveRow}/> : null}
+            {props.removeRow !== undefined && props.removeRow !== false ? <XButton label="Remove row" onClick={onClickRemoveRow}/> : null}
+            <XButton label="Export rows" onClick={onClickExport} />
+            {props.appButtons}
+            <XExportRowsDialog dialogOpened={exportRowsDialogOpened} rowCount={exportRowsDialogRowCount} onHideDialog={exportRowsDialogOnHide}/>
             {props.searchTableParams !== undefined ? <XButton label="Choose" onClick={onClickChoose}/> : null}
         </div>
     );

@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from "react";
 import {XUtils} from "./XUtils";
 import {Dropdown} from "primereact/dropdown";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 // pouzivany vo filtri v XLazyDataTable aj v XFormDataTable2
 export const XDropdownDTFilter = (props: {entity: string; path: string; value: any; onValueChange: (field: string, displayValue: any) => void;}) => {
@@ -8,7 +9,7 @@ export const XDropdownDTFilter = (props: {entity: string; path: string; value: a
     const [options, setOptions] = useState<any[]>([]);
 
     // TODO - upravit tak aby zvladol aj path dlzky 3 a viac
-    const fieldList: string[] = XUtils.getFieldListForPath(props.path);
+    const fieldList: string[] = XUtilsCommon.getFieldListForPath(props.path);
     if (fieldList.length < 2) {
         throw `XDropdownDTFilter: prop path (${props.path}) must have at least 2 fields`;
     }

@@ -237,7 +237,7 @@ export class XBrowse extends Component<XBrowseProps> {
             <div>
                 <XLazyDataTable entity={xBrowseMeta.entity} rows={xBrowseMeta.rows} editMode={this.state.editMode} editModeHandlers={xEditModeHandlers} onEdit={this.onEdit} displayed={(this.props as any).displayed}>
                     {xBrowseMeta.columnMetaList.map(function (xColumnMeta: XColumnMeta, index: number) {
-                            return (<XLazyColumn key={index} field={xColumnMeta.field} header={xColumnMeta.header} dropdownInFilter={xColumnMeta.dropdownInFilter}/>);
+                            return (<XLazyColumn key={index} field={xColumnMeta.field} header={xColumnMeta.header} dropdownInFilter={xColumnMeta.dropdownInFilter} align={xColumnMeta.align} width={xColumnMeta.width}/>);
                         }
                     )}
                 </XLazyDataTable>

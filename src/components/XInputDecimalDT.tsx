@@ -1,8 +1,8 @@
 import {XFormBase} from "./XFormBase";
-import {XUtils} from "./XUtils";
 import React from "react";
 import {InputNumber} from "primereact/inputnumber";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 export const XInputDecimalDT = (props: {form: XFormBase; entity: string; field: string; rowData: any; readOnly?: boolean}) => {
 
@@ -31,7 +31,7 @@ export const XInputDecimalDT = (props: {form: XFormBase; entity: string; field: 
     let fieldValue: number | undefined = undefined;
     // test na undefined je tu koli insertu noveho riadku
     if (props.rowData !== undefined && props.rowData !== null) {
-        let rowDataValue = XUtils.getValueByPath(props.rowData, props.field);
+        let rowDataValue = XUtilsCommon.getValueByPath(props.rowData, props.field);
         //  pre istotu dame na null, null je standard
         //if (rowDataValue === undefined) {
         //    rowDataValue = null;

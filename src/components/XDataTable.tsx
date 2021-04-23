@@ -31,10 +31,10 @@ export const XDataTable = (props: {entity: string; dataKey: string; onSelect: (s
     }
 
     const loadDataBase = async (findParam: FindParam) => {
-        console.log("zavolany loadDataBase - startIndex = " + findParam.first + ", endIndex = " + (findParam.first + findParam.rows) + ", filters = " + JSON.stringify(findParam.filters) + ", multiSortMeta = " + JSON.stringify(findParam.multiSortMeta) + ", fields = " + JSON.stringify(findParam.fields));
+        console.log("zavolany loadDataBase - startIndex = " + findParam.first + ", endIndex = " + ((findParam.first ?? 0) + (findParam.rows ?? 0)) + ", filters = " + JSON.stringify(findParam.filters) + ", multiSortMeta = " + JSON.stringify(findParam.multiSortMeta) + ", fields = " + JSON.stringify(findParam.fields));
         setLoading(true);
         const findResult = await findByFilter(findParam);
-        setValue(findResult.rowList);
+        setValue(findResult.rowList ?? []);
         setLoading(false);
     }
 

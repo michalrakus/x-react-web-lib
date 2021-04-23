@@ -1,9 +1,9 @@
 import {XFormBase} from "./XFormBase";
-import {XUtils} from "./XUtils";
 import {dateFormatCalendar} from "./XUtilsConversions";
 import {XField} from "../serverApi/XEntityMetadata";
 import {Calendar} from "primereact/calendar";
 import React from "react";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 export const XInputDateDT = (props: {form: XFormBase; xField: XField; field: string; rowData: any; readOnly?: boolean}) => {
 
@@ -32,7 +32,7 @@ export const XInputDateDT = (props: {form: XFormBase; xField: XField; field: str
     let fieldValue: Date | undefined = undefined;
     // test na undefined je tu koli insertu noveho riadku
     if (props.rowData !== undefined && props.rowData !== null) {
-        let rowDataValue = XUtils.getValueByPath(props.rowData, props.field);
+        let rowDataValue = XUtilsCommon.getValueByPath(props.rowData, props.field);
         //  pre istotu dame na null, null je standard
         //if (rowDataValue === undefined) {
         //    rowDataValue = null;

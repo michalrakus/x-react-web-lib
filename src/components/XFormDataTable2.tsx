@@ -15,6 +15,7 @@ import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XInputDecimalDT} from "./XInputDecimalDT";
 import {XInputDateDT} from "./XInputDateDT";
 import {XCheckboxDT} from "./XCheckboxDT";
+import {TriStateCheckbox} from "primereact/tristatecheckbox";
 
 export interface XDropdownOptionsMap {
     [assocField: string]: any[];
@@ -67,6 +68,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         this.onSelectionChange = this.onSelectionChange.bind(this);
         this.onDropdownOptionsMapChange = this.onDropdownOptionsMapChange.bind(this);
         this.onFilter = this.onFilter.bind(this);
+        this.onCheckboxFilterChange = this.onCheckboxFilterChange.bind(this);
+        this.getCheckboxFilterValue = this.getCheckboxFilterValue.bind(this);
         this.onDropdownFilterChange = this.onDropdownFilterChange.bind(this);
         this.getDropdownFilterValue = this.getDropdownFilterValue.bind(this);
         this.bodyTemplate = this.bodyTemplate.bind(this);
@@ -122,6 +125,33 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
         // tymto zavolanim sa zapise znak zapisany klavesnicou do inputu filtra (ak prikaz zakomentujeme, input filtra zostane prazdny)
         this.setState({filters: event.filters});
+    }
+
+    onCheckboxFilterChange(field: string, checkboxValue: boolean | null) {
+        // TODO - treba vyklonovat?
+        const filtersCloned: Filters = {...this.state.filters};
+        if (checkboxValue !== null) {
+            filtersCloned[field] = {value: checkboxValue ? "true" : "false", matchMode: "equals"};
+        }
+        else {
+            // pouzivatel zrusil hodnotu vo filtri (vybral prazdny stav v checkboxe), zrusime polozku z filtra
+            delete filtersCloned[field];
+        }
+        this.setState({filters: filtersCloned});
+    }
+
+    getCheckboxFilterValue(field: string) : boolean | null {
+        let checkboxValue: boolean | null = null;
+        const filterValue: FilterValue = this.state.filters[field];
+        if (filterValue !== undefined && filterValue !== null) {
+            if (filterValue.value === 'true') {
+                checkboxValue = true;
+            }
+            else if (filterValue.value === 'false') {
+                checkboxValue = false;
+            }
+        }
+        return checkboxValue;
     }
 
     onDropdownFilterChange(field: string, displayValue: any) {
@@ -261,14 +291,20 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                                 // (aj ked, da sa to prebit na stlpcoch (na elemente Column), su na to atributy)
                                 const field: string = XFormDataTable2.getPathForColumn(childColumnProps);
                                 const header = childColumnProps.header !== undefined ? childColumnProps.header : field;
-                                let filterElement;
-                                if (childColumnProps.dropdownInFilter) {
-                                    const dropdownValue = thisLocal.getDropdownFilterValue(field);
-                                    filterElement = <XDropdownDTFilter entity={thisLocal.getEntity()} path={field} value={dropdownValue} onValueChange={thisLocal.onDropdownFilterChange}/>
-                                }
 
                                 // TODO - toto by sa mohlo vytiahnut vyssie, aj v bodyTemplate sa vola metoda XUtilsMetadata.getXFieldByPath
                                 const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
+
+                                // *********** filterElement ***********
+                                let filterElement;
+                                if (xField.type === "boolean") {
+                                    const checkboxValue: boolean | null = thisLocal.getCheckboxFilterValue(field);
+                                    filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => thisLocal.onCheckboxFilterChange(field, e.value)}/>;
+                                }
+                                else if (childColumnProps.dropdownInFilter) {
+                                    const dropdownValue = thisLocal.getDropdownFilterValue(field);
+                                    filterElement = <XDropdownDTFilter entity={thisLocal.getEntity()} path={field} value={dropdownValue} onValueChange={thisLocal.onDropdownFilterChange}/>
+                                }
 
                                 // *********** width/headerStyle ***********
                                 let width: string | undefined;

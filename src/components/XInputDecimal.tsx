@@ -1,11 +1,11 @@
 import {XFormBase} from "./XFormBase";
 import {XObject} from "./XObject";
-import {XUtils} from "./XUtils";
 import React from "react";
 import {InputNumber} from "primereact/inputnumber";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
-export const XInputDecimal = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; size?: number; inputStyle?: React.CSSProperties;}) => {
+export const XInputDecimal = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; size?: number; labelStyle?: React.CSSProperties; inputStyle?: React.CSSProperties;}) => {
 
     props.form.addField(props.field);
 
@@ -25,6 +25,8 @@ export const XInputDecimal = (props: {form: XFormBase; field: string; label?: st
 
     const sizeInput = props.size !== undefined ? props.size : size;
 
+    const labelStyle = props.labelStyle ?? {width:'150px'};
+
     const onValueChange = (e: any) => {
         // z InputNumber prichadza e.value - typ number alebo null
         props.form.onFieldChange(props.field, e.value);
@@ -33,7 +35,7 @@ export const XInputDecimal = (props: {form: XFormBase; field: string; label?: st
     let fieldValue: number | undefined = undefined;
     const object: XObject | null = props.form.state.object;
     if (object !== null) {
-        let objectValue = XUtils.getValueByPath(object, props.field);
+        let objectValue = XUtilsCommon.getValueByPath(object, props.field);
         //  pre istotu dame na null, null je standard
         //if (objectValue === undefined) {
         //    objectValue = null;
@@ -56,7 +58,7 @@ export const XInputDecimal = (props: {form: XFormBase; field: string; label?: st
     // note: style overrides size (width of the input according to character count)
     return (
         <div className="p-field p-grid">
-            <label htmlFor={props.field} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
+            <label htmlFor={props.field} className="p-col-fixed" style={labelStyle}>{label}</label>
             <InputNumber id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} mode="decimal" locale="de-DE"
                          useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}
                          size={sizeInput} style={props.inputStyle}/>

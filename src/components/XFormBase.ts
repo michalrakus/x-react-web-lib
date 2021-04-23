@@ -27,7 +27,8 @@ export abstract class XFormBase extends Component<FormProps> {
 
     entity?: string; // typ objektu, napr. Car, pouziva sa pri citani objektu z DB
     fields: Set<string>; // zoznam zobrazovanych fieldov (vcetne asoc. objektov) - potrebujeme koli nacitavaniu root objektu
-    state: {object: XObject | null;}; // poznamka: mohli by sme sem dat aj typ any...
+    state: {object: XObject | null;} | any; // poznamka: mohli by sme sem dat aj typ any...
+    // poznamka 2: " | any" sme pridali aby sme mohli do state zapisovat aj neperzistentne atributy typu "this.state.passwordNew"
 
     constructor(props: FormProps) {
         super(props);
@@ -60,11 +61,11 @@ export abstract class XFormBase extends Component<FormProps> {
             throw "XFormBase: Property entity is not defined - use decorator @Form.";
         }
         if (this.props.id !== undefined) {
-            console.log('XFormBase.componentDidMount ide nacitat objekt');
-            console.log(this.fields);
+            //console.log('XFormBase.componentDidMount ide nacitat objekt');
+            //console.log(this.fields);
             const object: XObject = await XUtils.fetchById(this.entity, Array.from(this.fields), this.props.id);
-            console.log('XFormBase.componentDidMount nacital objekt:');
-            console.log(object);
+            //console.log('XFormBase.componentDidMount nacital objekt:');
+            //console.log(object);
             // const price = (object as any).price;
             // console.log(typeof price);
             // console.log(price);
@@ -91,6 +92,10 @@ export abstract class XFormBase extends Component<FormProps> {
 
     getObject(): any {
         return this.getXObject() as any;
+    }
+
+    isAddRow(): any {
+        return this.props.id === undefined;
     }
 
     onFieldChange(field: string, value: any) {
@@ -175,7 +180,7 @@ export abstract class XFormBase extends Component<FormProps> {
     }
 
     async onClickSave() {
-        console.log("zavolany onClickSave");
+        //console.log("zavolany onClickSave");
 
         // docasne na testovanie
         // const object: T | null = this.state.object;
@@ -190,7 +195,7 @@ export abstract class XFormBase extends Component<FormProps> {
         //     }
         // }
 
-        console.log(this.state.object);
+        //console.log(this.state.object);
         const response = await XUtils.post('saveRow', {entity: this.getEntity(), object: this.state.object});
         if (!response.ok) {
             const errorMessage = `Save row failed. Status: ${response.status}, status text: ${response.statusText}`;
@@ -203,7 +208,7 @@ export abstract class XFormBase extends Component<FormProps> {
     }
 
     onClickCancel() {
-        console.log("zavolany onClickCancel");
+        //console.log("zavolany onClickCancel");
 
         // pre XFormNavigator:
         //this.props.openForm(<CarBrowse openForm={this.props.openForm}/>);

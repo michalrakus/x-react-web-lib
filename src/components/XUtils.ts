@@ -1,7 +1,8 @@
-import {dateFormat} from "./XUtilsConversions";
 import {XToken} from "./XToken";
 import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {dateFormat, XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {CsvDecimalFormat, CsvSeparator, ExportType} from "../serverApi/ExportImportParam";
 
 export class XUtils {
 
@@ -16,6 +17,16 @@ export class XUtils {
 
     // nacachovane metadata (setuju sa v App.fetchAndSetXMetadata)
     private static appFormMap: {[name: string]: any;} = {};
+
+    static exportTypeOptions = [ExportType.Csv, ExportType.Json];
+
+    static csvSeparatorOptions = [CsvSeparator.Semicolon, CsvSeparator.Comma];
+
+    static decimalFormatOptions = [CsvDecimalFormat.Comma, CsvDecimalFormat.Dot];
+
+    static demo(): boolean {
+        return XUtils.getXServerUrl().indexOf('x-demo-server') !== -1;
+    }
 
     // zatial nepouzivane - v buducnosti sa takto mozu vytvorit registre browsov a formularov, ktore potom budeme vediet otvorit len na zaklade entity
     static registerAppBrowse(elem: any, entity: string, formId?: string): void {
@@ -48,7 +59,7 @@ export class XUtils {
     }
 
     static async fetch(path: string, value: any): Promise<any> {
-        const response = await XUtils.fetchBasic(path, value);
+        const response = await XUtils.fetchBasicJson(path, value);
         if (!response.ok) {
             const errorMessage = `Http request "${path}" failed. Status: ${response.status}, status text: ${response.statusText}`;
             console.log(errorMessage);
@@ -57,90 +68,62 @@ export class XUtils {
         return await response.json();
     }
 
-    static post(path: string, value: any): Promise<Response> {
-        return XUtils.fetchBasic(path, value);
+    // to iste co XUtils.post (request ktory nevracia json), ale navyse overujeme response.ok
+    static async fetchNoResponse(path: string, value: any) {
+        const response: Response = await XUtils.fetchBasicJson(path, value);
+        if (!response.ok) {
+            const errorMessage = `Http request "${path}" failed. Status: ${response.status}, status text: ${response.statusText}`;
+            console.log(errorMessage);
+            throw errorMessage;
+        }
     }
 
-    static fetchBasic(path: string, value: any): Promise<Response> {
+    static post(path: string, value: any): Promise<Response> {
+        return XUtils.fetchBasicJson(path, value);
+    }
+
+    static fetchBasicJson(path: string, value: any): Promise<Response> {
+        return XUtils.fetchBasic(path, {'Content-Type': 'application/json'}, XUtilsCommon.objectAsJSON(value));
+    }
+
+    static async fetchFile(path: string, jsonFieldValue: any, fileToPost: any): Promise<any> {
+        const formData = new FormData();
+        formData.append(
+            "jsonField",
+            XUtilsCommon.objectAsJSON(jsonFieldValue)
+        );
+        formData.append(
+            "fileField",
+            fileToPost,
+            fileToPost.name
+        );
+        // poznamka: metoda fetch automaticky prida do headers 'Content-Type': 'multipart/form-data' aj s boundery
+        const response = await XUtils.fetchBasic(path, {}, formData);
+        if (!response.ok) {
+            const errorMessage = `Http request "${path}" failed. Status: ${response.status}, status text: ${response.statusText}`;
+            console.log(errorMessage);
+            throw errorMessage;
+        }
+        return await response.json();
+    }
+
+    static fetchBasic(path: string, headers: any, body: any): Promise<Response> {
         let xToken: XToken | null = XUtils.getXToken();
         if (xToken === null) {
             xToken = XUtils.xTokenPublic; // ak nikto nie je prihlaseny, posleme public token
         }
-        const headers: any = {
-            'Content-Type': 'application/json',
+        headers = {...headers,
             'Authorization': `Basic ${Buffer.from(xToken.username + ':' + xToken.password).toString('base64')}`
         };
         return fetch(XUtils.getXServerUrl() + path, {
             method: 'POST',
             headers: headers,
-            body: XUtils.objectAsJSON(value)
+            body: body
         });
     }
 
     static fetchById(entity: string, fields: string[], id: number): Promise<any> {
         return XUtils.fetchOne('findRowById', {entity: entity, fields: fields, id: id})
-    }
-
-    // TODO - toto by sme mohli doplnit o kontrolu ak programator urobil preklep
-    static getValueByPath(object: any, path: string): any {
-        const [field, restPath] = XUtils.getFieldAndRestPath(path);
-        if (restPath === null) {
-            return object[field];
-        }
-        else {
-            const assocObject = object[field];
-            // pri vytvarani noveho riadku - assocObject neni v novom objekte ani ako null (je undefined)
-            if (assocObject !== null && assocObject !== undefined) {
-                return XUtils.getValueByPath(assocObject, restPath);
-            }
-            else {
-                return null; // asociovany objekt je null, aj hodnota atributu bude null
-            }
-        }
-    }
-
-    static getFieldListForPath(path: string): string[] {
-        return path.split('.');
-    }
-
-    static getFieldAndRestPath(path: string): [string, string | null] {
-        const posDot : number = path.indexOf(".");
-        if (posDot === -1) {
-            return [path, null];
-        }
-        else {
-            const assocField = path.substring(0, posDot);
-            const restPath = path.substring(posDot + 1);
-            return [assocField, restPath];
-        }
-    }
-
-    static objectAsJSON(value: any): string {
-
-        // sem treba dat nejaku pre nas vhodnu serializaciu
-        // zatial provizorne robene cez antipatern - modifikaciu prototype funcii primitivnych typov
-        // TODO - bud pouzit nejaky serializator alebo nakodit vlastnu rekurzivnu iteraciu objektov alebo pouzit druhy parameter v JSON.stringify - konvertovaciu funkciu
-
-        const dateToJSONOriginal = Date.prototype.toJSON;
-        Date.prototype.toJSON = function () {
-            // TODO - ak pre datetime nastavime vsetky zlozky casu na 00:00:00, tak sformatuje hodnotu ako datum a spravi chybu pri zapise do DB - zapise  1:00:00
-            let dateStr: string;
-            if (this.getHours() === 0 && this.getMinutes() === 0 && this.getSeconds() === 0) {
-                dateStr = dateFormat(this, 'yyyy-mm-dd');
-            }
-            else {
-                // jedna sa o datetime
-                dateStr = dateFormat(this, 'yyyy-mm-dd HH:MM:ss');
-            }
-            return dateStr;
-        }
-
-        const json: string = JSON.stringify(value);
-
-        // vratime naspet povodnu funkciu
-        Date.prototype.toJSON = dateToJSONOriginal;
-
-        return json;
     }
 
     static setXToken(xToken: XToken | null) {

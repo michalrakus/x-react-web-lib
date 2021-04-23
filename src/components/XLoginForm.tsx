@@ -20,8 +20,8 @@ export const XLoginForm = (props: {setXToken: (xToken: XToken | null) => void;})
         const xUserAuthenticationResponse: XUserAuthenticationResponse = await XUtils.fetchOne('userAuthentication', xUserAuthenticationRequest);
 
         if (xUserAuthenticationResponse.authenticationOk) {
-            console.log("Autentifikacia uspesne zbehla");
-            console.log(xUserAuthenticationResponse.xUser);
+            //console.log("Autentifikacia uspesne zbehla");
+            //console.log(xUserAuthenticationResponse.xUser);
             // zatial si ulozime len username/password (koli http basic autentifikacii)
             props.setXToken({username: username, password: password});
         }

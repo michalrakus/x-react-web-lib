@@ -1,9 +1,9 @@
 import {XFormBase} from "./XFormBase";
 import React from "react";
-import {XUtils} from "./XUtils";
 import {InputText} from "primereact/inputtext";
 import {stringAsUI, stringFromUI} from "./XUtilsConversions";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 export const XInputTextDT = (props: {form: XFormBase; entity: string; field: string; rowData: any; readOnly?: boolean}) => {
 
@@ -31,7 +31,7 @@ export const XInputTextDT = (props: {form: XFormBase; entity: string; field: str
     let fieldValue = "";
     // test na undefined je tu koli insertu noveho riadku
     if (props.rowData !== undefined && props.rowData !== null) {
-        let rowDataValue = XUtils.getValueByPath(props.rowData, props.field);
+        let rowDataValue = XUtilsCommon.getValueByPath(props.rowData, props.field);
         //  pri inserte noveho riadku su (zatial) vsetky fieldy undefined, dame na null, null je standard
         if (rowDataValue === undefined) {
             rowDataValue = null;

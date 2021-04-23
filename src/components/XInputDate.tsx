@@ -1,11 +1,11 @@
 import {XFormBase} from "./XFormBase";
 import {XObject} from "./XObject";
-import {XUtils} from "./XUtils";
 import React from "react";
 import {Calendar} from "primereact/calendar";
 import {dateFormatCalendar} from "./XUtilsConversions";
 import {XField} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 export const XInputDate = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean}) => {
 
@@ -38,7 +38,7 @@ export const XInputDate = (props: {form: XFormBase; field: string; label?: strin
     let fieldValue: Date | undefined = undefined;
     const object: XObject | null = props.form.state.object;
     if (object !== null) {
-        let objectValue = XUtils.getValueByPath(object, props.field);
+        let objectValue = XUtilsCommon.getValueByPath(object, props.field);
         //  pre istotu dame na null, null je standard
         //if (objectValue === undefined) {
         //    objectValue = null;

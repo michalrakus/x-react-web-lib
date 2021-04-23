@@ -1,9 +1,11 @@
 import {XAssoc, XAssocMap, XEntity, XEntityMap, XField} from "../serverApi/XEntityMetadata";
 import {XUtils} from "./XUtils";
 import {XBrowseMeta, XBrowseMetaMap} from "../serverApi/XBrowseMetadata";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 // idelany nazov: UtilsEntityMetadata - ale strasne dlhy
 // tato funkcionalita by mala ist bud do tried XEntity, XField alebo lepsie do nejakeho servisu
+// ekvivalentna funkcionalita sa nachadza aj na servri v servise XEntityMetadataService.ts (TODO - v buducnosti spravit spolocnu triedu/servis)
 export class XUtilsMetadata {
     // nacachovane metadata (setuju sa v App.fetchAndSetXMetadata)
     private static xEntityMap: XEntityMap;
@@ -41,7 +43,7 @@ export class XUtilsMetadata {
     }
 
     static getXFieldByPath(xEntity: XEntity, path: string): XField {
-        const [field, restPath] = XUtils.getFieldAndRestPath(path);
+        const [field, restPath] = XUtilsCommon.getFieldAndRestPath(path);
         if (restPath === null) {
             return XUtilsMetadata.getXField(xEntity, field);
         }

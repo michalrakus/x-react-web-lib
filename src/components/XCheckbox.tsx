@@ -1,12 +1,11 @@
 import React from "react";
-import {InputText} from "primereact/inputtext";
 import {XFormBase} from "./XFormBase";
 import { XObject } from "./XObject";
-import {stringAsUI, stringFromUI} from "./XUtilsConversions";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
-export const XInputText = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; size?: number; labelStyle?: React.CSSProperties; inputStyle?: React.CSSProperties;}) => {
+export const XCheckbox = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; inputStyle?: React.CSSProperties;}) => {
 
     props.form.addField(props.field);
 
@@ -23,31 +22,37 @@ export const XInputText = (props: {form: XFormBase; field: string; label?: strin
         readOnly = props.readOnly !== undefined ? props.readOnly : false;
     }
 
-    const size = props.size !== undefined ? props.size : xField.length;
-
-    const labelStyle = props.labelStyle ?? {width:'150px'};
-
     const onValueChange = (e: any) => {
-        props.form.onFieldChange(props.field, stringFromUI(e.target.value));
+        let newValue: boolean | null = e.value;
+        // pri klikani na TriStateCheckbox prichadza v newValue cyklicky: true -> false -> null
+        // ak mame not null atribut, tak pri null hodnote skocime rovno na true
+        if (!xField.isNullable) {
+            if (newValue === null) {
+                newValue = true;
+            }
+        }
+
+        // zmenime hodnotu v modeli (odtial sa hodnota cita)
+        props.form.onFieldChange(props.field, newValue);
     }
 
-    let fieldValue = "";
+    let fieldValue: boolean | null = null;
     const object: XObject | null = props.form.state.object;
     if (object !== null) {
         let objectValue = XUtilsCommon.getValueByPath(object, props.field);
-        //  pre istotu dame na null, null je standard
+        //  pri inserte noveho riadku su (zatial) vsetky fieldy undefined, dame na null, null je standard
         if (objectValue === undefined) {
             objectValue = null;
         }
         // konvertovat null hodnotu na "" (vo funkcii stringAsUI) je dolezite aby sa prejavila zmena na null v modeli
-        fieldValue = stringAsUI(objectValue);
+        fieldValue = objectValue;
     }
 
     // note: style overrides size (width of the input according to character count)
     return (
         <div className="p-field p-grid">
-            <label htmlFor={props.field} className="p-col-fixed" style={labelStyle}>{label}</label>
-            <InputText id={props.field} value={fieldValue} onChange={onValueChange} readOnly={readOnly} maxLength={xField.length} size={size} style={props.inputStyle}/>
+            <label htmlFor={props.field} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
+            <TriStateCheckbox id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} style={props.inputStyle}/>
         </div>
     );
 }

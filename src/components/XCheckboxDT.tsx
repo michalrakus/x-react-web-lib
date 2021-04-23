@@ -1,9 +1,8 @@
 import {XFormBase} from "./XFormBase";
-import {XUtilsMetadata} from "./XUtilsMetadata";
-import {XUtils} from "./XUtils";
 import React from "react";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XField} from "../serverApi/XEntityMetadata";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 export const XCheckboxDT = (props: {form: XFormBase; xField: XField; field: string; rowData: any; readOnly?: boolean}) => {
 
@@ -35,7 +34,7 @@ export const XCheckboxDT = (props: {form: XFormBase; xField: XField; field: stri
     let fieldValue: boolean | null = null;
     // test na undefined je tu koli insertu noveho riadku
     if (props.rowData !== undefined && props.rowData !== null) {
-        let rowDataValue = XUtils.getValueByPath(props.rowData, props.field);
+        let rowDataValue = XUtilsCommon.getValueByPath(props.rowData, props.field);
         //  pri inserte noveho riadku su (zatial) vsetky fieldy undefined, dame na null, null je standard
         if (rowDataValue === undefined) {
             rowDataValue = null;
