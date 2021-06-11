@@ -1,8 +1,16 @@
 import {XToken} from "./XToken";
 import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
-import {dateFormat, XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {CsvDecimalFormat, CsvSeparator, ExportType} from "../serverApi/ExportImportParam";
+import {XResponseError} from "./XResponseError";
+
+export enum OperationType {
+    None,
+    Insert,
+    Update,
+    Remove
+}
 
 export class XUtils {
 
@@ -45,12 +53,12 @@ export class XUtils {
         return XUtils.appFormMap[formKey];
     }
 
-    static fetchMany(path: string, value: any): Promise<any[]> {
-        return XUtils.fetch(path, value);
+    static fetchMany(path: string, value: any, usePublicToken?: boolean): Promise<any[]> {
+        return XUtils.fetch(path, value, usePublicToken);
     }
 
-    static fetchOne(path: string, value: any): Promise<any> {
-        return XUtils.fetch(path, value);
+    static fetchOne(path: string, value: any, usePublicToken?: boolean): Promise<any> {
+        return XUtils.fetch(path, value, usePublicToken);
     }
 
     static async fetchString(path: string, value: any): Promise<string> {
@@ -58,32 +66,17 @@ export class XUtils {
         return valueObj.value;
     }
 
-    static async fetch(path: string, value: any): Promise<any> {
-        const response = await XUtils.fetchBasicJson(path, value);
-        if (!response.ok) {
-            const errorMessage = `Http request "${path}" failed. Status: ${response.status}, status text: ${response.statusText}`;
-            console.log(errorMessage);
-            throw errorMessage;
-        }
+    static async fetch(path: string, value: any, usePublicToken?: boolean): Promise<any> {
+        const response = await XUtils.fetchBasicJson(path, value, usePublicToken);
         return await response.json();
-    }
-
-    // to iste co XUtils.post (request ktory nevracia json), ale navyse overujeme response.ok
-    static async fetchNoResponse(path: string, value: any) {
-        const response: Response = await XUtils.fetchBasicJson(path, value);
-        if (!response.ok) {
-            const errorMessage = `Http request "${path}" failed. Status: ${response.status}, status text: ${response.statusText}`;
-            console.log(errorMessage);
-            throw errorMessage;
-        }
     }
 
     static post(path: string, value: any): Promise<Response> {
         return XUtils.fetchBasicJson(path, value);
     }
 
-    static fetchBasicJson(path: string, value: any): Promise<Response> {
-        return XUtils.fetchBasic(path, {'Content-Type': 'application/json'}, XUtilsCommon.objectAsJSON(value));
+    static fetchBasicJson(path: string, value: any, usePublicToken?: boolean): Promise<Response> {
+        return XUtils.fetchBasic(path, {'Content-Type': 'application/json'}, XUtilsCommon.objectAsJSON(value), usePublicToken);
     }
 
     static async fetchFile(path: string, jsonFieldValue: any, fileToPost: any): Promise<any> {
@@ -99,27 +92,33 @@ export class XUtils {
         );
         // poznamka: metoda fetch automaticky prida do headers 'Content-Type': 'multipart/form-data' aj s boundery
         const response = await XUtils.fetchBasic(path, {}, formData);
-        if (!response.ok) {
-            const errorMessage = `Http request "${path}" failed. Status: ${response.status}, status text: ${response.statusText}`;
-            console.log(errorMessage);
-            throw errorMessage;
-        }
         return await response.json();
     }
 
-    static fetchBasic(path: string, headers: any, body: any): Promise<Response> {
-        let xToken: XToken | null = XUtils.getXToken();
-        if (xToken === null) {
-            xToken = XUtils.xTokenPublic; // ak nikto nie je prihlaseny, posleme public token
+    static async fetchBasic(path: string, headers: any, body: any, usePublicToken?: boolean): Promise<Response> {
+        let xToken: XToken | null;
+        if (usePublicToken) {
+            xToken = XUtils.xTokenPublic; // public token vzdy
+        }
+        else {
+            xToken = XUtils.getXToken();
+            if (xToken === null) {
+                xToken = XUtils.xTokenPublic; // ak nikto nie je prihlaseny, posleme public token
+            }
         }
         headers = {...headers,
             'Authorization': `Basic ${Buffer.from(xToken.username + ':' + xToken.password).toString('base64')}`
         };
-        return fetch(XUtils.getXServerUrl() + path, {
-            method: 'POST',
-            headers: headers,
-            body: body
-        });
+        const response = await fetch(XUtils.getXServerUrl() + path, {
+                                    method: 'POST',
+                                    headers: headers,
+                                    body: body
+                                });
+        if (!response.ok) {
+            const responseBody = await response.json();
+            throw new XResponseError(path, response.status, response.statusText, responseBody);
+        }
+        return response;
     }
 
     static fetchById(entity: string, fields: string[], id: number): Promise<any> {
@@ -154,12 +153,7 @@ export class XUtils {
     static async removeRow(entity: string, row: any) {
         const xEntity: XEntity = XUtilsMetadata.getXEntity(entity);
         const id = row[xEntity.idField];
-        const response = await XUtils.post('removeRow', {entity: entity, id: id});
-        if (!response.ok) {
-            const errorMessage = `Remove row failed. Status: ${response.status}, status text: ${response.statusText}`;
-            console.log(errorMessage);
-            alert(errorMessage);
-        }
+        await XUtils.post('removeRow', {entity: entity, id: id});
     }
 
     static arrayMoveElement(array: any[], position: number, offset: number) {
@@ -175,5 +169,34 @@ export class XUtils {
         if (positionNew >= 0 && positionNew <= array.length) {
             array.splice(positionNew, 0, element);
         }
+    }
+
+    // helper
+    static isReadOnly(path: string, readOnlyInit?: boolean): boolean {
+        // ak mame path dlzky 2 a viac, field je vzdy readOnly
+        let readOnly: boolean;
+        if (!XUtilsCommon.isSingleField(path)) {
+            readOnly = true;
+        }
+        else {
+            readOnly = readOnlyInit ?? false;
+        }
+        return readOnly;
+    }
+
+    static markNotNull(label: string): string {
+        return label + ' *';
+    }
+
+    static showErrorMessage(message: string, e: Error) {
+        let msg = message + XUtilsCommon.newLine;
+        if (e instanceof XResponseError) {
+            msg += e.message + XUtilsCommon.newLine;
+            msg += JSON.stringify(e.xResponseErrorBody, null, 4);
+        }
+        else if (e instanceof Error) {
+            msg += e.message;
+        }
+        alert(msg);
     }
 }

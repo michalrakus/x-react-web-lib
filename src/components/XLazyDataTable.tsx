@@ -201,17 +201,27 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
         //console.log("zavolany onClickRemoveRow");
 
         if (selectedRow !== null) {
-            // zatial nemame moznost override-nut
             if (props.removeRow instanceof Function) {
-                const reread = await props.removeRow(selectedRow);
+                let reread = true;
+                try {
+                    reread = await props.removeRow(selectedRow);
+                }
+                catch (e) {
+                    XUtils.showErrorMessage("Remove row failed.", e);
+                }
                 if (reread) {
                     loadData();
                 }
             }
             else {
                 if (window.confirm('Are you sure to remove the selected row?')) {
-                    // poznamka: vdaka await bude loadData() bezat az po dobehnuti requestu removeRow
-                    await XUtils.removeRow(props.entity, selectedRow);
+                    try {
+                        // poznamka: vdaka await bude loadData() bezat az po dobehnuti requestu removeRow
+                        await XUtils.removeRow(props.entity, selectedRow);
+                    }
+                    catch (e) {
+                        XUtils.showErrorMessage("Remove row failed.", e);
+                    }
                     loadData();
                 }
             }
@@ -249,11 +259,13 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
             csvParam.headers = getHeaders();
         }
         const exportParam: ExportParam = {exportType: exportType, filters: filtersAfterFiltering, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), csvParam: csvParam};
-        const response = await XUtils.fetchBasicJson(path, exportParam);
-        if (!response.ok) {
-            const errorMessage = `Http request "${path}" failed. Status: ${response.status}, status text: ${response.statusText}`;
-            console.log(errorMessage);
-            throw errorMessage;
+        let response;
+        try {
+            response = await XUtils.fetchBasicJson(path, exportParam);
+        }
+        catch (e) {
+            XUtils.showErrorMessage("Export failed.", e);
+            return;
         }
         const fileExt: string = exportType;
         const fileName = `${props.entity}.${fileExt}`;

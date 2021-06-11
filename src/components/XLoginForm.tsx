@@ -9,7 +9,7 @@ import {
     XUserAuthenticationResponse
 } from "../serverApi/XUserAuthenticationIfc";
 
-export const XLoginForm = (props: {setXToken: (xToken: XToken | null) => void;}) => {
+export const XLoginForm = (props: {setXToken: (xToken: XToken | null) => void; onLogin?: () => void;}) => {
 
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -24,6 +24,10 @@ export const XLoginForm = (props: {setXToken: (xToken: XToken | null) => void;})
             //console.log(xUserAuthenticationResponse.xUser);
             // zatial si ulozime len username/password (koli http basic autentifikacii)
             props.setXToken({username: username, password: password});
+            // metoda pouzivana v XLoginDialog
+            if (props.onLogin) {
+                props.onLogin();
+            }
         }
         else {
             alert("Invalid Username/Password");

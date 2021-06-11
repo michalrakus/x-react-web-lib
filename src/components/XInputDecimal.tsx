@@ -4,6 +4,7 @@ import React from "react";
 import {InputNumber} from "primereact/inputnumber";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XUtils} from "./XUtils";
 
 export const XInputDecimal = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; size?: number; labelStyle?: React.CSSProperties; inputStyle?: React.CSSProperties;}) => {
 
@@ -12,15 +13,10 @@ export const XInputDecimal = (props: {form: XFormBase; field: string; label?: st
     const xField = XUtilsMetadata.getXFieldByPathStr(props.form.getEntity(), props.field);
     const {useGrouping, fractionDigits, min, max, size} = XUtilsMetadata.getParamsForInputNumber(xField);
 
-    const label = props.label !== undefined ? props.label : props.field;
-    // ak mame path, field je vzdy readOnly
-    let readOnly: boolean;
-    const posDot : number = props.field.indexOf(".");
-    if (posDot !== -1) {
-        readOnly = true;
-    }
-    else {
-        readOnly = props.readOnly !== undefined ? props.readOnly : false;
+    let label = props.label ?? props.field;
+    const readOnly: boolean = XUtils.isReadOnly(props.field, props.readOnly);
+    if (!xField.isNullable && !readOnly) {
+        label = XUtils.markNotNull(label);
     }
 
     const sizeInput = props.size !== undefined ? props.size : size;

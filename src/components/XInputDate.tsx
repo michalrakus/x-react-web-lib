@@ -6,6 +6,7 @@ import {dateFormatCalendar} from "./XUtilsConversions";
 import {XField} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XUtils} from "./XUtils";
 
 export const XInputDate = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean}) => {
 
@@ -15,15 +16,10 @@ export const XInputDate = (props: {form: XFormBase; field: string; label?: strin
     const showTime: boolean = (xField.type === 'datetime');
     const cssClassName = showTime ? 'x-input-datetime' : 'x-input-date';
 
-    const label = props.label !== undefined ? props.label : props.field;
-    // ak mame path, field je vzdy readOnly
-    let readOnly: boolean;
-    const posDot : number = props.field.indexOf(".");
-    if (posDot !== -1) {
-        readOnly = true;
-    }
-    else {
-        readOnly = props.readOnly !== undefined ? props.readOnly : false;
+    let label = props.label ?? props.field;
+    const readOnly: boolean = XUtils.isReadOnly(props.field, props.readOnly);
+    if (!xField.isNullable && !readOnly) {
+        label = XUtils.markNotNull(label);
     }
 
     const onValueChange = (e: any) => {

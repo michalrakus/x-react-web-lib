@@ -19,6 +19,7 @@ function generateApi(cb) {
         "./lib/components/XChangePasswordForm",
         "./lib/components/XCheckbox",
         "./lib/components/XDropdown",
+        "./lib/components/XErrors",
         "./lib/components/XFormBase",
         "./lib/components/XFormBaseT",
         "./lib/components/XFormDataTable2",
@@ -35,6 +36,8 @@ function generateApi(cb) {
         "./lib/components/XUtils",
         "./lib/components/XUtilsConversions",
         "./lib/components/XUtilsMetadata",
+
+        "./lib/serverApi/XUtilsCommon",
 
         "./lib/administration/XUserBrowse",
         "./lib/administration/XUserForm",

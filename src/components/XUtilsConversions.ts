@@ -38,6 +38,19 @@ export function numberAsUI(value: number | null, fractionDigits?: number): strin
     }
 }
 
+// v modeli na klientovi by mal byt vzdy Date, teraz je tam niekedy string (z json-u zo servera) a niekedy Date (z komponentu)
+// provizorne zatial takato konverzia
+export function dateFromModel(value: any): Date | null {
+    let dateValue: Date | null = null;
+    if (typeof value === 'string') {
+        dateValue = new Date(value);
+    }
+    else if (typeof value === 'object' && value instanceof Date) {
+        dateValue = value;
+    }
+    return dateValue;
+}
+
 export function dateAsUI(value: Date | null): string {
     if (value !== null) {
         return dateFormat(value, dateFormatUI());
@@ -54,6 +67,25 @@ export function datetimeAsUI(value: Date | null): string {
     else {
         return "";
     }
+}
+
+// provizorne zatial takato konverzia
+export function timeFromModel(value: any): Date | null {
+    let timeValue: Date | null = null;
+    if (typeof value === 'string') {
+        // ak prichadza cas priamo z databazy, pride '19:30:00'
+        // ak prichadza reloadnuty objekt (napr. cez webservis saveRow), pride '2021-06-07 19:30:00'
+        let rowDataCasStr = value;
+        if (rowDataCasStr.length < 10) {
+            // mame '19:30:00' -> pridame hociaky rok aby sme skonvertovali na validny Date
+            rowDataCasStr = '1970-01-01 ' + rowDataCasStr;
+        }
+        timeValue = new Date(rowDataCasStr);
+    }
+    else if (typeof value === 'object' && value instanceof Date) {
+        timeValue = value;
+    }
+    return timeValue;
 }
 
 export function dateFormatUI(): string {

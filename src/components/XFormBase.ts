@@ -1,6 +1,10 @@
 import {Component} from "react";
 import {XObject} from "./XObject";
-import {XUtils} from "./XUtils";
+import {OperationType, XUtils} from "./XUtils";
+import {XFormComponent} from "./XFormComponent";
+import {XFormDataTable2} from "./XFormDataTable2";
+import {XErrorMap, XErrors} from "./XErrors";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 // poznamka - v assoc button-e (XSearchButton, XToOneAssocButton, XFormSearchButtonColumn) je mozne zadat nazov formulara cez property assocForm={<BrandForm/>}
 // pri tomto zapise sa nezadava property id (id sa doplni automaticky pri otvoreni assoc formularu cez klonovanie elementu)
@@ -8,6 +12,7 @@ import {XUtils} from "./XUtils";
 export interface FormProps {
     id?: number;
     object?: XObject; // pri inserte (id je undefined) mozme cez tuto property poslat do formulara objekt s uz nastavenymi niektorymi hodnotami
+    onSaveOrCancel?: (object: XObject | null, objectChange: OperationType) => void; // pouziva sa pri zobrazeni formulara v dialogu (napr. v XAutoCompleteBase) - pri onSave odovzdava updatnuty/insertnuty objekt, pri onCancel odovzdava null
 }
 
 // class decorator ktory nastavuje property entity (dalo by sa to nastavovat v konstruktore ale decorator je menej ukecany)
@@ -27,8 +32,11 @@ export abstract class XFormBase extends Component<FormProps> {
 
     entity?: string; // typ objektu, napr. Car, pouziva sa pri citani objektu z DB
     fields: Set<string>; // zoznam zobrazovanych fieldov (vcetne asoc. objektov) - potrebujeme koli nacitavaniu root objektu
-    state: {object: XObject | null;} | any; // poznamka: mohli by sme sem dat aj typ any...
+    state: {object: XObject | null; errorMap: XErrorMap} | any; // poznamka: mohli by sme sem dat aj typ any...
     // poznamka 2: " | any" sme pridali aby sme mohli do state zapisovat aj neperzistentne atributy typu "this.state.passwordNew"
+
+    xFormComponentList: Array<XFormComponent<any>>; // zoznam jednoduchych komponentov na formulari (vcetne XDropdown, XSearchButton, ...)
+    xFormDataTableList: Array<XFormDataTable2>; // zoznam detailovych tabuliek (obsahuju zoznam dalsich komponentov)
 
     constructor(props: FormProps) {
         super(props);
@@ -49,8 +57,11 @@ export abstract class XFormBase extends Component<FormProps> {
         }
         this.fields = new Set<string>();
         this.state = {
-            object: object
+            object: object,
+            errorMap: {}
         };
+        this.xFormComponentList = [];
+        this.xFormDataTableList = [];
         this.onClickSave = this.onClickSave.bind(this);
         this.onClickCancel = this.onClickCancel.bind(this);
     }
@@ -98,11 +109,16 @@ export abstract class XFormBase extends Component<FormProps> {
         return this.props.id === undefined;
     }
 
-    onFieldChange(field: string, value: any) {
+    onFieldChange(field: string, value: any, error?: string | undefined) {
+
         const object: XObject = this.getXObject();
         object[field] = value;
+
+        const errorMap: XErrorMap = this.state.errorMap;
+        errorMap[field] = {...errorMap[field], onChange: error};
+
         // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
-        this.setState({object: object});
+        this.setState({object: object, errorMap: errorMap});
     }
 
     onTableFieldChange(assocField: string, rowIndex: number, field: string, value: any) {
@@ -165,22 +181,32 @@ export abstract class XFormBase extends Component<FormProps> {
         const rowList: any[] = object[assocField];
         // poznamka: indexOf pri vyhladavani pouziva strict equality (===), 2 objekty su rovnake len ak porovnavame 2 smerniky na totozny objekt
         const index = rowList.indexOf(row);
-        if (index > -1) {
-            rowList.splice(index, 1);
-            // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
-            this.setState({object: object});
+        if (index === -1) {
+            throw "Unexpected error - element 'row' not found in 'rowList'";
         }
-        else {
-            console.log("Neocakavana chyba - nenasiel sa element na zmazanie v poli");
-        }
+        rowList.splice(index, 1);
+        // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
+        this.setState({object: object});
     }
 
     addField(field: string) {
         this.fields.add(field);
     }
 
+    addXFormComponent(xFormComponent: XFormComponent<any>) {
+        this.xFormComponentList.push(xFormComponent);
+    }
+
+    addXFormDataTable(xFormDataTable: XFormDataTable2) {
+        this.xFormDataTableList.push(xFormDataTable);
+    }
+
     async onClickSave() {
         //console.log("zavolany onClickSave");
+
+        if (!this.validateSave()) {
+            return;
+        }
 
         // docasne na testovanie
         // const object: T | null = this.state.object;
@@ -195,25 +221,95 @@ export abstract class XFormBase extends Component<FormProps> {
         //     }
         // }
 
+        const isAddRow = this.isAddRow();
+
         //console.log(this.state.object);
-        const response = await XUtils.post('saveRow', {entity: this.getEntity(), object: this.state.object});
-        if (!response.ok) {
-            const errorMessage = `Save row failed. Status: ${response.status}, status text: ${response.statusText}`;
-            console.log(errorMessage);
-            alert(errorMessage);
+        let object: XObject;
+        try {
+            object = await XUtils.fetch('saveRow', {entity: this.getEntity(), object: this.state.object, reload: this.props.onSaveOrCancel !== undefined});
+        }
+        catch (e) {
+            XUtils.showErrorMessage("Save row failed.", e);
+            return; // zostavame vo formulari
+        }
+
+        if (this.props.onSaveOrCancel !== undefined) {
+            // formular je zobrazeny v dialogu
+            this.props.onSaveOrCancel(object, isAddRow ? OperationType.Insert : OperationType.Update);
         }
         else {
-            (this.props as any).openForm(null);
+            (this.props as any).openForm(null); // standardny rezim; save zbehol, ideme naspet do browsu
         }
     }
 
     onClickCancel() {
-        //console.log("zavolany onClickCancel");
+        if (this.props.onSaveOrCancel !== undefined) {
+            this.props.onSaveOrCancel(null, OperationType.None); // formular je zobrazeny v dialogu
+        }
+        else {
+            // standardny rezim
+            // openForm pridavame automaticky v XFormNavigator2 pri renderovani komponentu
+            // null - vrati sa do predchadzajuceho formularu, z ktoreho bol otvoreny
+            (this.props as any).openForm(null);
+        }
+    }
 
-        // pre XFormNavigator:
-        //this.props.openForm(<CarBrowse openForm={this.props.openForm}/>);
-        // openForm pridavame automaticky v XFormNavigator2 pri renderovani komponentu
-        // null - vrati sa do predchadzajuceho formularu, z ktoreho bol otvoreny
-        (this.props as any).openForm(null);
+    validateSave(): boolean {
+
+        const xErrorMap: XErrorMap = this.validateForm();
+
+        // zatial takto
+        let msg: string = "";
+        for (const [field, xError] of Object.entries(xErrorMap)) {
+            if (xError) {
+                if (xError.onChange || xError.onBlur || xError.form) {
+                    msg += `${field}: ${xError.onChange}, ${xError.onBlur}, ${xError.form}${XUtilsCommon.newLine}`;
+                }
+            }
+        }
+
+        let ok: boolean = true;
+        if (msg !== "") {
+            alert(msg);
+            ok = false;
+        }
+
+        return ok;
+    }
+
+    validateForm(): XErrorMap {
+        const xErrorMap: XErrorMap = this.fieldValidation();
+
+        // form validation
+        const xErrors: XErrors = this.validate(this.getXObject());
+        for (const [field, error] of Object.entries(xErrors)) {
+            if (error) {
+                xErrorMap[field] = {...xErrorMap[field], form: error};
+            }
+        }
+
+        // TODO - optimalizacia - netreba setovat stav ak by sme sli prec z formulara (ak by zbehla validacia aj save a isli by sme naspet do browsu)
+        this.setState({errorMap: xErrorMap});
+        return xErrorMap;
+    }
+
+    fieldValidation(): XErrorMap {
+        const xErrorMap: XErrorMap = {};
+        for (const xFormComponent of this.xFormComponentList) {
+            const errorItem = xFormComponent.validate();
+            if (errorItem) {
+                //console.log("Mame field = " + errorItem.field);
+                xErrorMap[errorItem.field] = errorItem.xError;
+            }
+        }
+        for (const xFormDataTable of this.xFormDataTableList) {
+            // TODO - validate table
+        }
+        return xErrorMap;
+    }
+
+    // this method can be overriden in subclass if needed (custom validation)
+    validate(object: XObject): XErrors {
+        return {};
     }
 }

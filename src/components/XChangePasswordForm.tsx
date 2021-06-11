@@ -41,8 +41,13 @@ export const XChangePasswordForm = (props: {setXToken: (xToken: XToken | null) =
             return;
         }
 
-        // ak request zlyha, vyleti exception
-        await XUtils.fetchNoResponse('userChangePassword', {username: xToken.username, passwordNew: passwordNew});
+        try {
+            await XUtils.post('userChangePassword', {username: xToken.username, passwordNew: passwordNew});
+        }
+        catch (e) {
+            XUtils.showErrorMessage("Change password failed.", e);
+            return;
+        }
 
         // request bol uspesny, heslo je zmenene, zapiseme si ho do token-u
         props.setXToken({username: xToken.username, password: passwordNew});

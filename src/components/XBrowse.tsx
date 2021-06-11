@@ -84,12 +84,12 @@ export class XBrowse extends Component<XBrowseProps> {
         }
 
         console.log(xBrowseMeta);
-        const response = await XUtils.post('saveRow', {entity: "XBrowseMeta", object: xBrowseMeta});
-        if (!response.ok) {
-            const errorMessage = `Save row XBrowseMeta failed. Status: ${response.status}, status text: ${response.statusText}`;
-            console.log(errorMessage);
-            alert(errorMessage);
-            return;
+        try {
+            await XUtils.post('saveRow', {entity: "XBrowseMeta", object: xBrowseMeta});
+        }
+        catch (e) {
+            XUtils.showErrorMessage("Save row XBrowseMeta failed.", e);
+            return; // zostavame v edit mode
         }
 
         // zmeny ulozime aj do cache formularov

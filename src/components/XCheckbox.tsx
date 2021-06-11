@@ -4,6 +4,7 @@ import { XObject } from "./XObject";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XUtils} from "./XUtils";
 
 export const XCheckbox = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; inputStyle?: React.CSSProperties;}) => {
 
@@ -11,15 +12,10 @@ export const XCheckbox = (props: {form: XFormBase; field: string; label?: string
 
     const xField = XUtilsMetadata.getXFieldByPathStr(props.form.getEntity(), props.field);
 
-    const label = props.label !== undefined ? props.label : props.field;
-    // ak mame path, field je vzdy readOnly
-    let readOnly: boolean;
-    const posDot : number = props.field.indexOf(".");
-    if (posDot !== -1) {
-        readOnly = true;
-    }
-    else {
-        readOnly = props.readOnly !== undefined ? props.readOnly : false;
+    let label = props.label ?? props.field;
+    const readOnly: boolean = XUtils.isReadOnly(props.field, props.readOnly);
+    if (!xField.isNullable && !readOnly) {
+        label = XUtils.markNotNull(label);
     }
 
     const onValueChange = (e: any) => {

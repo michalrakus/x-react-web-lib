@@ -66,15 +66,14 @@ export class XUserForm extends XFormBase {
         // zapise this.state.object do DB - samostatny servis koli hashovaniu password-u
         console.log("zavolany onClickSave");
         console.log(this.state.object);
-        const response = await XUtils.post('userSaveRow', {entity: this.getEntity(), object: this.state.object});
-        if (!response.ok) {
-            const errorMessage = `Save row failed. Status: ${response.status}, status text: ${response.statusText}`;
-            console.log(errorMessage);
-            alert(errorMessage);
+        try {
+            await XUtils.post('userSaveRow', {entity: this.getEntity(), object: this.state.object});
         }
-        else {
-            (this.props as any).openForm(null);
+        catch (e) {
+            XUtils.showErrorMessage("Save row failed.", e);
+            return; // zostavame vo formulari
         }
+        (this.props as any).openForm(null); // save zbehol, ideme naspet do browsu
     }
 
     render() {

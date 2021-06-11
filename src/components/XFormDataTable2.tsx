@@ -100,6 +100,39 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
     }
 
+    static getHeader(columnProps: XFormColumnProps, xEntity: XEntity, field: string, xField: XField): string {
+        // poznamky - parametre field a xField by sme mohli vyratavat na zaklade columnProps ale kedze ich uz mame, setrime performance a neduplikujeme vypocet
+        // nie je to tu uplne idealne nakodene, ale je to pomerne prehladne
+        let isNullable: boolean = true;
+        let readOnly: boolean = false;
+        if (columnProps.type === "inputSimple") {
+            const columnPropsInputSimple = (columnProps as XFormInputSimpleColumnProps);
+            isNullable = xField.isNullable;
+            readOnly = XUtils.isReadOnly(columnPropsInputSimple.field, columnProps.readOnly);
+        }
+        else if (columnProps.type === "dropdown") {
+            const columnPropsDropdown = (columnProps as XFormDropdownColumnProps);
+            const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(xEntity, columnPropsDropdown.assocField);
+            isNullable = xAssoc.isNullable;
+            readOnly = columnProps.readOnly ?? false;
+        }
+        else if (columnProps.type === "searchButton") {
+            const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
+            const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(xEntity, columnPropsSearchButton.assocField);
+            isNullable = xAssoc.isNullable;
+            readOnly = columnProps.readOnly ?? false;
+        }
+        else {
+            throw "Unknown prop type = " + columnProps.type;
+        }
+
+        let header = columnProps.header ?? field;
+        if (!isNullable && !readOnly) {
+            header = XUtils.markNotNull(header);
+        }
+        return header;
+    }
+
     getEntity(): string {
         if (this.entity === undefined) {
             throw `Unexpected error: this.entity is undefined`;
@@ -290,10 +323,12 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                                 // je dolezite, aby field obsahoval cely path az po zobrazovany atribut, lebo podla neho sa vykonava filtrovanie a sortovanie
                                 // (aj ked, da sa to prebit na stlpcoch (na elemente Column), su na to atributy)
                                 const field: string = XFormDataTable2.getPathForColumn(childColumnProps);
-                                const header = childColumnProps.header !== undefined ? childColumnProps.header : field;
 
                                 // TODO - toto by sa mohlo vytiahnut vyssie, aj v bodyTemplate sa vola metoda XUtilsMetadata.getXFieldByPath
                                 const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
+
+                                // *********** header ***********
+                                const header: string = XFormDataTable2.getHeader(childColumnProps, xEntity, field, xField);
 
                                 // *********** filterElement ***********
                                 let filterElement;
