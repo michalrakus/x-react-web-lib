@@ -1,7 +1,6 @@
 import React, {Component} from "react";
 import {XFormBase} from "./XFormBase";
 import {XError} from "./XErrors";
-import {Dropdown} from "primereact/dropdown";
 
 export interface XFormComponentProps {
     form: XFormBase;
@@ -68,7 +67,8 @@ export class XFormComponent<P extends XFormComponentProps> extends Component<P> 
         return null;
     }
 
-    getClassNameTooltip(): {} {
+    // vrati error message z form.state.errorMap
+    getError(): string | undefined {
         const field = this.getFieldForEdit();
         if (field) {
             const error: XError = this.props.form.state.errorMap[field];
@@ -90,10 +90,20 @@ export class XFormComponent<P extends XFormComponentProps> extends Component<P> 
                         }
                         message += error.form;
                     }
-                    return {className: "p-invalid", tooltip: message, tooltipOptions: { className: 'pink-tooltip', position: 'bottom' }};
+                    return message;
                 }
             }
         }
-        return {};
+        return undefined;
+    }
+
+    // deprecated - nie je to pekne riesenie - do komponentu treba posielat error message (string) a nie props
+    getClassNameTooltip(): {} {
+        const error = this.getError();
+        return error ? {
+            className: "p-invalid",
+            tooltip: error,
+            tooltipOptions: {className: 'pink-tooltip', position: 'bottom'}
+        } : {};
     }
 }

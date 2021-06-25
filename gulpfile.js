@@ -14,6 +14,8 @@ function generateApi(cb) {
 
     const apiFileList = [
         "./lib/components/useXToken",
+        "./lib/components/XAutoComplete",
+        "./lib/components/XAutoCompleteBase",
         "./lib/components/XButton",
         "./lib/components/XBrowse",
         "./lib/components/XChangePasswordForm",
@@ -29,6 +31,7 @@ function generateApi(cb) {
         "./lib/components/XInputDecimal",
         "./lib/components/XInputText",
         "./lib/components/XLazyDataTable",
+        "./lib/components/XLoginDialog",
         "./lib/components/XLoginForm",
         "./lib/components/XSearchButton",
         "./lib/components/XToken",

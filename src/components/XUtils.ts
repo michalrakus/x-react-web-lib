@@ -36,6 +36,16 @@ export class XUtils {
         return XUtils.getXServerUrl().indexOf('x-demo-server') !== -1;
     }
 
+    static isMobile(): boolean {
+        // extra small displays (podla https://www.w3schools.com/howto/howto_css_media_query_breakpoints.asp)
+        // mozno tu treba dat (window.screen.width * window.devicePixelRatio)
+        return typeof window !== 'undefined' && window.screen.availWidth <= 600; // $sm = 576 (primeflex)
+    }
+
+    static mobileCssSuffix(): string {
+        return XUtils.isMobile() ? '-mobile' : '';
+    }
+
     // zatial nepouzivane - v buducnosti sa takto mozu vytvorit registre browsov a formularov, ktore potom budeme vediet otvorit len na zaklade entity
     static registerAppBrowse(elem: any, entity: string, formId?: string): void {
         // console.log("***************** sme v register");
@@ -53,11 +63,11 @@ export class XUtils {
         return XUtils.appFormMap[formKey];
     }
 
-    static fetchMany(path: string, value: any, usePublicToken?: boolean): Promise<any[]> {
+    static fetchMany(path: string, value: any, usePublicToken?: boolean | XToken): Promise<any[]> {
         return XUtils.fetch(path, value, usePublicToken);
     }
 
-    static fetchOne(path: string, value: any, usePublicToken?: boolean): Promise<any> {
+    static fetchOne(path: string, value: any, usePublicToken?: boolean | XToken): Promise<any> {
         return XUtils.fetch(path, value, usePublicToken);
     }
 
@@ -66,7 +76,7 @@ export class XUtils {
         return valueObj.value;
     }
 
-    static async fetch(path: string, value: any, usePublicToken?: boolean): Promise<any> {
+    static async fetch(path: string, value: any, usePublicToken?: boolean | XToken): Promise<any> {
         const response = await XUtils.fetchBasicJson(path, value, usePublicToken);
         return await response.json();
     }
@@ -75,7 +85,7 @@ export class XUtils {
         return XUtils.fetchBasicJson(path, value);
     }
 
-    static fetchBasicJson(path: string, value: any, usePublicToken?: boolean): Promise<Response> {
+    static fetchBasicJson(path: string, value: any, usePublicToken?: boolean | XToken): Promise<Response> {
         return XUtils.fetchBasic(path, {'Content-Type': 'application/json'}, XUtilsCommon.objectAsJSON(value), usePublicToken);
     }
 
@@ -95,9 +105,12 @@ export class XUtils {
         return await response.json();
     }
 
-    static async fetchBasic(path: string, headers: any, body: any, usePublicToken?: boolean): Promise<Response> {
+    static async fetchBasic(path: string, headers: any, body: any, usePublicToken?: boolean | XToken): Promise<Response> {
         let xToken: XToken | null;
-        if (usePublicToken) {
+        if (typeof usePublicToken === 'object') {
+            xToken = usePublicToken;
+        }
+        else if (usePublicToken) {
             xToken = XUtils.xTokenPublic; // public token vzdy
         }
         else {
@@ -198,5 +211,10 @@ export class XUtils {
             msg += e.message;
         }
         alert(msg);
+    }
+
+    // pouziva sa hlavne na inputy
+    static createErrorProps(error: string | undefined): {} {
+        return error ? {className: "p-invalid", tooltip: error, tooltipOptions: { className: 'pink-tooltip', position: 'bottom' }} : {};
     }
 }

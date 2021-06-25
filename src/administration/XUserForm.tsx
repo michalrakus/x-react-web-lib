@@ -31,6 +31,10 @@ export class XUserForm extends XFormBase {
 
     async onClickSave(): Promise<void> {
 
+        if (!this.validateSave()) {
+            return;
+        }
+
         // v deme nedovolime zmenit uzivatelov ktori sa pouzivaju na skusanie dema
         if (XUtils.demo() && (this.state.object.username === 'jozko' || this.state.object.username === 'xman')) {
             alert("Users jozko, xman can not be changed.");
@@ -64,8 +68,6 @@ export class XUserForm extends XFormBase {
         }
 
         // zapise this.state.object do DB - samostatny servis koli hashovaniu password-u
-        console.log("zavolany onClickSave");
-        console.log(this.state.object);
         try {
             await XUtils.post('userSaveRow', {entity: this.getEntity(), object: this.state.object});
         }
@@ -79,15 +81,15 @@ export class XUserForm extends XFormBase {
     render() {
         return (
             <div>
-                <XInputDecimal form={this} field="idXUser" label="ID" readOnly={true} labelStyle={{width:'200px'}}/>
-                <XInputText form={this} field="username" label="Username" size={20} labelStyle={{width:'200px'}} readOnly={this.state.usernameReadOnly}/>
-                <XInputText form={this} field="name" label="Name" size={30} labelStyle={{width:'200px'}}/>
+                <XInputDecimal form={this} field="idXUser" label="ID" readOnly={true} labelStyle={{width:'14rem'}}/>
+                <XInputText form={this} field="username" label="Username" size={20} labelStyle={{width:'14rem'}} readOnly={this.state.usernameReadOnly}/>
+                <XInputText form={this} field="name" label="Name" size={30} labelStyle={{width:'14rem'}}/>
                 <div className="p-field p-grid">
-                    <label className="p-col-fixed" style={{width:'200px'}}>New password</label>
+                    <label className="p-col-fixed" style={{width:'14rem'}}>New password</label>
                     <Password value={this.state.passwordNew} onChange={(e: any) => this.setState({passwordNew: e.target.value})} feedback={false} maxLength={64} size={20}/>
                 </div>
                 <div className="p-field p-grid">
-                    <label className="p-col-fixed" style={{width:'200px', whiteSpace:'nowrap'}}>Confirm new password</label>
+                    <label className="p-col-fixed" style={{width:'14rem', whiteSpace:'nowrap'}}>Confirm new password</label>
                     <Password value={this.state.passwordNewConfirm} onChange={(e: any) => this.setState({passwordNewConfirm: e.target.value})} feedback={false} maxLength={64} size={20}/>
                 </div>
                 <XButton label="Save" onClick={this.onClickSave} />

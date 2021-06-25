@@ -3,4 +3,5 @@
 export interface XToken {
     username: string;
     password: string;
+    customUser?: any; // user info specificke pre dany projekt (nepovinne)
 }

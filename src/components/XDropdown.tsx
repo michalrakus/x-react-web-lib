@@ -81,6 +81,8 @@ export class XDropdown extends XFormComponent<XDropdownProps> {
 
         const readOnly = props.readOnly ?? false;
 
+        const labelStyle = props.labelStyle ?? {width:'150px'};
+
         const onValueChange = (e: any) => {
             let newValueOrNull: any;
             // specialna null polozka nema ziadne atributy
@@ -100,7 +102,7 @@ export class XDropdown extends XFormComponent<XDropdownProps> {
 
         return (
             <div className="p-field p-grid">
-                <label htmlFor={props.assocField} className="p-col-fixed" style={{width: '150px'}}>{label}</label>
+                <label htmlFor={props.assocField} className="p-col-fixed" style={labelStyle}>{label}</label>
                 <Dropdown id={props.assocField} optionLabel={props.displayField} value={assocObject} options={options} onChange={onValueChange}
                           {...this.getClassNameTooltip()}/>
             </div>

@@ -1,6 +1,6 @@
 {
   "name": "@michalrakus/x-react-web-lib",
-  "version": "0.15.0",
+  "version": "0.17.0",
   "description": "",
   "scripts": {
     "clean": "rimraf lib",
@@ -10,6 +10,7 @@
     "linkDemo": "npm link && npm link ../DemoReactWebApp/node_modules/react",
     "linkDemoRouter": "npm link && npm link ../demo-router-web-app/node_modules/react",
     "linkKvm": "npm link && npm link ../kvm-web-app/node_modules/react",
+    "linkKvmNext": "npm link && npm link ../kvm-next-web-app/node_modules/react",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepublishOnly": "npm run build"
   },

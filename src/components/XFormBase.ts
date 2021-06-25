@@ -221,6 +221,8 @@ export abstract class XFormBase extends Component<FormProps> {
         //     }
         // }
 
+        this.preSave(this.state.object);
+
         const isAddRow = this.isAddRow();
 
         //console.log(this.state.object);
@@ -311,5 +313,9 @@ export abstract class XFormBase extends Component<FormProps> {
     // this method can be overriden in subclass if needed (custom validation)
     validate(object: XObject): XErrors {
         return {};
+    }
+
+    // this method can be overriden in subclass if needed (to modify object before save)
+    preSave(object: XObject) {
     }
 }

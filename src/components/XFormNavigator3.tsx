@@ -52,7 +52,8 @@ export class XFormNavigator3 extends Component<XFormNavigator3Props> {
                 // TODO - do buducnosti - ak nechceme drzat stav componentu cez display: "none", staci vratit null (komponent vobec nevyrenderujeme)
                 const display: string = (displayed ? "block" : "none");
                 // TODO - neviem ci naisto treba key={index}
-                return <div key={index} style={{display: display}}>{formElementCloned}</div>;
+                // max-width: 100% - koli chybe ked sa na mobile nezobrazovala lava cast tabulky/formularu (nedalo sa k nej doscrollovat)
+                return <div key={index} style={{display: display, maxWidth: "100%"}}>{formElementCloned}</div>;
             }
         );
         return (
