@@ -163,9 +163,18 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 */
 
     setFocusToInput() {
-        //povodne bolo (kym bol XAutoCompleteBase priamo v projekte):
-        // this.autoCompleteRef.current.inputRef.current.focus();
-        this.autoCompleteRef.current.inputEl.focus();
+        if (this.autoCompleteRef.current.inputRef !== undefined) {
+            // funguje ak je XAutoCompleteBase priamo v projekte, tiez funguje ak sa pouziva lib-ka z npmjs.com
+            // nefunguje ak mame lib-ku priamo nalinkovanu na projekt (zmeny lib-ky pocas vyvoja)(minimalne next projekt kvm-next-web-app nefungoval)
+            this.autoCompleteRef.current.inputRef.current.focus();
+        }
+        else {
+            // pozor! nefunguje ak sa lib-ka pouziva z npmjs.com,
+            // je tu koli tomu ked je lib-ka priamo nalinkovana na projekt
+            // je to hack ale neviem to lepsie vyriesit
+            console.log('Warning! this.autoCompleteRef.current.inputRef is undefined - we try to use this.autoCompleteRef.current.inputEl instead');
+            this.autoCompleteRef.current.inputEl.focus();
+        }
     }
 
     setObjectValue(object: any, objectChange: OperationType) {
