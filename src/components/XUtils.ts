@@ -217,4 +217,13 @@ export class XUtils {
     static createErrorProps(error: string | undefined): {} {
         return error ? {className: "p-invalid", tooltip: error, tooltipOptions: { className: 'pink-tooltip', position: 'bottom' }} : {};
     }
+
+    // pomocna metodka pouzivana (zatial len) pre autocomplete na ignorovanie velkych-malych znakov a diakritiky
+    static normalizeString(value: string): string {
+        if (value) {
+            // odstranuje vselijaku moznu diakritiku, pre nas je dolezite, ze zmeni "ľščťžýáíéúäňô" na "lsctzyaieuano"
+            value = value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+        return value;
+    }
 }

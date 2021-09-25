@@ -60,6 +60,7 @@ export const XChangePasswordForm = (props: {setXToken: (xToken: XToken | null) =
     }
 
     return(
+        // autoComplete="new-password" - bez tohto chrome predplna user/password, ak si user da ulozit user/password (pre danu url)
         <div>
             <h2>Change password</h2>
             <div className="p-field p-grid">
@@ -68,15 +69,15 @@ export const XChangePasswordForm = (props: {setXToken: (xToken: XToken | null) =
             </div>
             <div className="p-field p-grid">
                 <label className="p-col-fixed" style={{width:'200px'}}>Current password</label>
-                <Password value={passwordCurrent} onChange={(e: any) => setPasswordCurrent(e.target.value)} feedback={false} maxLength={64}/>
+                <Password value={passwordCurrent} onChange={(e: any) => setPasswordCurrent(e.target.value)} feedback={false} maxLength={64} autoComplete="new-password"/>
             </div>
             <div className="p-field p-grid">
                 <label className="p-col-fixed" style={{width:'200px'}}>New password</label>
-                <Password value={passwordNew} onChange={(e: any) => setPasswordNew(e.target.value)} feedback={false} maxLength={64}/>
+                <Password value={passwordNew} onChange={(e: any) => setPasswordNew(e.target.value)} feedback={false} maxLength={64} autoComplete="new-password"/>
             </div>
             <div className="p-field p-grid">
                 <label className="p-col-fixed" style={{width:'200px'}}>Confirm new password</label>
-                <Password value={passwordNewConfirm} onChange={(e: any) => setPasswordNewConfirm(e.target.value)} feedback={false} maxLength={64}/>
+                <Password value={passwordNewConfirm} onChange={(e: any) => setPasswordNewConfirm(e.target.value)} feedback={false} maxLength={64} autoComplete="new-password"/>
             </div>
             <Button label="Save" onClick={onClickSave} />
         </div>

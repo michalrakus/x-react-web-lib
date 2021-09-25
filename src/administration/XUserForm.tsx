@@ -79,6 +79,7 @@ export class XUserForm extends XFormBase {
     }
 
     render() {
+        // autoComplete="new-password" - bez tohto chrome predplna user/password, ak si user da ulozit user/password (pre danu url)
         return (
             <div>
                 <XInputDecimal form={this} field="idXUser" label="ID" readOnly={true} labelStyle={{width:'14rem'}}/>
@@ -86,11 +87,11 @@ export class XUserForm extends XFormBase {
                 <XInputText form={this} field="name" label="Name" size={30} labelStyle={{width:'14rem'}}/>
                 <div className="p-field p-grid">
                     <label className="p-col-fixed" style={{width:'14rem'}}>New password</label>
-                    <Password value={this.state.passwordNew} onChange={(e: any) => this.setState({passwordNew: e.target.value})} feedback={false} maxLength={64} size={20}/>
+                    <Password value={this.state.passwordNew} onChange={(e: any) => this.setState({passwordNew: e.target.value})} feedback={false} maxLength={64} size={20} autoComplete="new-password"/>
                 </div>
                 <div className="p-field p-grid">
                     <label className="p-col-fixed" style={{width:'14rem', whiteSpace:'nowrap'}}>Confirm new password</label>
-                    <Password value={this.state.passwordNewConfirm} onChange={(e: any) => this.setState({passwordNewConfirm: e.target.value})} feedback={false} maxLength={64} size={20}/>
+                    <Password value={this.state.passwordNewConfirm} onChange={(e: any) => this.setState({passwordNewConfirm: e.target.value})} feedback={false} maxLength={64} size={20} autoComplete="new-password"/>
                 </div>
                 <XButton label="Save" onClick={this.onClickSave} />
                 <XButton label="Cancel" onClick={this.onClickCancel} />

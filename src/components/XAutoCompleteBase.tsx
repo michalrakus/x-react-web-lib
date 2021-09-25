@@ -68,9 +68,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             filteredSuggestions = [...this.props.suggestions];
         }
         else {
+            const queryNormalized = XUtils.normalizeString(event.query);
             filteredSuggestions = this.props.suggestions.filter((suggestion) => {
                 const fieldValue: string = suggestion[this.props.field];
-                return fieldValue.toLowerCase().startsWith(event.query.toLowerCase());
+                // bolo:
+                //return XUtils.normalizeString(fieldValue).startsWith(queryNormalized);
+                return XUtils.normalizeString(fieldValue).indexOf(queryNormalized) !== -1;
             });
         }
 
