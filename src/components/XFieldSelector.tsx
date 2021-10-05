@@ -40,9 +40,9 @@ export const XFieldSelector = (props: {entity: string; assocSelectable: boolean;
 
     return (
         <TreeTable value={treeNodeList} selectionMode="single" selectionKeys={props.selectionField} onSelectionChange={e => props.onSelectionChange(e.value)}
-                   className="x-field-treetable p-treetable-sm" scrollable scrollHeight="400px">
-            <Column field="name" header="Field name" headerStyle={{width: "220px"}} expander></Column>
-            <Column field="type" header="Type" headerStyle={{width: "130px"}}></Column>
+                   className="x-field-treetable p-treetable-sm" scrollable scrollHeight="20rem">
+            <Column field="name" header="Field name" headerStyle={{width: "15.7rem"}} expander></Column>
+            <Column field="type" header="Type" headerStyle={{width: "9.3rem"}}></Column>
         </TreeTable>
     );
 }

@@ -81,7 +81,7 @@ export class XDropdown extends XFormComponent<XDropdownProps> {
 
         const readOnly = props.readOnly ?? false;
 
-        const labelStyle = props.labelStyle ?? {width:'150px'};
+        const labelStyle = props.labelStyle ?? {width: XUtils.FIELD_LABEL_WIDTH};
 
         const onValueChange = (e: any) => {
             let newValueOrNull: any;
@@ -101,8 +101,8 @@ export class XDropdown extends XFormComponent<XDropdownProps> {
         let assocObject = this.getValueFromObject();
 
         return (
-            <div className="p-field p-grid">
-                <label htmlFor={props.assocField} className="p-col-fixed" style={labelStyle}>{label}</label>
+            <div className="field grid">
+                <label htmlFor={props.assocField} className="col-fixed" style={labelStyle}>{label}</label>
                 <Dropdown id={props.assocField} optionLabel={props.displayField} value={assocObject} options={options} onChange={onValueChange}
                           {...this.getClassNameTooltip()}/>
             </div>

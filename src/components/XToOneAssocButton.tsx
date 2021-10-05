@@ -3,6 +3,7 @@ import {XObject} from "./XObject";
 import React from "react";
 import {Button} from "primereact/button";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {XUtils} from "./XUtils";
 
 export const XToOneAssocButton = (props: {form: XFormBase; assocField: string; assocForm: any; label?: string;}) => {
 
@@ -25,8 +26,8 @@ export const XToOneAssocButton = (props: {form: XFormBase; assocField: string; a
     }
 
     return (
-        <div className="p-field p-grid">
-            <label htmlFor={props.assocField} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
+        <div className="field grid">
+            <label htmlFor={props.assocField} className="col-fixed" style={{width: XUtils.FIELD_LABEL_WIDTH}}>{label}</label>
             <Button label={label} onClick={onClickButton} disabled={assocObject === null}/>
         </div>
     );

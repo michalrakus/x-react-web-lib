@@ -41,12 +41,12 @@ export const XLoginForm = (props: {setXToken: (xToken: XToken | null) => void; o
     return(
         <div>
             <h2>Please log in</h2>
-            <div className="p-field p-grid">
-                <label htmlFor="userName" className="p-col-fixed" style={{width:'150px'}}>Username</label>
+            <div className="field grid">
+                <label htmlFor="userName" className="col-fixed" style={{width:'10.5rem'}}>Username</label>
                 <InputText id="userName" value={username} onChange={(e: any) => setUsername(e.target.value)} maxLength={64}/>
             </div>
-            <div className="p-field p-grid">
-                <label htmlFor="password" className="p-col-fixed" style={{width:'150px'}}>Password</label>
+            <div className="field grid">
+                <label htmlFor="password" className="col-fixed" style={{width:'10.5rem'}}>Password</label>
                 <Password id="password" value={password} onChange={(e: any) => setPassword(e.target.value)} feedback={false} maxLength={64}/>
             </div>
             <Button label="Log in" onClick={onClickLogIn} />

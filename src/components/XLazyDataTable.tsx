@@ -27,7 +27,8 @@ export interface XEditModeHandlers {
     onMoveColumnRight: (field: string) => void;
 }
 
-export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: number; onAddRow?: () => void; onEdit?: (selectedRow: any) => void; removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean; appButtons?: any; searchTableParams?: SearchTableParams; width?: string; editMode?: boolean; editModeHandlers?: XEditModeHandlers; displayed?: boolean; children: ReactChild[];}) => {
+// POZNAMKA: parameter width?: string; neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
+export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: number; scrollWidth?: string; scrollHeight?: string; onAddRow?: () => void; onEdit?: (selectedRow: any) => void; removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean; appButtons?: any; searchTableParams?: SearchTableParams; width?: string; editMode?: boolean; editModeHandlers?: XEditModeHandlers; displayed?: boolean; children: ReactChild[];}) => {
 
     const dataTableEl = useRef<any>(null);
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0});
@@ -387,11 +388,27 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
 
     const xEntity: XEntity = XUtilsMetadata.getXEntity(props.entity);
 
+    let scrollable: boolean;
+    if (props.scrollWidth !== undefined || props.scrollHeight !== undefined) {
+        scrollable = true;
+    }
+    else {
+        scrollable = false;
+    }
+
+    let style: {};
+    if (props.scrollWidth !== undefined) {
+        style = {width: props.scrollWidth};
+    }
+    else {
+        style = {width: 'min-content'}; // ak nic nedame (nechame auto), tak natiahne tabulku na celu sirku stranky, co nechceme; min-content stlaci sirku stranky
+    }
+
     let tableStyle;
     if (props.width !== undefined) {
         let width: string = props.width;
         if (!isNaN(Number(width))) { // if width is number
-            width = width + 'px';
+            width = width + 'rem';
         }
         tableStyle = {width: width};
     }
@@ -419,7 +436,9 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
     // poznamka - resizableColumns su zrusene lebo nefunguje dropdown vo filtri
     return (
         <div className="x-lazy-datatable">
-            <XButton label="Filter" onClick={onClickFilter} />
+            <div className="flex justify-content-center">
+                <XButton label="Filter" onClick={onClickFilter} />
+            </div>
             <DataTable value={value.rowList} dataKey={dataKey} paginator={true} rows={rows} totalRecords={value.totalRecords}
                        lazy={true} first={first} onPage={onPage} loading={loading}
                        filters={filters} onFilter={onFilter}
@@ -427,7 +446,8 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                        selectionMode="single" selection={selectedRow} onSelectionChange={onSelectionChange}
                        onRowDoubleClick={onRowDoubleClick}
                        ref={dataTableEl} className="p-datatable-sm" /*resizableColumns columnResizeMode="expand"*/ tableStyle={tableStyle}
-                       paginatorLeft={paginatorLeft} paginatorRight={paginatorRight}>
+                       paginatorLeft={paginatorLeft} paginatorRight={paginatorRight}
+                       scrollable={scrollable} scrollHeight={props.scrollHeight} style={style}>
                 {React.Children.map(
                     props.children,
                     function(child) {
@@ -481,11 +501,11 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                         if (childColumn.props.width !== undefined && childColumn.props.width !== null) {
                             width = childColumn.props.width;
                             if (!isNaN(Number(width))) { // if width is number
-                                width = width + 'px';
+                                width = width + 'rem';
                             }
                         }
                         else {
-                            width = XUtilsMetadata.computeColumnWidth(xField);
+                            width = XUtilsMetadata.computeColumnWidth(xField, undefined, headerLabel);
                         }
                         let headerStyle;
                         if (width !== undefined) {
@@ -520,13 +540,15 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
                     }
                 )}
             </DataTable>
-            {props.onAddRow !== undefined ? <XButton label="Add row" onClick={onClickAddRow}/> : null}
-            {props.onEdit !== undefined ? <XButton label="Edit" onClick={onClickEdit}/> : null}
-            {props.removeRow !== undefined && props.removeRow !== false ? <XButton label="Remove row" onClick={onClickRemoveRow}/> : null}
-            <XButton label="Export rows" onClick={onClickExport} />
-            {props.appButtons}
-            <XExportRowsDialog dialogOpened={exportRowsDialogOpened} rowCount={exportRowsDialogRowCount} onHideDialog={exportRowsDialogOnHide}/>
-            {props.searchTableParams !== undefined ? <XButton label="Choose" onClick={onClickChoose}/> : null}
+            <div className="flex justify-content-center">
+                {props.onAddRow !== undefined ? <XButton label="Add row" onClick={onClickAddRow}/> : null}
+                {props.onEdit !== undefined ? <XButton label="Edit" onClick={onClickEdit}/> : null}
+                {props.removeRow !== undefined && props.removeRow !== false ? <XButton label="Remove row" onClick={onClickRemoveRow}/> : null}
+                <XButton label="Export rows" onClick={onClickExport} />
+                {props.appButtons}
+                <XExportRowsDialog dialogOpened={exportRowsDialogOpened} rowCount={exportRowsDialogRowCount} onHideDialog={exportRowsDialogOnHide}/>
+                {props.searchTableParams !== undefined ? <XButton label="Choose" onClick={onClickChoose}/> : null}
+            </div>
         </div>
     );
 }
@@ -536,7 +558,7 @@ export interface XLazyColumnProps {
     header?: any;
     align?: "left" | "center" | "right";
     dropdownInFilter?: boolean;
-    width?: string; // for example 150px or 10% (value 150 means 150px)
+    width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
 }
 
 // TODO - XLazyColumn neni idealny nazov, lepsi je XColumn (ale zatial nechame XLazyColumn)

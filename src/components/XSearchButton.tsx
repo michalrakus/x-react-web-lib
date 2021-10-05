@@ -194,12 +194,14 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
         const inputValue = computeInputValue();
 
         return (
-            <div className="p-field p-grid">
-                <label htmlFor={props.assocField} className="p-col-fixed" style={{width: '150px'}}>{label}</label>
-                <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur}
-                           readOnly={readOnly} ref={this.inputTextEl} maxLength={xDisplayField.length} size={size} style={props.inputStyle}
-                           {...this.getClassNameTooltip()}/>
-                <Button label="..." onClick={onClickSearch}/>
+            <div className="field grid">
+                <label htmlFor={props.assocField} className="col-fixed" style={{width: XUtils.FIELD_LABEL_WIDTH}}>{label}</label>
+                <div className="x-search-button-base">
+                    <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur}
+                               readOnly={readOnly} ref={this.inputTextEl} maxLength={xDisplayField.length} size={size} style={props.inputStyle}
+                               {...this.getClassNameTooltip()}/>
+                    <Button label="..." onClick={onClickSearch}/>
+                </div>
                 <Dialog visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>
                     {/* klonovanim elementu pridame atribut searchTableParams */}
                     {React.cloneElement(props.searchTable, {

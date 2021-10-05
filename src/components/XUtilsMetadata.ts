@@ -122,57 +122,117 @@ export class XUtilsMetadata {
         return {useGrouping: useGrouping, fractionDigits: fractionDigits, min: min, max: max, size: size};
     }
 
-    static CHAR_SIZE: number = 8;
+    //static CHAR_SIZE: number = 0.57; // 0.57rem (8px)
+    static CHAR_SIZE: number = 0.5; // 0.5rem (7px) - skusime
 
-    static computeColumnWidth(xField: XField, formColumnType?: string): string | undefined {
+    static computeColumnWidth(xField: XField, formColumnType: string | undefined, header: string | undefined): string | undefined {
         let width: number | undefined;
-        if (xField.type === "string") {
-            if (xField.length !== undefined) {
-                width = xField.length * XUtilsMetadata.CHAR_SIZE + 7 + 7; // character size (8px) and padding left/right (7px + 7px)
+        if (formColumnType === undefined) {
+            // lazy datatable (no inputs, no buttons, only text and padding)
+            if (xField.type === "string") {
+                width = XUtilsMetadata.computeColumnWidthBase(xField.length, 0.5 + 0.5); // padding 7px + 7px
             }
-        }
-        else if (xField.type === "decimal" || xField.type === "number") {
-            const {size} = XUtilsMetadata.getParamsForInputNumber(xField);
-            if (size !== undefined) {
-                width = size * XUtilsMetadata.CHAR_SIZE + 7 + 7;
+            else if (xField.type === "decimal" || xField.type === "number") {
+                const {size} = XUtilsMetadata.getParamsForInputNumber(xField);
+                width = XUtilsMetadata.computeColumnWidthBase(size, 0.5 + 0.5);
             }
-        }
-        else if (xField.type === "date") {
-            width = 85 + 7 + 7; // also in App.css defined
-        }
-        else if (xField.type === "datetime") {
-            width = 145 + 7 + 7; // also in App.css defined
-        }
-        else if (xField.type === "boolean") {
-            width = 7 + 7 + 7; // zatial takto provizorne
+            else if (xField.type === "date") {
+                width = XUtilsMetadata.computeColumnWidthBase(10, 0.5 + 0.5); // napr. 31.12.2021
+            }
+            else if (xField.type === "datetime") {
+                width = XUtilsMetadata.computeColumnWidthBase(10 + 9, 0.5 + 0.5); // napr. 31.12.2021 03:03:00
+            }
+            else if (xField.type === "boolean") {
+                width = 1.43 + 0.5 + 0.5; // checkbox ma sirku 20px
+            }
+            else {
+                throw `XField ${xField.name}: unknown xField.type = ${xField.type}`;
+            }
         }
         else {
-            throw `XField ${xField.name}: unknown xField.type = ${xField.type}`;
-        }
-        // in form datatable, buttons may add some additional width
-        if (formColumnType !== undefined) {
+            // form datatable (formColumnType is defined)
             if (formColumnType === "inputSimple") {
-                if (xField.type === "date" || xField.type === "datetime") {
+                const padding = 0.21 + 0.07 + 0.5; // padding is 2.94px + 1px border + 7px padding in input
+                if (xField.type === "string") {
+                    width = XUtilsMetadata.computeColumnWidthBase(xField.length, padding + padding); // padding left + right
+                }
+                else if (xField.type === "decimal" || xField.type === "number") {
+                    const {size} = XUtilsMetadata.getParamsForInputNumber(xField);
+                    width = XUtilsMetadata.computeColumnWidthBase(size, padding + padding);
+                }
+                else if (xField.type === "date") {
+                    width = 0.21 + 6 + 2.36 + 0.21; // padding + input (also in App.css defined) + button + padding
+                }
+                else if (xField.type === "datetime") {
+                    width = 0.21 + 10 + 2.36 + 0.21; // padding + input (also in App.css defined) + button + padding
+                }
+                else if (xField.type === "boolean") {
+                    width = 1.43 + 0.5 + 0.5; // checkbox ma sirku 20px
+                }
+                else {
+                    throw `XField ${xField.name}: unknown xField.type = ${xField.type}`;
+                }
+            }
+            else if (formColumnType === "dropdown" || formColumnType === "searchButton" || formColumnType === "autoComplete") {
+                // vyratame sirku inputu
+                const padding = 0.21 + 0.07 + 0.5; // padding is 2.94px + 1px border + 7px padding in input
+                if (xField.type === "string") {
+                    width = XUtilsMetadata.computeColumnWidthBase(xField.length, padding + padding); // padding left + right
+                }
+                else if (xField.type === "decimal" || xField.type === "number") {
+                    const {size} = XUtilsMetadata.getParamsForInputNumber(xField);
+                    width = XUtilsMetadata.computeColumnWidthBase(size, padding + padding);
+                }
+                else if (xField.type === "date") {
+                    width = XUtilsMetadata.computeColumnWidthBase(10, padding + padding); // napr. 31.12.2021
+                }
+                else if (xField.type === "datetime") {
+                    width = XUtilsMetadata.computeColumnWidthBase(10 + 9, padding + padding); // napr. 31.12.2021 03:03:00
+                }
+                else {
+                    throw `XField ${xField.name}: xField.type = ${xField.type} not implemented for dropdown/searchButton/autoComplete`;
+                }
+                // pridame sirku buttonu
+                if (formColumnType === "dropdown") {
                     if (width !== undefined) {
-                        width += 33; // button for calendar
+                        width += 2; // button for dropdown
                     }
                 }
-            }
-            else if (formColumnType === "dropdown") {
-                if (width !== undefined) {
-                    width += 33; // button for dropdown
+                else if (formColumnType === "searchButton") {
+                    if (width !== undefined) {
+                        width += 2.18; // button for search button
+                    }
                 }
-            }
-            else if (formColumnType === "searchButton") {
-                if (width !== undefined) {
-                    width += 39; // button for search button
+                else if (formColumnType === "autoComplete") {
+                    throw `XField ${xField.name}: computing button width not implemented for autoComplete`;
                 }
             }
             else {
                 throw "Unknown prop type = " + formColumnType;
             }
         }
-        return width !== undefined ? width.toString() + 'px' : undefined;
+        // ak je label dlhsi ako sirka stlpca, tak sirka stlpca bude podla label-u
+        if (header !== undefined) {
+            const widthHeader = XUtilsMetadata.computeColumnWidthBase(header.length, 0.5 + 0.5 + 1.28 + 0.5); // padding (7px) + space (7px) + sort icon (18px) + padding (7px)
+            if (widthHeader !== undefined) {
+                if (width === undefined || widthHeader > width) {
+                    width = widthHeader;
+                }
+            }
+        }
+
+        return width !== undefined ? width.toString() + 'rem' : undefined;
+    }
+
+    static computeColumnWidthBase(charSize?: number, paddingAndOther?: number): number | undefined {
+        let width: number | undefined;
+        if (charSize !== undefined) {
+            width = charSize * XUtilsMetadata.CHAR_SIZE; // character size (8px)
+        }
+        if (width !== undefined && paddingAndOther !== undefined) {
+            width += paddingAndOther;
+        }
+        return width;
     }
 
     static getXBrowseMeta(entity: string, browseId?: string): XBrowseMeta {

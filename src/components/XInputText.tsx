@@ -68,7 +68,7 @@ export class XInputText extends XFormComponent<XInputTextProps> {
 
         const size = props.size ?? xField.length;
 
-        const labelStyle = props.labelStyle ?? {width:'150px'};
+        const labelStyle = props.labelStyle ?? {width: XUtils.FIELD_LABEL_WIDTH};
 
         const onValueChange = (e: any) => {
             const value = stringFromUI(e.target.value);
@@ -81,8 +81,8 @@ export class XInputText extends XFormComponent<XInputTextProps> {
 
         // note: style overrides size (width of the input according to character count)
         return (
-            <div className="p-field p-grid">
-                <label htmlFor={props.field} className="p-col-fixed" style={labelStyle}>{label}</label>
+            <div className="field grid">
+                <label htmlFor={props.field} className="col-fixed" style={labelStyle}>{label}</label>
                 <InputText id={props.field} value={fieldValue} onChange={onValueChange} readOnly={readOnly} maxLength={xField.length} size={size} style={props.inputStyle}
                            {...this.getClassNameTooltip()}/>
             </div>

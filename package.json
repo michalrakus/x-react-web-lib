@@ -1,6 +1,6 @@
 {
   "name": "@michalrakus/x-react-web-lib",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "description": "",
   "scripts": {
     "clean": "rimraf lib",
@@ -30,7 +30,7 @@
     "@types/react-transition-group": "^4.2.4",
     "axios": "^0.19.0",
     "classnames": "^2.2.6",
-    "primeflex": "2.0.0",
+    "primeflex": "3.0.1",
     "primeicons": "^4.1.0",
     "primereact": "latest",
     "lodash": "^4.17.21",

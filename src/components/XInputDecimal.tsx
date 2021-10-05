@@ -21,7 +21,7 @@ export const XInputDecimal = (props: {form: XFormBase; field: string; label?: st
 
     const sizeInput = props.size !== undefined ? props.size : size;
 
-    const labelStyle = props.labelStyle ?? {width:'150px'};
+    const labelStyle = props.labelStyle ?? {width: XUtils.FIELD_LABEL_WIDTH};
 
     const onValueChange = (e: any) => {
         // z InputNumber prichadza e.value - typ number alebo null
@@ -53,8 +53,8 @@ export const XInputDecimal = (props: {form: XFormBase; field: string; label?: st
 
     // note: style overrides size (width of the input according to character count)
     return (
-        <div className="p-field p-grid">
-            <label htmlFor={props.field} className="p-col-fixed" style={labelStyle}>{label}</label>
+        <div className="field grid">
+            <label htmlFor={props.field} className="col-fixed" style={labelStyle}>{label}</label>
             <InputNumber id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} mode="decimal" locale="de-DE"
                          useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}
                          size={sizeInput} style={props.inputStyle}/>

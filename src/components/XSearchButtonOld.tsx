@@ -140,8 +140,8 @@ export const XSearchButtonOld = (props: {form: XFormBase; assocField: string; di
     const inputValue = computeInputValue();
 
     return (
-        <div className="p-field p-grid">
-            <label htmlFor={props.assocField} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
+        <div className="field grid">
+            <label htmlFor={props.assocField} className="col-fixed" style={{width: XUtils.FIELD_LABEL_WIDTH}}>{label}</label>
             <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur} readOnly={readOnly} ref={inputTextEl} maxLength={xDisplayField.length} size={size} style={props.inputStyle}/>
             <Button label="..." onClick={onClickSearch} />
             <Dialog visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>

@@ -32,6 +32,9 @@ export class XUtils {
 
     static decimalFormatOptions = [CsvDecimalFormat.Comma, CsvDecimalFormat.Dot];
 
+    // konstanty (zatial takto jednoducho)
+    static FIELD_LABEL_WIDTH: string = '10.5rem';
+
     static demo(): boolean {
         return XUtils.getXServerUrl().indexOf('x-demo-server') !== -1;
     }
@@ -39,7 +42,8 @@ export class XUtils {
     static isMobile(): boolean {
         // extra small displays (podla https://www.w3schools.com/howto/howto_css_media_query_breakpoints.asp)
         // mozno tu treba dat (window.screen.width * window.devicePixelRatio)
-        return typeof window !== 'undefined' && window.screen.availWidth <= 600; // $sm = 576 (primeflex)
+        // bolo 600 ($sm = 576 (primeflex)) - len ak bol mobil na vysku, 786 ma byt aj pre mobil na sirku
+        return typeof window !== 'undefined' && window.screen.availWidth <= 786; // $sm = 576 (primeflex)
     }
 
     static mobileCssSuffix(): string {

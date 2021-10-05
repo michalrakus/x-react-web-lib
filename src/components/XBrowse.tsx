@@ -229,7 +229,7 @@ export class XBrowse extends Component<XBrowseProps> {
         let formSourceCode;
         if (entitySourceCodeLink !== undefined) {
             formSourceCode =
-                <div className="p-mt-3">
+                <div className="flex justify-content-center mt-3">
                     <span className="source-code-link">Form is saved in DB (Administration - Browses)</span>
                 </div>;
         }

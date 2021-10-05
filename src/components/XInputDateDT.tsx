@@ -57,6 +57,6 @@ export const XInputDateDT = (props: {form: XFormBase; xField: XField; field: str
 
     return (
         <Calendar id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.value)} disabled={readOnly} showIcon={true}
-                  dateFormat={dateFormatCalendar()} showTime={showTime} showSeconds={showTime} inputClassName={cssClassName} />
+                  dateFormat={dateFormatCalendar()} showTime={showTime} showSeconds={showTime} inputClassName={cssClassName} showOnFocus={false}/>
     );
 }

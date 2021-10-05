@@ -1,9 +1,9 @@
 import {Form, XFormBase} from "../components/XFormBase";
 import {XInputDecimal} from "../components/XInputDecimal";
 import {XInputText} from "../components/XInputText";
-import {XButton} from "../components/XButton";
 import React from "react";
 import {XFormColumn, XFormDataTable2} from "../components/XFormDataTable2";
+import {XFormFooter} from "../components/XFormFooter";
 
 @Form("XBrowseMeta")
 export class XBrowseMetaForm extends XFormBase {
@@ -17,15 +17,14 @@ export class XBrowseMetaForm extends XFormBase {
                 <XInputDecimal form={this} field="rows" label="Rows"/>
                 <XFormDataTable2 form={this} assocField="columnMetaList" label="Column list">
                     <XFormColumn field="idXColumnMeta" header="ID" readOnly={true}/>
-                    <XFormColumn field="field" header="Field" width="250"/>
-                    <XFormColumn field="header" header="Header" width="250"/>
+                    <XFormColumn field="field" header="Field" width="17rem"/>
+                    <XFormColumn field="header" header="Header" width="17rem"/>
                     <XFormColumn field="align" header="Align"/>
                     <XFormColumn field="dropdownInFilter" header="Dropdown in filter"/>
                     <XFormColumn field="width" header="Width"/>
                     <XFormColumn field="columnOrder" header="Column order"/>
                 </XFormDataTable2>
-                <XButton label="Save" onClick={this.onClickSave} />
-                <XButton label="Cancel" onClick={this.onClickCancel} />
+                <XFormFooter form={this}/>
             </div>
         );
     }

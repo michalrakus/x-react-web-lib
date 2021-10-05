@@ -33,16 +33,16 @@ export const XExportRowsDialog = (props: {dialogOpened: boolean; rowCount?: numb
     if (props.dialogOpened) {
         if (exportType === ExportType.Csv) {
             elem = <span>
-            <div className="p-field p-grid">
-                <label className="p-col-fixed" style={{width:'130px'}}>Create header line</label>
+            <div className="field grid">
+                <label className="col-fixed" style={{width:'9.3rem'}}>Create header line</label>
                 <Checkbox checked={createHeaderLine} onChange={(e: any) => setCreateHeaderLine(e.checked)}/>
             </div>
-            <div className="p-field p-grid">
-                <label className="p-col-fixed" style={{width:'130px'}}>Csv separator</label>
+            <div className="field grid">
+                <label className="col-fixed" style={{width:'9.3rem'}}>Csv separator</label>
                 <Dropdown value={csvSeparator} options={XUtils.csvSeparatorOptions} onChange={(e: any) => setCsvSeparator(e.value)}/>
             </div>
-            <div className="p-field p-grid">
-                <label className="p-col-fixed" style={{width:'130px'}}>Decimal format</label>
+            <div className="field grid">
+                <label className="col-fixed" style={{width:'9.3rem'}}>Decimal format</label>
                 <Dropdown value={decimalFormat} options={XUtils.decimalFormatOptions} onChange={(e: any) => setDecimalFormat(e.value)}/>
             </div>
         </span>;
@@ -52,12 +52,12 @@ export const XExportRowsDialog = (props: {dialogOpened: boolean; rowCount?: numb
     // poznamka: renderovanie vnutornych komponentov Dialogu sa zavola az po otvoreni dialogu
     return (
         <Dialog visible={props.dialogOpened} onShow={onShow} onHide={() => props.onHideDialog(false, undefined, undefined)}>
-            <div className="p-field p-grid">
-                <label className="p-col-fixed" style={{width:'130px'}}>Row count</label>
+            <div className="field grid">
+                <label className="col-fixed" style={{width:'9.3rem'}}>Row count</label>
                 <InputText value={props.rowCount} readOnly={true}/>
             </div>
-            <div className="p-field p-grid">
-                <label className="p-col-fixed" style={{width:'130px'}}>Export type</label>
+            <div className="field grid">
+                <label className="col-fixed" style={{width:'9.3rem'}}>Export type</label>
                 <Dropdown value={exportType} options={XUtils.exportTypeOptions} onChange={(e: any) => setExportType(e.value)}/>
             </div>
             {elem}

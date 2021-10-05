@@ -25,6 +25,7 @@ function generateApi(cb) {
         "./lib/components/XFormBase",
         "./lib/components/XFormBaseT",
         "./lib/components/XFormDataTable2",
+        "./lib/components/XFormFooter",
         "./lib/components/XFormNavigator3",
         "./lib/components/XHolders",
         "./lib/components/XInputDate",

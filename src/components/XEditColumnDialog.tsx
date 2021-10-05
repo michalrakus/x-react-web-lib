@@ -64,7 +64,7 @@ export const XEditColumnDialog = (props: {dialogOpened: boolean; addColumn: bool
     let buttonLabel;
     if (props.addColumn) {
         fieldElement =
-            <div className="p-mb-3">
+            <div className="mb-3">
                 <XFieldSelector entity={props.entity} assocSelectable={false}
                                            selectionField={field} onSelectionChange={onFieldChange}/>
             </div>;
@@ -72,8 +72,8 @@ export const XEditColumnDialog = (props: {dialogOpened: boolean; addColumn: bool
     }
     else {
         fieldElement =
-            <div className="p-field p-grid">
-                <label htmlFor="field" className="p-col-fixed" style={{width:'130px'}}>Field</label>
+            <div className="field grid">
+                <label htmlFor="field" className="col-fixed" style={{width:'9.3rem'}}>Field</label>
                 <InputText id="field" value={field} readOnly={true}/>
             </div>;
         buttonLabel = "Modify column";
@@ -83,12 +83,12 @@ export const XEditColumnDialog = (props: {dialogOpened: boolean; addColumn: bool
     return (
         <Dialog visible={props.dialogOpened} onShow={onShow} onHide={() => props.onHideDialog(null)}>
             {fieldElement}
-            <div className="p-field p-grid">
-                <label htmlFor="header" className="p-col-fixed" style={{width:'130px'}}>Header</label>
+            <div className="field grid">
+                <label htmlFor="header" className="col-fixed" style={{width:'9.3rem'}}>Header</label>
                 <InputText id="header" value={header} onChange={(e: any) => setHeader(e.target.value)} maxLength={64}/>
             </div>
-            <div className="p-field p-grid">
-                <label htmlFor="dropdownInFilter" className="p-col-fixed" style={{width:'130px'}}>Dropdown in filter</label>
+            <div className="field grid">
+                <label htmlFor="dropdownInFilter" className="col-fixed" style={{width:'9.3rem'}}>Dropdown in filter</label>
                 <Checkbox id="dropdownInFilter" checked={dropdownInFilter} onChange={(e: any) => setDropdownInFilter(e.checked)} readOnly={dropdownInFilterReadOnly}/>
             </div>
             <XButton label={buttonLabel} onClick={onSave}/>

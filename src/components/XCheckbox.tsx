@@ -46,8 +46,8 @@ export const XCheckbox = (props: {form: XFormBase; field: string; label?: string
 
     // note: style overrides size (width of the input according to character count)
     return (
-        <div className="p-field p-grid">
-            <label htmlFor={props.field} className="p-col-fixed" style={{width:'150px'}}>{label}</label>
+        <div className="field grid">
+            <label htmlFor={props.field} className="col-fixed" style={{width: XUtils.FIELD_LABEL_WIDTH}}>{label}</label>
             <TriStateCheckbox id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} style={props.inputStyle}/>
         </div>
     );

@@ -8,8 +8,9 @@ export interface XAutoCompleteBaseProps {
     value: any;
     suggestions: any[];
     onChange: (object: any, objectChange: OperationType) => void; // odovzda vybraty objekt, ak bol vybraty objekt zmeneny cez dialog (aj v DB), tak vrati objectChange !== OperationType.None
-    field: string;
+    field: string; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
     valueForm?: any; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
+    idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
     maxlength?: number;
     error?: string; // chybova hlaska, ak chceme field oznacit za nevalidny (pozor! netreba sem davat error z onErrorCahnge, ten si riesi XAutoCompleteBase sam)
     onErrorChange: (error: string | undefined) => void; // "vystup" pre validacnu chybu ktoru "ohlasi" AutoComplete; chyba by mala byt ohlasena vzdy ked this.state.inputChanged = true (a nemame focus na inpute)
@@ -256,7 +257,10 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                                 alert('Please select some row.');
                             } else {
                                 // otvorime dialog na update
-                                this.formDialogObjectId = this.props.value.idDobrovolnik;
+                                if (this.props.idField === undefined) {
+                                    throw "XAutoCompleteBase: property valueForm is defined but property idField is also needed for form editation.";
+                                }
+                                this.formDialogObjectId = this.props.value[this.props.idField];
                                 this.formDialogInitObjectForInsert = undefined;
                                 this.setState({formDialogOpened: true});
                             }
@@ -297,9 +301,9 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         // Dialog pre konkretny form:
         // <DobrovolnikForm id={this.formDialogObjectId} object={this.formDialogInitObjectForInsert} onSaveOrCancel={this.formDialogOnSaveOrCancel}/>
 
-        // p-inputgroup lepi SplitButton na autocomplete a zarovna jeho vysku
+        // formgroup-inline lepi SplitButton na autocomplete a zarovna jeho vysku
         return (
-            <div className="p-inputgroup">
+            <div className="x-auto-complete-base">
                 <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} field={this.props.field}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} maxlength={this.props.maxlength}
                               ref={this.autoCompleteRef} {...XUtils.createErrorProps(error)}/>

@@ -115,7 +115,7 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
 
     return (
         <div>
-            <div className="p-inputgroup">
+            <div className="x-search-button-base">
                 <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur} readOnly={readOnly} ref={inputTextEl}/>
                 <Button label="..." onClick={onClickSearch} />
             </div>

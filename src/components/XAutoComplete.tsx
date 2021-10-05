@@ -118,16 +118,15 @@ export class XAutoComplete extends XFormComponent<XAutoCompleteProps> {
 
         const size = this.props.size ?? xDisplayField.length;
 
-        const labelStyle = this.props.labelStyle ?? {width: '14rem'};
+        const labelStyle = this.props.labelStyle ?? {width: XUtils.FIELD_LABEL_WIDTH};
 
-        // div className="p-col" nam zabezpeci aby XAutoCompleteBase nezaberal celu dlzku p-grid-u (ma nastaveny width=100% vdaka "p-inputgroup")
+        // div className="col" nam zabezpeci aby XAutoCompleteBase nezaberal celu dlzku grid-u (ma nastaveny width=100% vdaka "formgroup-inline")
         return (
-            <div className="p-field p-grid">
-                <label htmlFor={this.props.assocField} className="p-col-fixed" style={labelStyle}>{label}</label>
-                <div className="p-col" style={{padding: "0rem"}}>
-                    <XAutoCompleteBase value={this.getValueFromObject()} suggestions={this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
-                                       field={this.props.displayField} valueForm={this.props.assocForm} error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}/>
-                </div>
+            <div className="field grid">
+                <label htmlFor={this.props.assocField} className="col-fixed" style={labelStyle}>{label}</label>
+                <XAutoCompleteBase value={this.getValueFromObject()} suggestions={this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
+                                   field={this.props.displayField} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
+                                   error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}/>
             </div>
         );
     }

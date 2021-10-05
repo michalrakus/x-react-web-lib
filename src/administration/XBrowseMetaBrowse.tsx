@@ -14,8 +14,8 @@ export const XBrowseMetaBrowse = (props: {}) => {
     return (
         <XLazyDataTable entity="XBrowseMeta" rows={15} onEdit={onEdit} removeRow={true} displayed={(props as any).displayed}>
             <XLazyColumn field="idXBrowseMeta" header="ID"/>
-            <XLazyColumn field="entity" header="Entity" width="250"/>
-            <XLazyColumn field="browseId" header="Browse ID" width="250"/>
+            <XLazyColumn field="entity" header="Entity" width="17rem"/>
+            <XLazyColumn field="browseId" header="Browse ID" width="17rem"/>
             <XLazyColumn field="rows" header="Rows"/>
         </XLazyDataTable>
     );
