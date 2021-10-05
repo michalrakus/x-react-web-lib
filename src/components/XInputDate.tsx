@@ -57,7 +57,7 @@ export const XInputDate = (props: {form: XFormBase; field: string; label?: strin
     return (
         <div className="field grid">
             <label htmlFor={props.field} className="col-fixed" style={{width: XUtils.FIELD_LABEL_WIDTH}}>{label}</label>
-            <Calendar id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} showIcon={true} touchUI={true}
+            <Calendar id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} showIcon={true}
                       dateFormat={dateFormatCalendar()} showTime={showTime} showSeconds={showTime} inputClassName={cssClassName} showOnFocus={false}/>
         </div>
     );
