@@ -67,7 +67,9 @@ export const XDropdownDT = (props: {form: XFormBase; entity: string; assocField:
         }
     }
     const options = props.dropdownOptionsMap[props.assocField] !== undefined ? props.dropdownOptionsMap[props.assocField] : []; // mozno mozme do options prasknut rovno undefined...
+    // appendTo={document.body} appenduje overlay panel na element body - eliminuje problem s overflow (pozri poznamku v XDropdownDTFilter)
     return (
-        <Dropdown id={props.assocField} optionLabel={props.displayField} value={assocObject} options={options} onChange={(e: any) => onValueChange(props.assocField, props.rowData, e.target.value)}/>
+        <Dropdown appendTo={document.body} id={props.assocField} optionLabel={props.displayField} value={assocObject} options={options}
+                  onChange={(e: any) => onValueChange(props.assocField, props.rowData, e.target.value)}/>
     );
 }

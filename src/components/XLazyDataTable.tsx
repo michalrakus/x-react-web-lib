@@ -27,8 +27,28 @@ export interface XEditModeHandlers {
     onMoveColumnRight: (field: string) => void;
 }
 
-// POZNAMKA: parameter width?: string; neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
-export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: number; scrollWidth?: string; scrollHeight?: string; onAddRow?: () => void; onEdit?: (selectedRow: any) => void; removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean; appButtons?: any; searchTableParams?: SearchTableParams; width?: string; editMode?: boolean; editModeHandlers?: XEditModeHandlers; displayed?: boolean; children: ReactChild[];}) => {
+export interface XLazyDataTableProps {
+    entity: string;
+    dataKey?: string;
+    rows?: number;
+    scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
+    scrollWidth?: string;
+    scrollHeight?: string;
+    formFooterHeight?: string; // pouziva sa (zatial) len pri deme - zadava sa sem vyska linkov na zdrojaky (SourceCodeLinkForm, SourceCodeLinkEntity) aby ich bolo vidno pri automatickom vypocte vysky tabulky
+    shrinkWidth: boolean; // default true - ak je true, nerozsiruje stlpce na viac ako je ich explicitna sirka (nevznikaju "siroke" tabulky na celu dlzku parent elementu)
+    onAddRow?: () => void;
+    onEdit?: (selectedRow: any) => void;
+    removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean;
+    appButtons?: any;
+    searchTableParams?: SearchTableParams;
+    width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
+    editMode?: boolean;
+    editModeHandlers?: XEditModeHandlers;
+    displayed?: boolean;
+    children: ReactChild[];
+}
+
+export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     const dataTableEl = useRef<any>(null);
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0});
@@ -388,20 +408,42 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
 
     const xEntity: XEntity = XUtilsMetadata.getXEntity(props.entity);
 
-    let scrollable: boolean;
-    if (props.scrollWidth !== undefined || props.scrollHeight !== undefined) {
-        scrollable = true;
-    }
-    else {
-        scrollable = false;
+    // ak nemame scrollWidth/scrollHeight zadane, vyratame scrollWidth/scrollHeight tak aby tabulka "sadla" okna (viewport-u)
+
+    let scrollWidth: string | undefined;
+    let scrollHeight: string | undefined;
+
+    if (props.scrollable) {
+        scrollWidth = props.scrollWidth;
+        if (scrollWidth === undefined || scrollWidth === "default") {
+            scrollWidth = 'calc(100vw - 1.4rem)'; // 20px okraje
+        }
+
+        scrollHeight = props.scrollHeight;
+        if (scrollHeight === undefined || scrollHeight === "default") {
+            // vypocet je priblizny, robeny na mobil, desktop bude mat mozno iny
+            //const headerHeight = XUtils.toPX0('12.7rem');
+            //let footerHeight = XUtils.toPX0('3.7rem') + XUtils.toPX0('3rem'); // table footer (paging) + buttons Add row, Edit, ...
+            // na desktope mi nechce odpocitat vysku taskbar-u od window.screen.availHeight, tak to poriesime takymto hack-om:
+            // if (!XUtils.isMobile()) {
+            //     footerHeight += XUtils.toPX0('6rem'); // priblizna vyska taskbaru (ak mam 2 rady buttonov)
+            // }
+            let headerFooterHeight = 344.35 - XUtils.toPX0('4.43rem'); // experimentalne zistena vyska header/footer (body - table body) bez formFooterHeight
+            // este pridame vysku linkov na zdrojaky, ak treba
+            if (props.formFooterHeight !== undefined) {
+                headerFooterHeight += XUtils.toPX0(XUtils.processGridBreakpoints(props.formFooterHeight));
+            }
+            scrollHeight = `calc(100vh - ${headerFooterHeight}px)`;
+        }
     }
 
-    let style: {};
-    if (props.scrollWidth !== undefined) {
-        style = {width: props.scrollWidth};
+    let style: React.CSSProperties = {};
+    if (scrollWidth !== undefined) {
+        style.width = scrollWidth;
     }
-    else {
-        style = {width: 'min-content'}; // ak nic nedame (nechame auto), tak natiahne tabulku na celu sirku stranky, co nechceme; min-content stlaci sirku stranky
+
+    if (props.shrinkWidth) {
+        style.maxWidth = 'min-content'; // ak nic nedame (nechame auto), tak (v pripade ak nebudeme mat horizontalny scrollbar) natiahne tabulku na celu sirku stranky, co nechceme
     }
 
     let tableStyle;
@@ -433,113 +475,111 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
     }
     // else -> editMode is undefined - browse is not editable
 
-    // poznamka - resizableColumns su zrusene lebo nefunguje dropdown vo filtri
+    // pre lepsiu citatelnost vytvarame stlpce uz tu
+    const columnElemList: JSX.Element[] = React.Children.map(
+        props.children,
+        function(child) {
+            // ak chceme zmenit child element, tak treba bud vytvorit novy alebo vyklonovat
+            // priklad je na https://soshace.com/building-react-components-using-children-props-and-context-api/
+            // (vzdy musime robit manipulacie so stlpcom, lebo potrebujeme pridat filter={true} sortable={true}
+            const childColumn = child as any as {props: XLazyColumnProps}; // nevedel som to krajsie...
+            const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, childColumn.props.field);
+
+            // *********** header ***********
+            const headerLabel = childColumn.props.header !== undefined ? childColumn.props.header : childColumn.props.field;
+            let header;
+            if (props.editMode === true) {
+                header = <div>
+                    <div>
+                        <XButtonIconSmall icon="pi pi-plus" onClick={() => props.editModeHandlers?.onAddColumn(childColumn.props.field)} tooltip="Add column"/>
+                        <XButtonIconSmall icon="pi pi-pencil" onClick={() => props.editModeHandlers?.onEditColumn(childColumn.props.field)} tooltip="Edit column"/>
+                        <XButtonIconSmall icon="pi pi-trash" onClick={() => props.editModeHandlers?.onRemoveColumn(childColumn.props.field)} tooltip="Remove column"/>
+                    </div>
+                    <div>
+                        <XButtonIconSmall icon="pi pi-chevron-left" onClick={() => props.editModeHandlers?.onMoveColumnLeft(childColumn.props.field)} tooltip="Move column left"/>
+                        <XButtonIconSmall icon="pi pi-chevron-right" onClick={() => props.editModeHandlers?.onMoveColumnRight(childColumn.props.field)} tooltip="Move column right"/>
+                    </div>
+                    <div>{headerLabel}</div>
+                </div>;
+            }
+            else {
+                header = headerLabel;
+            }
+
+            // *********** filterElement ***********
+            let filterElement;
+            if (xField.type === "boolean") {
+                const checkboxValue: boolean | null = getCheckboxFilterValue(childColumn.props.field);
+                filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => onCheckboxFilterChange(childColumn.props.field, e.value)}/>;
+            }
+            else if (childColumn.props.dropdownInFilter) {
+                const dropdownValue = getDropdownFilterValue(childColumn.props.field);
+                filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field} value={dropdownValue} onValueChange={onDropdownFilterChange}/>
+            }
+
+            // *********** body ***********
+            // TODO - mozno by bolo dobre vytvarat body pre kazdy field, nech je to vsetko konzistentne
+            let body;
+            if (xField.type === "decimal" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
+                body = (rowData: any) => {return bodyTemplate(childColumn.props, rowData, xField);};
+            }
+
+            // *********** width/headerStyle ***********
+            let width: string | undefined = XUtils.processPropWidth(childColumn.props.width);
+            if (width === undefined || width === "default") {
+                width = XUtilsMetadata.computeColumnWidth(xField, undefined, headerLabel);
+            }
+            let headerStyle;
+            if (width !== undefined) {
+                headerStyle = {width: width};
+            }
+
+            // *********** align ***********
+            let align = "left"; // default
+            if (childColumn.props.align !== undefined && childColumn.props.align !== null) {
+                align = childColumn.props.align;
+            }
+            else {
+                // decimal defaultne zarovnavame doprava
+                if (xField.type === "decimal") {
+                    align = "right";
+                }
+                else if (xField.type === "boolean") {
+                    align = "center";
+                }
+            }
+
+            // *********** style ***********
+            let style;
+            // TODO - pouzit className a nie style
+            if (align === "center" || align === "right") {
+                style = {'textAlign': align};
+                headerStyle = {...headerStyle, ...style}; // headerStyle overrides style in TH cell
+            }
+
+            return <Column field={childColumn.props.field} header={header} filter={true} sortable={true}
+                           filterElement={filterElement} body={body} headerStyle={headerStyle} style={style}/>;
+        }
+    );
+
     return (
-        <div className="x-lazy-datatable">
+        <div>
             <div className="flex justify-content-center">
                 <XButton label="Filter" onClick={onClickFilter} />
             </div>
-            <DataTable value={value.rowList} dataKey={dataKey} paginator={true} rows={rows} totalRecords={value.totalRecords}
-                       lazy={true} first={first} onPage={onPage} loading={loading}
-                       filters={filters} onFilter={onFilter}
-                       sortMode="multiple" removableSort={true} multiSortMeta={multiSortMeta} onSort={onSort}
-                       selectionMode="single" selection={selectedRow} onSelectionChange={onSelectionChange}
-                       onRowDoubleClick={onRowDoubleClick}
-                       ref={dataTableEl} className="p-datatable-sm" /*resizableColumns columnResizeMode="expand"*/ tableStyle={tableStyle}
-                       paginatorLeft={paginatorLeft} paginatorRight={paginatorRight}
-                       scrollable={scrollable} scrollHeight={props.scrollHeight} style={style}>
-                {React.Children.map(
-                    props.children,
-                    function(child) {
-                        // ak chceme zmenit child element, tak treba bud vytvorit novy alebo vyklonovat
-                        // priklad je na https://soshace.com/building-react-components-using-children-props-and-context-api/
-                        // (vzdy musime robit manipulacie so stlpcom, lebo potrebujeme pridat filter={true} sortable={true}
-                        const childColumn = child as any as {props: XLazyColumnProps}; // nevedel som to krajsie...
-                        const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, childColumn.props.field);
-
-                        // *********** header ***********
-                        const headerLabel = childColumn.props.header !== undefined ? childColumn.props.header : childColumn.props.field;
-                        let header;
-                        if (props.editMode === true) {
-                            header = <div>
-                                        <div>
-                                            <XButtonIconSmall icon="pi pi-plus" onClick={() => props.editModeHandlers?.onAddColumn(childColumn.props.field)} tooltip="Add column"/>
-                                            <XButtonIconSmall icon="pi pi-pencil" onClick={() => props.editModeHandlers?.onEditColumn(childColumn.props.field)} tooltip="Edit column"/>
-                                            <XButtonIconSmall icon="pi pi-trash" onClick={() => props.editModeHandlers?.onRemoveColumn(childColumn.props.field)} tooltip="Remove column"/>
-                                        </div>
-                                        <div>
-                                            <XButtonIconSmall icon="pi pi-chevron-left" onClick={() => props.editModeHandlers?.onMoveColumnLeft(childColumn.props.field)} tooltip="Move column left"/>
-                                            <XButtonIconSmall icon="pi pi-chevron-right" onClick={() => props.editModeHandlers?.onMoveColumnRight(childColumn.props.field)} tooltip="Move column right"/>
-                                        </div>
-                                        <div>{headerLabel}</div>
-                                    </div>;
-                        }
-                        else {
-                            header = headerLabel;
-                        }
-
-                        // *********** filterElement ***********
-                        let filterElement;
-                        if (xField.type === "boolean") {
-                            const checkboxValue: boolean | null = getCheckboxFilterValue(childColumn.props.field);
-                            filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => onCheckboxFilterChange(childColumn.props.field, e.value)}/>;
-                        }
-                        else if (childColumn.props.dropdownInFilter) {
-                            const dropdownValue = getDropdownFilterValue(childColumn.props.field);
-                            filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field} value={dropdownValue} onValueChange={onDropdownFilterChange}/>
-                        }
-
-                        // *********** body ***********
-                        // TODO - mozno by bolo dobre vytvarat body pre kazdy field, nech je to vsetko konzistentne
-                        let body;
-                        if (xField.type === "decimal" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
-                            body = (rowData: any) => {return bodyTemplate(childColumn.props, rowData, xField);};
-                        }
-
-                        // *********** width/headerStyle ***********
-                        let width: string | undefined;
-                        if (childColumn.props.width !== undefined && childColumn.props.width !== null) {
-                            width = childColumn.props.width;
-                            if (!isNaN(Number(width))) { // if width is number
-                                width = width + 'rem';
-                            }
-                        }
-                        else {
-                            width = XUtilsMetadata.computeColumnWidth(xField, undefined, headerLabel);
-                        }
-                        let headerStyle;
-                        if (width !== undefined) {
-                            headerStyle = {width: width};
-                        }
-
-                        // *********** align ***********
-                        let align = "left"; // default
-                        if (childColumn.props.align !== undefined && childColumn.props.align !== null) {
-                            align = childColumn.props.align;
-                        }
-                        else {
-                            // decimal defaultne zarovnavame doprava
-                            if (xField.type === "decimal") {
-                                align = "right";
-                            }
-                            else if (xField.type === "boolean") {
-                                align = "center";
-                            }
-                        }
-
-                        // *********** style ***********
-                        let style;
-                        // TODO - pouzit className a nie style
-                        if (align === "center" || align === "right") {
-                            style = {'textAlign': align};
-                            headerStyle = {...headerStyle, ...style}; // headerStyle overrides style in TH cell
-                        }
-
-                        return <Column field={childColumn.props.field} header={header} filter={true} sortable={true}
-                                       filterElement={filterElement} body={body} headerStyle={headerStyle} style={style}/>;
-                    }
-                )}
-            </DataTable>
+            <div className="flex justify-content-center">
+                <DataTable value={value.rowList} dataKey={dataKey} paginator={true} rows={rows} totalRecords={value.totalRecords}
+                           lazy={true} first={first} onPage={onPage} loading={loading}
+                           filters={filters} onFilter={onFilter}
+                           sortMode="multiple" removableSort={true} multiSortMeta={multiSortMeta} onSort={onSort}
+                           selectionMode="single" selection={selectedRow} onSelectionChange={onSelectionChange}
+                           onRowDoubleClick={onRowDoubleClick}
+                           ref={dataTableEl} className="p-datatable-sm x-lazy-datatable" resizableColumns columnResizeMode="expand" tableStyle={tableStyle}
+                           paginatorLeft={paginatorLeft} paginatorRight={paginatorRight}
+                           scrollable={props.scrollable} scrollHeight={scrollHeight} style={style}>
+                    {columnElemList}
+                </DataTable>
+            </div>
             <div className="flex justify-content-center">
                 {props.onAddRow !== undefined ? <XButton label="Add row" onClick={onClickAddRow}/> : null}
                 {props.onEdit !== undefined ? <XButton label="Edit" onClick={onClickEdit}/> : null}
@@ -552,6 +592,11 @@ export const XLazyDataTable = (props: {entity: string; dataKey?: string; rows?: 
         </div>
     );
 }
+
+XLazyDataTable.defaultProps = {
+    scrollable: true,
+    shrinkWidth: true
+};
 
 export interface XLazyColumnProps {
     field: string;

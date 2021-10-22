@@ -7,6 +7,7 @@ export interface XFormComponentProps {
     label?: string;
     readOnly?: boolean;
     labelStyle?: React.CSSProperties;
+    inline?: boolean;
 }
 
 export class XFormComponent<P extends XFormComponentProps> extends Component<P> {

@@ -1,12 +1,18 @@
-import {XFormBase} from "./XFormBase";
 import {XObject} from "./XObject";
 import React from "react";
 import {InputNumber} from "primereact/inputnumber";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {XUtils} from "./XUtils";
+import {XFormComponentProps} from "./XFormComponent";
 
-export const XInputDecimal = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; size?: number; labelStyle?: React.CSSProperties; inputStyle?: React.CSSProperties;}) => {
+export interface XInputDecimalProps extends XFormComponentProps {
+    field: string;
+    size?: number;
+    inputStyle?: React.CSSProperties;
+}
+
+export const XInputDecimal = (props: XInputDecimalProps) => {
 
     props.form.addField(props.field);
 
@@ -21,7 +27,16 @@ export const XInputDecimal = (props: {form: XFormBase; field: string; label?: st
 
     const sizeInput = props.size !== undefined ? props.size : size;
 
-    const labelStyle = props.labelStyle ?? {width: XUtils.FIELD_LABEL_WIDTH};
+    const inline = props.inline ?? false;
+
+    let labelStyle: React.CSSProperties = props.labelStyle ?? {};
+    if (!inline) {
+        XUtils.addCssPropIfNotExists(labelStyle, {width: XUtils.FIELD_LABEL_WIDTH});
+    }
+    else {
+        XUtils.addCssPropIfNotExists(labelStyle, {width: 'auto'}); // podla dlzky labelu
+        XUtils.addCssPropIfNotExists(labelStyle, {marginLeft: '1rem'});
+    }
 
     const onValueChange = (e: any) => {
         // z InputNumber prichadza e.value - typ number alebo null

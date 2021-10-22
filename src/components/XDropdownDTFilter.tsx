@@ -35,8 +35,11 @@ export const XDropdownDTFilter = (props: {entity: string; path: string; value: a
     }
 
     // dropdown pouziva ako optionValue displayField (nie cely objekt) - je to koli problemom s prazdnym riadkom (nepodarilo sa to spravit inac)
+
+    // appendTo={document.body} appenduje overlay panel na element body - panel je vdaka tomu viditelny aj ked ma jeho parent (TH/TD element tabulky)
+    // nastavny overflow: hidden, resp. koli scrollovaniu by overlay panel "nevysiel" von z tabulky, v pripade ze je tabulka mala (napr. ma 1 riadok)
     return (
-        <Dropdown style={{width: '100%'}} className="ui-column-filter"
+        <Dropdown appendTo={document.body} style={{width: '100%'}} className="ui-column-filter"
                   optionLabel={displayField} optionValue={displayField} value={props.value} options={options} onChange={onValueChange}/>
     );
 }

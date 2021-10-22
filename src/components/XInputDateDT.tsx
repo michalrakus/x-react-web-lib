@@ -55,8 +55,10 @@ export const XInputDateDT = (props: {form: XFormBase; xField: XField; field: str
     // TODO - nefunguje dobre pridavanie noveho riadku - su tam stare neupdatnute hodnoty - este to asi neopravili https://github.com/primefaces/primereact/issues/1277
     // test mame na TestovaciForm
 
+    // appendTo={document.body} appenduje overlay panel na element body - eliminuje problem s overflow (pozri poznamku v XDropdownDTFilter)
     return (
-        <Calendar id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.value)} disabled={readOnly} showIcon={true}
-                  dateFormat={dateFormatCalendar()} showTime={showTime} showSeconds={showTime} inputClassName={cssClassName} showOnFocus={false}/>
+        <Calendar appendTo={document.body} id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.value)}
+                  disabled={readOnly} showIcon={true} dateFormat={dateFormatCalendar()} showTime={showTime} showSeconds={showTime}
+                  inputClassName={cssClassName} showOnFocus={false}/>
     );
 }

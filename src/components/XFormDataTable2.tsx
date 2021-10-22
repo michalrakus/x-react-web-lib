@@ -28,8 +28,10 @@ export interface XFormDataTableProps {
     dataKey?: string;
     paginator?: boolean;
     rows?: number;
-    scrollWidth?: string;
+    scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
+    scrollWidth?: string; // default 100%
     scrollHeight?: string;
+    shrinkWidth: boolean; // default true - ak je true, nerozsiruje stlpce na viac ako je ich explicitna sirka (nevznikaju "siroke" tabulky na celu dlzku parent elementu)
     label?: string;
     readOnly?: boolean;
     onClickAddRow?: () => void;
@@ -39,6 +41,14 @@ export interface XFormDataTableProps {
 }
 
 export class XFormDataTable2 extends Component<XFormDataTableProps> {
+
+    public static defaultProps = {
+        scrollable: true,
+        scrollWidth: '100%', // 'auto' nefunguje dobre
+        scrollHeight: '200vh', // ak nechame undefined, tak nam nezarovnava header a body (v body chyba disablovany vertikalny scrollbar),
+                                // tym ze pouzivame 200vh (max-height pre body), tak realne scrollovanie sa zapne az pri velmi vela riadkoch
+        shrinkWidth: true
+    };
 
     props: XFormDataTableProps;
     entity?: string;
@@ -294,20 +304,21 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
         const xEntity: XEntity = XUtilsMetadata.getXEntity(this.getEntity());
 
-        let scrollable: boolean;
-        if (this.props.scrollWidth !== undefined || this.props.scrollHeight !== undefined) {
-            scrollable = true;
-        }
-        else {
-            scrollable = false;
+        let scrollWidth: string | undefined;
+        let scrollHeight: string | undefined;
+
+        if (this.props.scrollable) {
+            scrollWidth = this.props.scrollWidth;
+            scrollHeight = this.props.scrollHeight;
         }
 
-        let style: {};
-        if (this.props.scrollWidth !== undefined) {
-            style = {width: this.props.scrollWidth};
+        let style: React.CSSProperties = {};
+        if (scrollWidth !== undefined) {
+            style.width = scrollWidth;
         }
-        else {
-            style = {width: 'min-content'}; // ak nic nedame (nechame auto), tak natiahne tabulku na celu sirku stranky, co nechceme; min-content stlaci sirku stranky
+
+        if (this.props.shrinkWidth) {
+            style.maxWidth = 'min-content'; // ak nic nedame (nechame auto), tak (v pripade ak nebudeme mat horizontalny scrollbar) natiahne tabulku na celu sirku stranky, co nechceme
         }
 
         let tableStyle;
@@ -319,96 +330,94 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             tableStyle = {width: width};
         }
 
-        // poznamka - resizableColumns su zrusene lebo nefunguje dropdown vo filtri
+        // pre lepsiu citatelnost vytvarame stlpce uz tu
+        const columnElemList: JSX.Element[] = React.Children.map(
+            this.props.children,
+            function (child) {
+                // ak chceme zmenit child element, tak treba bud vytvorit novy alebo vyklonovat
+                // priklad je na https://soshace.com/building-react-components-using-children-props-and-context-api/
+                // (vzdy musime robit manipulacie so stlpcom, lebo potrebujeme pridat filter={true} sortable={true}
+                const childColumn = child as any as {props: XFormColumnProps}; // nevedel som to krajsie...
+                const childColumnProps = childColumn.props;
+                // je dolezite, aby field obsahoval cely path az po zobrazovany atribut, lebo podla neho sa vykonava filtrovanie a sortovanie
+                // (aj ked, da sa to prebit na stlpcoch (na elemente Column), su na to atributy)
+                const field: string = XFormDataTable2.getPathForColumn(childColumnProps);
+
+                // TODO - toto by sa mohlo vytiahnut vyssie, aj v bodyTemplate sa vola metoda XUtilsMetadata.getXFieldByPath
+                const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
+
+                // *********** header ***********
+                const header: string = XFormDataTable2.getHeader(childColumnProps, xEntity, field, xField);
+
+                // *********** filterElement ***********
+                let filterElement;
+                if (xField.type === "boolean") {
+                    const checkboxValue: boolean | null = thisLocal.getCheckboxFilterValue(field);
+                    filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => thisLocal.onCheckboxFilterChange(field, e.value)}/>;
+                }
+                else if (childColumnProps.dropdownInFilter) {
+                    const dropdownValue = thisLocal.getDropdownFilterValue(field);
+                    filterElement = <XDropdownDTFilter entity={thisLocal.getEntity()} path={field} value={dropdownValue} onValueChange={thisLocal.onDropdownFilterChange}/>
+                }
+
+                // *********** width/headerStyle ***********
+                let width: string | undefined = XUtils.processPropWidth(childColumn.props.width);
+                if (width === undefined || width === "default") {
+                    width = XUtilsMetadata.computeColumnWidth(xField, childColumnProps.type, header);
+                }
+                let headerStyle;
+                if (width !== undefined) {
+                    headerStyle = {width: width};
+                }
+
+                // *********** align ***********
+                let align = "left"; // default
+                // do buducna
+                // if (childColumnProps.align !== undefined) {
+                //     align = childColumnProps.align;
+                // }
+                // else {
+                // decimal defaultne zarovnavame doprava
+                // if (xField.type === "decimal") {
+                //     align = "right";
+                // }
+                // else
+                if (xField.type === "boolean") {
+                    align = "center";
+                }
+                // }
+
+                // *********** style ***********
+                let style;
+                // TODO - pouzit className a nie style
+                if (align === "center" || align === "right") {
+                    style = {'textAlign': align};
+                    headerStyle = {...headerStyle, ...style}; // headerStyle overrides style in TH cell
+                }
+
+                return <Column field={field} header={header} filter={true} sortable={true} filterElement={filterElement}
+                               headerStyle={headerStyle} style={style}
+                               body={(rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, rowData, xEntity);}}/>;
+            }
+        );
+
         return (
             <div>
                 <div className="flex justify-content-center">
                     <label>{label}</label>
                     {/*<XButton label="Filter" onClick={onClickFilter} />*/}
                 </div>
-                <DataTable ref={(el) => this.dt = el} value={valueList} dataKey={this.dataKey} paginator={paginator} rows={rows}
-                           totalRecords={valueList.length}
-                           filters={this.state.filters} onFilter={this.onFilter}
-                           sortMode="multiple" removableSort={true}
-                           selectionMode="single" selection={this.state.selectedRow} onSelectionChange={this.onSelectionChange}
-                           className="p-datatable-sm x-form-datatable" /*resizableColumns columnResizeMode="expand"*/ tableStyle={tableStyle}
-                           scrollable={scrollable} scrollHeight={this.props.scrollHeight} style={style}>
-                    {React.Children.map(
-                        this.props.children,
-                        function (child) {
-                            // ak chceme zmenit child element, tak treba bud vytvorit novy alebo vyklonovat
-                            // priklad je na https://soshace.com/building-react-components-using-children-props-and-context-api/
-                            // (vzdy musime robit manipulacie so stlpcom, lebo potrebujeme pridat filter={true} sortable={true}
-                            const childColumn = child as any as {props: XFormColumnProps}; // nevedel som to krajsie...
-                            const childColumnProps = childColumn.props;
-                            // je dolezite, aby field obsahoval cely path az po zobrazovany atribut, lebo podla neho sa vykonava filtrovanie a sortovanie
-                            // (aj ked, da sa to prebit na stlpcoch (na elemente Column), su na to atributy)
-                            const field: string = XFormDataTable2.getPathForColumn(childColumnProps);
-
-                            // TODO - toto by sa mohlo vytiahnut vyssie, aj v bodyTemplate sa vola metoda XUtilsMetadata.getXFieldByPath
-                            const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
-
-                            // *********** header ***********
-                            const header: string = XFormDataTable2.getHeader(childColumnProps, xEntity, field, xField);
-
-                            // *********** filterElement ***********
-                            let filterElement;
-                            if (xField.type === "boolean") {
-                                const checkboxValue: boolean | null = thisLocal.getCheckboxFilterValue(field);
-                                filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => thisLocal.onCheckboxFilterChange(field, e.value)}/>;
-                            }
-                            else if (childColumnProps.dropdownInFilter) {
-                                const dropdownValue = thisLocal.getDropdownFilterValue(field);
-                                filterElement = <XDropdownDTFilter entity={thisLocal.getEntity()} path={field} value={dropdownValue} onValueChange={thisLocal.onDropdownFilterChange}/>
-                            }
-
-                            // *********** width/headerStyle ***********
-                            let width: string | undefined;
-                            if (childColumnProps.width !== undefined) {
-                                width = childColumnProps.width;
-                                if (!isNaN(Number(width))) { // if width is number
-                                    width = width + 'rem';
-                                }
-                            }
-                            else {
-                                width = XUtilsMetadata.computeColumnWidth(xField, childColumnProps.type, header);
-                            }
-                            let headerStyle;
-                            if (width !== undefined) {
-                                headerStyle = {width: width};
-                            }
-
-                            // *********** align ***********
-                            let align = "left"; // default
-                            // do buducna
-                            // if (childColumnProps.align !== undefined) {
-                            //     align = childColumnProps.align;
-                            // }
-                            // else {
-                                // decimal defaultne zarovnavame doprava
-                                // if (xField.type === "decimal") {
-                                //     align = "right";
-                                // }
-                                // else
-                                    if (xField.type === "boolean") {
-                                        align = "center";
-                                    }
-                            // }
-
-                            // *********** style ***********
-                            let style;
-                            // TODO - pouzit className a nie style
-                            if (align === "center" || align === "right") {
-                                style = {'textAlign': align};
-                                headerStyle = {...headerStyle, ...style}; // headerStyle overrides style in TH cell
-                            }
-
-                            return <Column field={field} header={header} filter={true} sortable={true} filterElement={filterElement}
-                                           headerStyle={headerStyle} style={style}
-                                           body={(rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, rowData, xEntity);}}/>;
-                        }
-                    )}
-                </DataTable>
+                <div className="flex justify-content-center">
+                    <DataTable ref={(el) => this.dt = el} value={valueList} dataKey={this.dataKey} paginator={paginator} rows={rows}
+                               totalRecords={valueList.length}
+                               filters={this.state.filters} onFilter={this.onFilter}
+                               sortMode="multiple" removableSort={true}
+                               selectionMode="single" selection={this.state.selectedRow} onSelectionChange={this.onSelectionChange}
+                               className="p-datatable-sm x-form-datatable" resizableColumns columnResizeMode="expand" tableStyle={tableStyle}
+                               scrollable={this.props.scrollable} scrollHeight={scrollHeight} style={style}>
+                        {columnElemList}
+                    </DataTable>
+                </div>
                 <div className="flex justify-content-center">
                     <XButton label="Add row" onClick={onClickAddRow}/>
                     <XButton label="Remove row" onClick={onClickRemoveRow}/>
