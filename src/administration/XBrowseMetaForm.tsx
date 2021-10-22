@@ -11,10 +11,14 @@ export class XBrowseMetaForm extends XFormBase {
     render() {
         return (
             <div>
-                <XInputDecimal form={this} field="idXBrowseMeta" label="ID" readOnly={true}/>
-                <XInputText form={this} field="entity" label="Entity" size={20}/>
-                <XInputText form={this} field="browseId" label="Browse ID" size={20}/>
-                <XInputDecimal form={this} field="rows" label="Rows"/>
+                <div className="x-form-row">
+                    <div className="x-form-col">
+                        <XInputDecimal form={this} field="idXBrowseMeta" label="ID" readOnly={true}/>
+                        <XInputText form={this} field="entity" label="Entity" size={20}/>
+                        <XInputText form={this} field="browseId" label="Browse ID" size={20}/>
+                        <XInputDecimal form={this} field="rows" label="Rows"/>
+                    </div>
+                </div>
                 <XFormDataTable2 form={this} assocField="columnMetaList" label="Column list">
                     <XFormColumn field="idXColumnMeta" header="ID" readOnly={true}/>
                     <XFormColumn field="field" header="Field" width="17rem"/>
