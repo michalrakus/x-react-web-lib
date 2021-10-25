@@ -29,8 +29,8 @@ export interface XFormDataTableProps {
     paginator?: boolean;
     rows?: number;
     scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
-    scrollWidth?: string; // default 100%
-    scrollHeight?: string;
+    scrollWidth?: string; // default 100%, hodnota "none" vypne horizontalne scrollovanie
+    scrollHeight?: string; // default '200vh', hodnota "none" vypne vertikalne scrollovanie (ale lepsie je nechat '200vh')
     shrinkWidth: boolean; // default true - ak je true, nerozsiruje stlpce na viac ako je ich explicitna sirka (nevznikaju "siroke" tabulky na celu dlzku parent elementu)
     label?: string;
     readOnly?: boolean;
@@ -44,8 +44,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
     public static defaultProps = {
         scrollable: true,
-        scrollWidth: '100%', // 'auto' nefunguje dobre
-        scrollHeight: '200vh', // ak nechame undefined, tak nam nezarovnava header a body (v body chyba disablovany vertikalny scrollbar),
+        scrollWidth: '100%', // hodnota '100%' zapne horizontalne scrollovanie, ak je tabulka sirsia ako parent element (a ten by mal byt max 100vw) (hodnota 'auto' (podobna ako '100%') nefunguje dobre)
+        scrollHeight: '200vh', // ak by sme dali 'none' (do DataTable by islo undefined), tak nam nezarovnava header a body (v body chyba disablovany vertikalny scrollbar),
                                 // tym ze pouzivame 200vh (max-height pre body), tak realne scrollovanie sa zapne az pri velmi vela riadkoch
         shrinkWidth: true
     };
@@ -304,12 +304,16 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
         const xEntity: XEntity = XUtilsMetadata.getXEntity(this.getEntity());
 
-        let scrollWidth: string | undefined;
-        let scrollHeight: string | undefined;
+        let scrollWidth: string | undefined = undefined; // vypnute horizontalne scrollovanie
+        let scrollHeight: string | undefined = undefined; // vypnute vertikalne scrollovanie
 
         if (this.props.scrollable) {
-            scrollWidth = this.props.scrollWidth;
-            scrollHeight = this.props.scrollHeight;
+            if (this.props.scrollWidth !== "none") {
+                scrollWidth = this.props.scrollWidth;
+            }
+            if (this.props.scrollHeight !== "none") {
+                scrollHeight = this.props.scrollHeight;
+            }
         }
 
         let style: React.CSSProperties = {};

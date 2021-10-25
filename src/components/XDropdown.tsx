@@ -100,11 +100,12 @@ export class XDropdown extends XFormComponent<XDropdownProps> {
 
         let assocObject = this.getValueFromObject();
 
+        // appendTo={document.body} appenduje overlay panel na element body - eliminuje "skakanie" formularu na mobile pri kliknuti na dropdown
         return (
             <div className="field grid">
                 <label htmlFor={props.assocField} className="col-fixed" style={labelStyle}>{label}</label>
-                <Dropdown id={props.assocField} optionLabel={props.displayField} value={assocObject} options={options} onChange={onValueChange}
-                          {...this.getClassNameTooltip()}/>
+                <Dropdown appendTo={document.body} id={props.assocField} optionLabel={props.displayField} value={assocObject} options={options}
+                          onChange={onValueChange} {...this.getClassNameTooltip()}/>
             </div>
         );
     }

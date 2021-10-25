@@ -39,7 +39,7 @@ export const XLoginForm = (props: {setXToken: (xToken: XToken | null) => void; o
     }
 
     return(
-        <div>
+        <div className="flex flex-column align-items-center">
             <h2>Please log in</h2>
             <div className="field grid">
                 <label htmlFor="userName" className="col-fixed" style={{width:'10.5rem'}}>Username</label>

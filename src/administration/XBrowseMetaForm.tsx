@@ -19,15 +19,17 @@ export class XBrowseMetaForm extends XFormBase {
                         <XInputDecimal form={this} field="rows" label="Rows"/>
                     </div>
                 </div>
-                <XFormDataTable2 form={this} assocField="columnMetaList" label="Column list">
-                    <XFormColumn field="idXColumnMeta" header="ID" readOnly={true}/>
-                    <XFormColumn field="field" header="Field" width="17rem"/>
-                    <XFormColumn field="header" header="Header" width="17rem"/>
-                    <XFormColumn field="align" header="Align"/>
-                    <XFormColumn field="dropdownInFilter" header="Dropdown in filter"/>
-                    <XFormColumn field="width" header="Width"/>
-                    <XFormColumn field="columnOrder" header="Column order"/>
-                </XFormDataTable2>
+                <div className="x-viewport-width">
+                    <XFormDataTable2 form={this} assocField="columnMetaList" label="Column list">
+                        <XFormColumn field="idXColumnMeta" header="ID" readOnly={true}/>
+                        <XFormColumn field="field" header="Field" width="17rem"/>
+                        <XFormColumn field="header" header="Header" width="17rem"/>
+                        <XFormColumn field="align" header="Align"/>
+                        <XFormColumn field="dropdownInFilter" header="Dropdown in filter"/>
+                        <XFormColumn field="width" header="Width"/>
+                        <XFormColumn field="columnOrder" header="Column order"/>
+                    </XFormDataTable2>
+                </div>
                 <XFormFooter form={this}/>
             </div>
         );

@@ -30,10 +30,11 @@ export interface XEditModeHandlers {
 export interface XLazyDataTableProps {
     entity: string;
     dataKey?: string;
-    rows?: number;
+    paginator: boolean;
+    rows: number;
     scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
-    scrollWidth?: string;
-    scrollHeight?: string;
+    scrollWidth: string; // hodnota "none" vypne horizontalne scrollovanie
+    scrollHeight: string; // hodnota "none" vypne vertikalne scrollovanie
     formFooterHeight?: string; // pouziva sa (zatial) len pri deme - zadava sa sem vyska linkov na zdrojaky (SourceCodeLinkForm, SourceCodeLinkEntity) aby ich bolo vidno pri automatickom vypocte vysky tabulky
     shrinkWidth: boolean; // default true - ak je true, nerozsiruje stlpce na viac ako je ich explicitna sirka (nevznikaju "siroke" tabulky na celu dlzku parent elementu)
     onAddRow?: () => void;
@@ -54,7 +55,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0});
     const [loading, setLoading] = useState(false);
     const [first, setFirst] = useState(0);
-    const [rows, setRows] = useState(props.rows !== undefined ? props.rows : 10);
+    const [rows, setRows] = useState(props.paginator ? props.rows : undefined);
     let filtersInit: Filters = {};
     if (props.searchTableParams !== undefined && props.searchTableParams.filter !== undefined) {
         filtersInit[props.searchTableParams.displayField] = {value: props.searchTableParams.filter, matchMode: "startsWith"};
@@ -408,32 +409,57 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     const xEntity: XEntity = XUtilsMetadata.getXEntity(props.entity);
 
-    // ak nemame scrollWidth/scrollHeight zadane, vyratame scrollWidth/scrollHeight tak aby tabulka "sadla" okna (viewport-u)
+    // ak mame scrollWidth/scrollHeight = viewport (default), vyratame scrollWidth/scrollHeight tak aby tabulka "sadla" okna (viewport-u)
 
-    let scrollWidth: string | undefined;
-    let scrollHeight: string | undefined;
+    let scrollWidth: string | undefined = undefined; // vypnute horizontalne scrollovanie
+    let scrollHeight: string | undefined = undefined; // vypnute vertikalne scrollovanie
 
     if (props.scrollable) {
-        scrollWidth = props.scrollWidth;
-        if (scrollWidth === undefined || scrollWidth === "default") {
-            scrollWidth = 'calc(100vw - 1.4rem)'; // 20px okraje
+        if (props.scrollWidth !== "none") {
+            scrollWidth = props.scrollWidth;
+            if (scrollWidth === "viewport") {
+                scrollWidth = 'calc(100vw - 1.4rem)'; // 20px okraje
+            }
         }
 
-        scrollHeight = props.scrollHeight;
-        if (scrollHeight === undefined || scrollHeight === "default") {
-            // vypocet je priblizny, robeny na mobil, desktop bude mat mozno iny
-            //const headerHeight = XUtils.toPX0('12.7rem');
-            //let footerHeight = XUtils.toPX0('3.7rem') + XUtils.toPX0('3rem'); // table footer (paging) + buttons Add row, Edit, ...
-            // na desktope mi nechce odpocitat vysku taskbar-u od window.screen.availHeight, tak to poriesime takymto hack-om:
-            // if (!XUtils.isMobile()) {
-            //     footerHeight += XUtils.toPX0('6rem'); // priblizna vyska taskbaru (ak mam 2 rady buttonov)
-            // }
-            let headerFooterHeight = 344.35 - XUtils.toPX0('4.43rem'); // experimentalne zistena vyska header/footer (body - table body) bez formFooterHeight
-            // este pridame vysku linkov na zdrojaky, ak treba
-            if (props.formFooterHeight !== undefined) {
-                headerFooterHeight += XUtils.toPX0(XUtils.processGridBreakpoints(props.formFooterHeight));
+        if (props.scrollHeight !== "none") {
+            scrollHeight = props.scrollHeight;
+            if (scrollHeight === "viewport") {
+                // vypocet je priblizny, robeny na mobil, desktop bude mat mozno iny
+                //const headerHeight = XUtils.toPX0('12.7rem');
+                //let footerHeight = XUtils.toPX0('3.7rem') + XUtils.toPX0('3rem'); // table footer (paging) + buttons Add row, Edit, ...
+                // na desktope mi nechce odpocitat vysku taskbar-u od window.screen.availHeight, tak to poriesime takymto hack-om:
+                // if (!XUtils.isMobile()) {
+                //     footerHeight += XUtils.toPX0('6rem'); // priblizna vyska taskbaru (ak mam 2 rady buttonov)
+                // }
+                let viewHeight: string;
+                let headerFooterHeight: number;
+                if (props.searchTableParams === undefined) {
+                    // sme v standardnom formulari
+                    viewHeight = '100vh';
+                    headerFooterHeight = XUtils.toPX0('20.89rem') - XUtils.toPX0('4.43rem'); // experimentalne zistena vyska header/footer (body - table body) bez formFooterHeight
+                }
+                else {
+                    // sme v dialogu
+                    if (XUtils.isMobile()) {
+                        viewHeight = '98vh'; // .p-dialog pre mobil ma max-height: 98%
+                        headerFooterHeight = XUtils.toPX0('17.60rem'); // rucne zratane
+                    }
+                    else {
+                        viewHeight = '90vh'; // .p-dialog pre desktop ma max-height: 90%
+                        headerFooterHeight = XUtils.toPX0('18.60rem'); // rucne zratane (desktop ma vecsi margin dole na dialogu)
+                    }
+                }
+                // pridame vysku paging-u, ak treba
+                if (props.paginator) {
+                    headerFooterHeight += XUtils.toPX0('3.71rem');
+                }
+                // este pridame vysku linkov na zdrojaky, ak treba
+                if (props.formFooterHeight !== undefined) {
+                    headerFooterHeight += XUtils.toPX0(XUtils.processGridBreakpoints(props.formFooterHeight));
+                }
+                scrollHeight = `calc(${viewHeight} - ${headerFooterHeight}px)`;
             }
-            scrollHeight = `calc(100vh - ${headerFooterHeight}px)`;
         }
     }
 
@@ -474,6 +500,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         paginatorRight = <XButtonIconSmall icon="pi pi-pencil" onClick={() => props.editModeHandlers?.onStart()} tooltip="Edit form"/>;
     }
     // else -> editMode is undefined - browse is not editable
+
+    // export pre search button-y zatial vypneme
+    const exportRows: boolean = (props.searchTableParams === undefined);
 
     // pre lepsiu citatelnost vytvarame stlpce uz tu
     const columnElemList: JSX.Element[] = React.Children.map(
@@ -568,7 +597,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 <XButton label="Filter" onClick={onClickFilter} />
             </div>
             <div className="flex justify-content-center">
-                <DataTable value={value.rowList} dataKey={dataKey} paginator={true} rows={rows} totalRecords={value.totalRecords}
+                <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator} rows={rows} totalRecords={value.totalRecords}
                            lazy={true} first={first} onPage={onPage} loading={loading}
                            filters={filters} onFilter={onFilter}
                            sortMode="multiple" removableSort={true} multiSortMeta={multiSortMeta} onSort={onSort}
@@ -584,17 +613,21 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {props.onAddRow !== undefined ? <XButton label="Add row" onClick={onClickAddRow}/> : null}
                 {props.onEdit !== undefined ? <XButton label="Edit" onClick={onClickEdit}/> : null}
                 {props.removeRow !== undefined && props.removeRow !== false ? <XButton label="Remove row" onClick={onClickRemoveRow}/> : null}
-                <XButton label="Export rows" onClick={onClickExport} />
+                {exportRows ? <XButton label="Export rows" onClick={onClickExport} /> : null}
                 {props.appButtons}
-                <XExportRowsDialog dialogOpened={exportRowsDialogOpened} rowCount={exportRowsDialogRowCount} onHideDialog={exportRowsDialogOnHide}/>
                 {props.searchTableParams !== undefined ? <XButton label="Choose" onClick={onClickChoose}/> : null}
+                {exportRows ? <XExportRowsDialog dialogOpened={exportRowsDialogOpened} rowCount={exportRowsDialogRowCount} onHideDialog={exportRowsDialogOnHide}/> : null}
             </div>
         </div>
     );
 }
 
 XLazyDataTable.defaultProps = {
+    paginator: true,
+    rows: 10,
     scrollable: true,
+    scrollWidth: 'viewport', // nastavi sirku tabulky na (100vw - nieco) (ak bude obsah sirsi, zapne horizontalny scrollbar)
+    scrollHeight: 'viewport', // nastavi vysku tabulky na (100vh - nieco) (ak bude obsah vecsi, zapne vertikalny scrollbar)
     shrinkWidth: true
 };
 

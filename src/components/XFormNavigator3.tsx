@@ -39,7 +39,21 @@ export class XFormNavigator3 extends Component<XFormNavigator3Props> {
             }
         }
 
-        this.setState({formElements: formElementsCloned});
+        this.setState({formElements: formElementsCloned}, () => {
+            // ked sa na mobile preklikavame medzi formularmi, tak browser drzi nascrollovanu poziciu ale my sa chceme vratit na zaciatok stranky
+            // (tento callback sa zavola po refreshnuti stranky)
+
+            // taketo nieco nezafungovalo, neviem preco...
+            // setTimeout(function() {
+            //     window.scrollTo(0,0);
+            // }, 100);
+
+            // tak scrollujeme k menu, ktore je v hornej casti
+            const menuElem = document.getElementById("menuId")
+            if (menuElem !== null) {
+                menuElem.scrollIntoView();
+            }
+        });
     }
 
     render() {
@@ -53,7 +67,8 @@ export class XFormNavigator3 extends Component<XFormNavigator3Props> {
                 const display: string = (displayed ? "block" : "none");
                 // TODO - neviem ci naisto treba key={index}
                 // max-width: 100% - koli chybe ked sa na mobile nezobrazovala lava cast tabulky/formularu (nedalo sa k nej doscrollovat)
-                return <div key={index} style={{display: display, maxWidth: "100%"}}>{formElementCloned}</div>;
+                // poznamka2: tento problem sa vyskytoval v suvislosti s flex-direction: column na .App-form - ten sme zrusili a preto maxWidth (zatial) odstranujeme
+                return <div key={index} style={{display: display /*, maxWidth: "100%"*/}}>{formElementCloned}</div>;
             }
         );
         return (

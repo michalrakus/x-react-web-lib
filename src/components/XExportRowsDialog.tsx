@@ -61,7 +61,9 @@ export const XExportRowsDialog = (props: {dialogOpened: boolean; rowCount?: numb
                 <Dropdown value={exportType} options={XUtils.exportTypeOptions} onChange={(e: any) => setExportType(e.value)}/>
             </div>
             {elem}
-            <XButton label="Export" onClick={onExport}/>
+            <div className="flex justify-content-center">
+                <XButton label="Export" onClick={onExport}/>
+            </div>
         </Dialog>
     );
 }
