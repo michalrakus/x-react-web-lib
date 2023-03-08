@@ -21,6 +21,7 @@ function generateApi(cb) {
         "./lib/components/XChangePasswordForm",
         "./lib/components/XCheckbox",
         "./lib/components/XDropdown",
+        "./lib/components/XEnvVars",
         "./lib/components/XErrors",
         "./lib/components/XFormBase",
         "./lib/components/XFormBaseT",

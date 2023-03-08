@@ -16,7 +16,7 @@ export const XEditColumnDialog = (props: {dialogOpened: boolean; addColumn: bool
 
     const notNullValues = props.xEditColumnDialogValues ?? {field: "", header: "", dropdownInFilter: false};
 
-    const [field, setField] = useState(notNullValues.field);
+    const [field, setField] = useState<string>(notNullValues.field);
     const [header, setHeader] = useState(notNullValues.header);
     const [dropdownInFilter, setDropdownInFilter] = useState(notNullValues.dropdownInFilter);
     const [dropdownInFilterReadOnly, setDropdownInFilterReadOnly] = useState(true);

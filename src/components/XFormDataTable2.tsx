@@ -369,7 +369,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 if (width === undefined || width === "default") {
                     width = XUtilsMetadata.computeColumnWidth(xField, childColumnProps.type, header);
                 }
-                let headerStyle;
+                let headerStyle: React.CSSProperties = {};
                 if (width !== undefined) {
                     headerStyle = {width: width};
                 }
@@ -392,10 +392,10 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 // }
 
                 // *********** style ***********
-                let style;
+                let style: React.CSSProperties = {};
                 // TODO - pouzit className a nie style
                 if (align === "center" || align === "right") {
-                    style = {'textAlign': align};
+                    style = {textAlign: align};
                     headerStyle = {...headerStyle, ...style}; // headerStyle overrides style in TH cell
                 }
 

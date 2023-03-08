@@ -6,7 +6,7 @@ import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {XUtils} from "./XUtils";
 
-export const XCheckbox = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; inputStyle?: React.CSSProperties;}) => {
+export const XCheckbox = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; inputStyle?: React.CSSProperties; labelStyle?: React.CSSProperties;}) => {
 
     props.form.addField(props.field);
 
@@ -17,6 +17,7 @@ export const XCheckbox = (props: {form: XFormBase; field: string; label?: string
     if (!xField.isNullable && !readOnly) {
         label = XUtils.markNotNull(label);
     }
+    const labelStyle = props.labelStyle ?? {width: XUtils.FIELD_LABEL_WIDTH};
 
     const onValueChange = (e: any) => {
         let newValue: boolean | null = e.value;
@@ -47,7 +48,7 @@ export const XCheckbox = (props: {form: XFormBase; field: string; label?: string
     // note: style overrides size (width of the input according to character count)
     return (
         <div className="field grid">
-            <label htmlFor={props.field} className="col-fixed" style={{width: XUtils.FIELD_LABEL_WIDTH}}>{label}</label>
+            <label htmlFor={props.field} className="col-fixed" style={labelStyle}>{label}</label>
             <TriStateCheckbox id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} style={props.inputStyle}/>
         </div>
     );

@@ -5,6 +5,7 @@ import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {CsvDecimalFormat, CsvSeparator, ExportType} from "../serverApi/ExportImportParam";
 import {XResponseError} from "./XResponseError";
 import React from "react";
+import {XEnvVar} from "./XEnvVars";
 
 export enum OperationType {
     None,
@@ -17,7 +18,7 @@ export class XUtils {
 
     static dropdownEmptyOptionValue: string = " ";
 
-    static xServerUrl: string | null = null;
+    static xBackendUrl: string | undefined = undefined;
 
     // nacachovany XToken - na rozlicnych miestach potrebujeme vediet uzivatela
     static xToken: XToken | null = null;
@@ -39,7 +40,7 @@ export class XUtils {
     static FIELD_LABEL_WIDTH: string = '10.5rem';
 
     static demo(): boolean {
-        return XUtils.getXServerUrl().indexOf('x-demo-server') !== -1;
+        return XUtils.getXBackendUrl().indexOf('x-demo-server') !== -1;
     }
 
     static isMobile(): boolean {
@@ -209,7 +210,8 @@ export class XUtils {
         return await response.json();
     }
 
-    static async fetchBasic(path: string, headers: any, body: any, usePublicToken?: boolean | XToken): Promise<Response> {
+    // nepouzivana stara Basic autentifikacia
+    static async fetchBasicAuthBasic(path: string, headers: any, body: any, usePublicToken?: boolean | XToken): Promise<Response> {
         let xToken: XToken | null;
         if (typeof usePublicToken === 'object') {
             xToken = usePublicToken;
@@ -226,7 +228,36 @@ export class XUtils {
         headers = {...headers,
             'Authorization': `Basic ${Buffer.from(xToken.username + ':' + xToken.password).toString('base64')}`
         };
-        const response = await fetch(XUtils.getXServerUrl() + path, {
+        const response = await fetch(XUtils.getXBackendUrl() + path, {
+            method: 'POST',
+            headers: headers,
+            body: body
+        });
+        if (!response.ok) {
+            const responseBody = await response.json();
+            throw new XResponseError(path, response.status, response.statusText, responseBody);
+        }
+        return response;
+    }
+
+    static async fetchBasic(path: string, headers: any, body: any, usePublicToken?: boolean | XToken): Promise<Response> {
+        let xToken: XToken | null;
+        if (typeof usePublicToken === 'object') {
+            xToken = usePublicToken;
+        }
+        else if (usePublicToken) {
+            xToken = XUtils.xTokenPublic; // public token vzdy
+        }
+        else {
+            xToken = XUtils.getXToken();
+            if (xToken === null) {
+                xToken = XUtils.xTokenPublic; // ak nikto nie je prihlaseny, posleme public token
+            }
+        }
+        headers = {...headers,
+            'Authorization': `Bearer ${xToken.accessToken}`
+        };
+        const response = await fetch(XUtils.getXBackendUrl() + path, {
                                     method: 'POST',
                                     headers: headers,
                                     body: body
@@ -251,18 +282,30 @@ export class XUtils {
     }
 
     static getUsername(): string | undefined {
-        return XUtils.getXToken()?.username;
+        return XUtils.getXToken()?.xUser?.username;
     }
 
-    static getXServerUrl(): string {
-        if (XUtils.xServerUrl === null) {
-            throw "XUtils.xServerUrl is null";
+    static getXBackendUrl(): string {
+        if (XUtils.xBackendUrl === undefined) {
+            throw "XUtils.xBackendUrl is undefined";
         }
-        return XUtils.xServerUrl;
+        return XUtils.xBackendUrl;
     }
 
-    static setXServerUrl(xServerUrl: string) {
-        XUtils.xServerUrl = xServerUrl;
+    static setXBackendUrl(xBackendUrl: string | undefined) {
+        XUtils.xBackendUrl = xBackendUrl;
+    }
+
+    /**
+     * returns value of environment variable from configuration file .env
+     * @param envVar
+     */
+    static getEnvVarValue(envVarEnum: XEnvVar): string {
+        const value: string | undefined = process.env[envVarEnum];
+        if (value === undefined) {
+            throw `Environment variable ${envVarEnum} - value not found. Check configuration file .env*`;
+        }
+        return value;
     }
 
     // funkcionalita ktoru by bolo dobre dat do servisov

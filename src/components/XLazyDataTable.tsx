@@ -558,7 +558,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             if (width === undefined || width === "default") {
                 width = XUtilsMetadata.computeColumnWidth(xField, undefined, headerLabel);
             }
-            let headerStyle;
+            let headerStyle: React.CSSProperties = {};
             if (width !== undefined) {
                 headerStyle = {width: width};
             }
@@ -579,7 +579,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             }
 
             // *********** style ***********
-            let style;
+            let style: React.CSSProperties = {};
             // TODO - pouzit className a nie style
             if (align === "center" || align === "right") {
                 style = {'textAlign': align};

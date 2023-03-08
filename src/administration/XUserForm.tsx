@@ -6,6 +6,8 @@ import {XInputDecimal} from "../components/XInputDecimal";
 import {Password} from "primereact/password";
 import {XUtils} from "../components/XUtils";
 import {XFormFooter} from "../components/XFormFooter";
+import {XCheckbox} from "../components/XCheckbox";
+import {XEnvVar, XReactAppAuth} from "../components/XEnvVars";
 
 @Form("XUser")
 export class XUserForm extends XFormBase {
@@ -13,7 +15,7 @@ export class XUserForm extends XFormBase {
     constructor(props: FormProps) {
         super(props);
 
-        this.state.usernameReadOnly = false;
+        this.state.usernameEnabledReadOnly = false;
         this.state.passwordNew = '';
         this.state.passwordNewConfirm = '';
 
@@ -25,7 +27,7 @@ export class XUserForm extends XFormBase {
 
         const username = this.getXObject().username;
         if (username === XUtils.getUsername() || (XUtils.demo() && (username === 'jozko' || username === 'xman'))) {
-            this.setState({usernameReadOnly: true});
+            this.setState({usernameEnabledReadOnly: true});
         }
     }
 
@@ -41,30 +43,33 @@ export class XUserForm extends XFormBase {
             return;
         }
 
-        if (this.isAddRow() && this.state.passwordNew === '') {
-            alert("Password is required.");
-            return;
-        }
-
-        if (this.state.passwordNew !== '' || this.state.passwordNewConfirm !== '') {
-
-            // nedovolime tuto zmenit heslo aktualne prihlasenemu uzivatelovi, lebo by sme museli upravit aj token
-            if (this.state.object.username === XUtils.getUsername()) {
-                alert("Please, change your password via option Administration -> Change password.");
+        // password is used only by local authorization
+        if (XUtils.getEnvVarValue(XEnvVar.REACT_APP_AUTH) === XReactAppAuth.LOCAL) {
+            if (this.isAddRow() && this.state.passwordNew === '') {
+                alert("Password is required.");
                 return;
             }
 
-            if (this.state.passwordNew !== this.state.passwordNewConfirm) {
-                alert("New password and confirmed new password are not equal.");
-                return;
-            }
+            if (this.state.passwordNew !== '' || this.state.passwordNewConfirm !== '') {
 
-            // zapiseme nove heslo do objektu
-            this.state.object.password = this.state.passwordNew;
-        }
-        else {
-            // nemenime heslo (atribut s hodnotou undefined sa nezapise do DB)
-            this.state.object.password = undefined;
+                // nedovolime tuto zmenit heslo aktualne prihlasenemu uzivatelovi, lebo by sme museli upravit aj token
+                if (this.state.object.username === XUtils.getUsername()) {
+                    alert("Please, change your password via option Administration -> Change password.");
+                    return;
+                }
+
+                if (this.state.passwordNew !== this.state.passwordNewConfirm) {
+                    alert("New password and confirmed new password are not equal.");
+                    return;
+                }
+
+                // zapiseme nove heslo do objektu
+                this.state.object.password = this.state.passwordNew;
+            }
+            else {
+                // nemenime heslo (atribut s hodnotou undefined sa nezapise do DB)
+                this.state.object.password = undefined;
+            }
         }
 
         // zapise this.state.object do DB - samostatny servis koli hashovaniu password-u
@@ -80,21 +85,29 @@ export class XUserForm extends XFormBase {
 
     render() {
         // autoComplete="new-password" - bez tohto chrome predplna user/password, ak si user da ulozit user/password (pre danu url)
+        let passwordElems: any[] = [];
+        if (XUtils.getEnvVarValue(XEnvVar.REACT_APP_AUTH) === XReactAppAuth.LOCAL) {
+            passwordElems = [
+                <div className="field grid">
+                    <label className="col-fixed" style={{width:'14rem'}}>New password</label>
+                    <Password value={this.state.passwordNew} onChange={(e: any) => this.setState({passwordNew: e.target.value})} feedback={false} maxLength={64} size={20} autoComplete="new-password"/>
+                </div>,
+                <div className="field grid">
+                    <label className="col-fixed" style={{width:'14rem', whiteSpace:'nowrap'}}>Confirm new password</label>
+                    <Password value={this.state.passwordNewConfirm} onChange={(e: any) => this.setState({passwordNewConfirm: e.target.value})} feedback={false} maxLength={64} size={20} autoComplete="new-password"/>
+                </div>
+            ];
+        }
+
         return (
             <div>
                 <div className="x-form-row">
                     <div className="x-form-col">
                         <XInputDecimal form={this} field="idXUser" label="ID" readOnly={true} labelStyle={{width:'14rem'}}/>
-                        <XInputText form={this} field="username" label="Username" size={20} labelStyle={{width:'14rem'}} readOnly={this.state.usernameReadOnly}/>
+                        <XInputText form={this} field="username" label="Username" size={30} labelStyle={{width:'14rem'}} readOnly={this.state.usernameEnabledReadOnly}/>
                         <XInputText form={this} field="name" label="Name" size={30} labelStyle={{width:'14rem'}}/>
-                        <div className="field grid">
-                            <label className="col-fixed" style={{width:'14rem'}}>New password</label>
-                            <Password value={this.state.passwordNew} onChange={(e: any) => this.setState({passwordNew: e.target.value})} feedback={false} maxLength={64} size={20} autoComplete="new-password"/>
-                        </div>
-                        <div className="field grid">
-                            <label className="col-fixed" style={{width:'14rem', whiteSpace:'nowrap'}}>Confirm new password</label>
-                            <Password value={this.state.passwordNewConfirm} onChange={(e: any) => this.setState({passwordNewConfirm: e.target.value})} feedback={false} maxLength={64} size={20} autoComplete="new-password"/>
-                        </div>
+                        <XCheckbox form={this} field="enabled" label="Enabled" labelStyle={{width:'14rem'}} readOnly={this.state.usernameEnabledReadOnly}/>
+                        {passwordElems}
                     </div>
                 </div>
                 <XFormFooter form={this}/>

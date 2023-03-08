@@ -27,7 +27,7 @@ export const XLoginForm = (props: {setXToken: (xToken: XToken | null) => void; o
                 customUser = await XUtils.fetchOne(props.customUserService, {username: username}, {username: username, password: password});
             }
             // zatial si ulozime len username/password (koli http basic autentifikacii)
-            props.setXToken({username: username, password: password, customUser: customUser});
+            props.setXToken({username: username, password: password, xUser: customUser});
             // metoda pouzivana v XLoginDialog
             if (props.onLogin) {
                 props.onLogin();

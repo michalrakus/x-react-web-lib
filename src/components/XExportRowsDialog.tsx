@@ -6,6 +6,7 @@ import {Dropdown} from "primereact/dropdown";
 import {Checkbox} from "primereact/checkbox";
 import {XButton} from "./XButton";
 import {XUtils} from "./XUtils";
+import {numberAsUI} from "./XUtilsConversions";
 
 export const XExportRowsDialog = (props: {dialogOpened: boolean; rowCount?: number; onHideDialog: (ok: boolean, exportType: ExportType | undefined, csvParam: CsvParam | undefined) => void;}) => {
 
@@ -54,7 +55,7 @@ export const XExportRowsDialog = (props: {dialogOpened: boolean; rowCount?: numb
         <Dialog visible={props.dialogOpened} onShow={onShow} onHide={() => props.onHideDialog(false, undefined, undefined)}>
             <div className="field grid">
                 <label className="col-fixed" style={{width:'9.3rem'}}>Row count</label>
-                <InputText value={props.rowCount} readOnly={true}/>
+                <InputText value={numberAsUI(props.rowCount ?? null)} readOnly={true}/>
             </div>
             <div className="field grid">
                 <label className="col-fixed" style={{width:'9.3rem'}}>Export type</label>
