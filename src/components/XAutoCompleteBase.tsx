@@ -11,7 +11,7 @@ export interface XAutoCompleteBaseProps {
     field: string; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
     valueForm?: any; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
-    maxlength?: number;
+    maxLength?: number;
     error?: string; // chybova hlaska, ak chceme field oznacit za nevalidny (pozor! netreba sem davat error z onErrorCahnge, ten si riesi XAutoCompleteBase sam)
     onErrorChange: (error: string | undefined) => void; // "vystup" pre validacnu chybu ktoru "ohlasi" AutoComplete; chyba by mala byt ohlasena vzdy ked this.state.inputChanged = true (a nemame focus na inpute)
     setFocusOnCreate?: boolean; // ak je true, nastavi focus do inputu po vytvoreni komponentu
@@ -167,18 +167,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 */
 
     setFocusToInput() {
-        if (this.autoCompleteRef.current.inputRef !== undefined) {
-            // funguje ak je XAutoCompleteBase priamo v projekte, tiez funguje ak sa pouziva lib-ka z npmjs.com
-            // nefunguje ak mame lib-ku priamo nalinkovanu na projekt (zmeny lib-ky pocas vyvoja)(minimalne next projekt kvm-next-web-app nefungoval)
-            this.autoCompleteRef.current.inputRef.current.focus();
-        }
-        else {
-            // pozor! nefunguje ak sa lib-ka pouziva z npmjs.com,
-            // je tu koli tomu ked je lib-ka priamo nalinkovana na projekt
-            // je to hack ale neviem to lepsie vyriesit
-            console.log('Warning! this.autoCompleteRef.current.inputRef is undefined - we try to use this.autoCompleteRef.current.inputEl instead');
-            this.autoCompleteRef.current.inputEl.focus();
-        }
+        this.autoCompleteRef.current.focus();
     }
 
     setObjectValue(object: any, objectChange: OperationType) {
@@ -282,7 +271,13 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                 command: (e: any) => {
                     // zobrazi cely suggestions list, zide sa ak chceme vidiet vsetky moznosti
                     // neprakticke ak mame vela poloziek v suggestions list
-                    this.autoCompleteRef.current.onDropdownClick();
+
+                    // krasne zobrazi cely objekt!
+                    // this.autoCompleteRef.current je element <AutoComplete .../>, ktory vytvarame v render metode
+                    //console.log(this.autoCompleteRef.current);
+
+                    // otvori dropdown (search je metoda popisana v API, volanie sme skopcili zo zdrojakov primereact)
+                    this.autoCompleteRef.current.search(e, '', 'dropdown');
                 }
             });
 
@@ -305,7 +300,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         return (
             <div className="x-auto-complete-base">
                 <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} field={this.props.field}
-                              onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} maxlength={this.props.maxlength}
+                              onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} maxLength={this.props.maxLength}
                               ref={this.autoCompleteRef} {...XUtils.createErrorProps(error)}/>
                 <SplitButton model={splitButtonItems} className={'x-splitbutton-only-dropdown' + XUtils.mobileCssSuffix()} menuClassName={'x-splitbutton-only-dropdown-menu' + XUtils.mobileCssSuffix()}/>
                 {this.props.valueForm != undefined ?

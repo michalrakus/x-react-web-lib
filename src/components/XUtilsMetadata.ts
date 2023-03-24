@@ -125,7 +125,7 @@ export class XUtilsMetadata {
     //static CHAR_SIZE: number = 0.57; // 0.57rem (8px)
     static CHAR_SIZE: number = 0.5; // 0.5rem (7px) - skusime
 
-    static computeColumnWidth(xField: XField, formColumnType: string | undefined, header: string | undefined): string | undefined {
+    static computeColumnWidth(xField: XField, filterMenuInFilterRow: boolean, formColumnType: string | undefined, header: string | undefined, filterButtonInHeader: boolean): string | undefined {
         let width: number | undefined;
         if (formColumnType === undefined) {
             // lazy datatable (no inputs, no buttons, only text and padding)
@@ -211,9 +211,18 @@ export class XUtilsMetadata {
                 throw "Unknown prop type = " + formColumnType;
             }
         }
+        if (filterMenuInFilterRow) {
+            // if the column has width of 25 characters or more, then the input field can be shorter
+            if (width !== undefined && width < 25 * XUtilsMetadata.CHAR_SIZE) {
+                width += 1.25; // filter menu icon
+            }
+        }
         // ak je label dlhsi ako sirka stlpca, tak sirka stlpca bude podla label-u
         if (header !== undefined) {
-            const widthHeader = XUtilsMetadata.computeColumnWidthBase(header.length, 0.5 + 0.5 + 1.28 + 0.5); // padding (7px) + space (7px) + sort icon (18px) + padding (7px)
+            let widthHeader = XUtilsMetadata.computeColumnWidthBase(header.length, 0.5 + 0.5 + 1.28); // padding (7px) + space (7px) + sort icon (18px)
+            if (filterButtonInHeader && widthHeader !== undefined) {
+                widthHeader += 1.5; // filter icon (21px = 14px (icon body) + 7px (right padding))
+            }
             if (widthHeader !== undefined) {
                 if (width === undefined || widthHeader > width) {
                     width = widthHeader;

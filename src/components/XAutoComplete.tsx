@@ -2,7 +2,6 @@ import React from "react";
 import {XFormComponent, XFormComponentProps} from "./XFormComponent";
 import {XAssoc} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
-import {XObject} from "./XObject";
 import {OperationType, XUtils} from "./XUtils";
 import {XAutoCompleteBase} from "./XAutoCompleteBase";
 import {XError} from "./XErrors";
@@ -50,33 +49,21 @@ export class XAutoComplete extends XFormComponent<XAutoCompleteProps> {
         this.setState({suggestions: suggestions});
     }
 
-    getFieldForEdit(): string | undefined {
-        // TODO - zohladnit aj aktualny readOnly stav
-        const readOnly = this.props.readOnly ?? false;
-        if (!readOnly) {
-            return this.props.assocField;
-        }
-        return undefined;
+    getField(): string {
+        return this.props.assocField;
     }
 
-    checkNotNull(): boolean {
-        // TODO - zohladnit aj aktualny readOnly stav
-        return !this.xAssoc.isNullable && !(this.props.readOnly ?? false);
+    isNotNull(): boolean {
+        return !this.xAssoc.isNullable;
     }
 
-    getValueFromObject(): any {
-        const object: XObject | null = this.props.form.state.object;
-        let assocObject = object !== null ? object[this.props.assocField] : null;
-        // ak je undefined, pre istotu dame na null, null je standard
-        if (assocObject === undefined) {
-            assocObject = null;
-        }
+    getValue(): any | null {
+        const assocObject: any | null = this.getValueFromObject();
         return assocObject;
     }
 
     onChangeAutoCompleteBase(object: any, objectChange: OperationType) {
-        const error: string | undefined = this.validateOnChange(object);
-        this.props.form.onFieldChange(this.props.assocField, object, error);
+        this.onValueChangeBase(object);
 
         if (objectChange !== OperationType.None) {
             // zmenil sa zaznam dobrovolnika v DB
@@ -94,11 +81,8 @@ export class XAutoComplete extends XFormComponent<XAutoCompleteProps> {
     // overrides method in XFormComponent
     validate(): {field: string; xError: XError} | undefined {
         if (this.errorInBase) {
-            const field = this.getFieldForEdit();
-            if (field) {
-                // error message dame na onChange, mohli by sme aj na onSet (predtym onBlur), je to jedno viac-menej
-                return {field: field, xError: {onChange: this.errorInBase}};
-            }
+            // error message dame na onChange, mohli by sme aj na onSet (predtym onBlur), je to jedno viac-menej
+            return {field: this.getField(), xError: {onChange: this.errorInBase, fieldLabel: this.getLabel()}};
         }
         // zavolame povodnu metodu
         return super.validate();
@@ -109,22 +93,16 @@ export class XAutoComplete extends XFormComponent<XAutoCompleteProps> {
         const xEntityAssoc = XUtilsMetadata.getXEntity(this.xAssoc.entityName);
         const xDisplayField = XUtilsMetadata.getXFieldByPath(xEntityAssoc, this.props.displayField);
 
-        let label = this.props.label ?? this.props.assocField;
-        if (this.checkNotNull()) {
-            label = XUtils.markNotNull(label);
-        }
+        // TODO - readOnly
 
-        const readOnly = this.props.readOnly ?? false;
-
+        // TODO - size
         const size = this.props.size ?? xDisplayField.length;
-
-        const labelStyle = this.props.labelStyle ?? {width: XUtils.FIELD_LABEL_WIDTH};
 
         // div className="col" nam zabezpeci aby XAutoCompleteBase nezaberal celu dlzku grid-u (ma nastaveny width=100% vdaka "formgroup-inline")
         return (
             <div className="field grid">
-                <label htmlFor={this.props.assocField} className="col-fixed" style={labelStyle}>{label}</label>
-                <XAutoCompleteBase value={this.getValueFromObject()} suggestions={this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
+                <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
+                <XAutoCompleteBase value={this.getValue()} suggestions={this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
                                    field={this.props.displayField} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
                                    error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}/>
             </div>

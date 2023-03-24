@@ -197,6 +197,17 @@ export abstract class XFormBase extends Component<FormProps> {
         this.xFormComponentList.push(xFormComponent);
     }
 
+    findXFormComponent(field: string): XFormComponent<any> | undefined {
+        // TODO - vytvorit mapu (field, ref(xFormComponent)), bude to rychlejsie
+        // vytvorit len mapu (a list zrusit) je problem - mozme mat pre jeden field viacero (napr. asociacnych) componentov
+        for (const xFormComponent of this.xFormComponentList) {
+            if (xFormComponent.getField() === field) {
+                return xFormComponent;
+            }
+        }
+        return undefined;
+    }
+
     addXFormDataTable(xFormDataTable: XFormDataTable2) {
         this.xFormDataTableList.push(xFormDataTable);
     }
@@ -264,8 +275,9 @@ export abstract class XFormBase extends Component<FormProps> {
         let msg: string = "";
         for (const [field, xError] of Object.entries(xErrorMap)) {
             if (xError) {
-                if (xError.onChange || xError.onBlur || xError.form) {
-                    msg += `${field}: ${xError.onChange}, ${xError.onBlur}, ${xError.form}${XUtilsCommon.newLine}`;
+                const errorMessage: string | undefined = XUtils.getXErrorMessage(xError);
+                if (errorMessage) {
+                    msg += `${xError.fieldLabel ?? field}: ${errorMessage}${XUtilsCommon.newLine}`;
                 }
             }
         }
@@ -286,7 +298,10 @@ export abstract class XFormBase extends Component<FormProps> {
         const xErrors: XErrors = this.validate(this.getXObject());
         for (const [field, error] of Object.entries(xErrors)) {
             if (error) {
-                xErrorMap[field] = {...xErrorMap[field], form: error};
+                // skusime zistit label
+                const xFormComponent: XFormComponent<any> | undefined = this.findXFormComponent(field);
+                const fieldLabel: string | undefined = xFormComponent ? xFormComponent.getLabel() : undefined;
+                xErrorMap[field] = {...xErrorMap[field], form: error, fieldLabel: fieldLabel};
             }
         }
 

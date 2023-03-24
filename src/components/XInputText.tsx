@@ -1,89 +1,39 @@
 import React from "react";
-import {XUtilsMetadata} from "./XUtilsMetadata";
-import {XUtils} from "./XUtils";
 import {stringAsUI, stringFromUI} from "./XUtilsConversions";
-import {XObject} from "./XObject";
-import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {InputText} from "primereact/inputtext";
-import {XFormComponent, XFormComponentProps} from "./XFormComponent";
-import {XField} from "../serverApi/XEntityMetadata";
-import {XError} from "./XErrors";
+import {XInput, XInputProps} from "./XInput";
 
-export interface XInputTextProps extends XFormComponentProps {
-    field: string;
+export interface XInputTextProps extends XInputProps {
     size?: number;
-    inputStyle?: React.CSSProperties;
 }
 
-export class XInputText extends XFormComponent<XInputTextProps> {
-
-    protected xField: XField;
+export class XInputText extends XInput<XInputTextProps> {
 
     constructor(props: XInputTextProps) {
         super(props);
 
-        this.xField = XUtilsMetadata.getXFieldByPathStr(props.form.getEntity(), props.field);
-
-        props.form.addField(props.field);
+        this.onValueChange = this.onValueChange.bind(this);
     }
 
-    // TODO - prerobit - len field nech vracia
-    getFieldForEdit(): string | undefined {
-        // TODO - zohladnit aj aktualny readOnly stav
-        if (!XUtils.isReadOnly(this.props.field, this.props.readOnly)) {
-            return this.props.field;
-        }
-        return undefined;
+    getValue(): string {
+        // konvertovat null hodnotu na "" (vo funkcii stringAsUI) je dolezite aby sa prejavila zmena na null v modeli
+        const value: string | null = this.getValueFromObject();
+        return stringAsUI(value);
     }
 
-    checkNotNull(): boolean {
-        // TODO - zohladnit aj aktualny readOnly stav
-        return !this.xField.isNullable && !XUtils.isReadOnly(this.props.field, this.props.readOnly);
-    }
-
-    getValueFromObject(): any {
-        let objectValue: string | null = null;
-        const object: XObject | null = this.props.form.state.object;
-        if (object !== null) {
-            objectValue = XUtilsCommon.getValueByPath(object, this.props.field);
-            //  pre istotu dame na null, null je standard
-            if (objectValue === undefined) {
-                objectValue = null;
-            }
-        }
-        return objectValue;
+    onValueChange(e: any) {
+        const value: string | null = stringFromUI(e.target.value);
+        this.onValueChangeBase(value);
     }
 
     render() {
-        const props = this.props;
-
-        const xField = this.xField;
-
-        let label = props.label ?? props.field;
-        if (this.checkNotNull()) {
-            label = XUtils.markNotNull(label);
-        }
-
-        const readOnly: boolean = XUtils.isReadOnly(props.field, props.readOnly);
-
-        const size = props.size ?? xField.length;
-
-        const labelStyle = props.labelStyle ?? {width: XUtils.FIELD_LABEL_WIDTH};
-
-        const onValueChange = (e: any) => {
-            const value = stringFromUI(e.target.value);
-            const error: string | undefined = this.validateOnChange(value);
-            props.form.onFieldChange(props.field, value, error);
-        }
-
-        // konvertovat null hodnotu na "" (vo funkcii stringAsUI) je dolezite aby sa prejavila zmena na null v modeli
-        const fieldValue: string = stringAsUI(this.getValueFromObject());
+        const size = this.props.size ?? this.xField.length;
 
         // note: style overrides size (width of the input according to character count)
         return (
             <div className="field grid">
-                <label htmlFor={props.field} className="col-fixed" style={labelStyle}>{label}</label>
-                <InputText id={props.field} value={fieldValue} onChange={onValueChange} readOnly={readOnly} maxLength={xField.length} size={size} style={props.inputStyle}
+                <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
+                <InputText id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} maxLength={this.xField.length} size={size} style={this.props.inputStyle}
                            {...this.getClassNameTooltip()}/>
             </div>
         );

@@ -80,6 +80,14 @@ export function timeFromModel(value: any): Date | null {
             // mame '19:30:00' -> pridame hociaky rok aby sme skonvertovali na validny Date
             rowDataCasStr = '1970-01-01 ' + rowDataCasStr;
         }
+        // na safari nefunguje konverzia new Date('2021-06-07 19:30:00') - vrati NaN
+        // preto string prehodime na '2021-06-07T19:30:00+01:00'
+        // 19:30:00 je cas z timezony Central Europe (taka je nastavena na nodejs)), preto oznacime tento cas touto timezonou
+        // (spravne riesenie je posielat time cez json vzdy vo formate '2021-06-07T18:30:00Z', v tomto formate chodia aj datetime atributy)
+        rowDataCasStr = rowDataCasStr.replace(' ', 'T');
+        if (!rowDataCasStr.endsWith('Z') && rowDataCasStr.indexOf('+') === -1) {
+            rowDataCasStr += '+01:00'; // Central Europe timezone
+        }
         timeValue = new Date(rowDataCasStr);
     }
     else if (typeof value === 'object' && value instanceof Date) {

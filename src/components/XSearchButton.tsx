@@ -1,4 +1,3 @@
-import {XObject} from "./XObject";
 import React from "react";
 import {InputText} from "primereact/inputtext";
 import {Button} from "primereact/button";
@@ -47,28 +46,12 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
         props.form.addField(props.assocField + '.' + props.displayField);
     }
 
-    getFieldForEdit(): string | undefined {
-        // TODO - zohladnit aj aktualny readOnly stav
-        const readOnly = this.props.readOnly ?? false;
-        if (!readOnly) {
-            return this.props.assocField;
-        }
-        return undefined;
+    getField(): string {
+        return this.props.assocField;
     }
 
-    checkNotNull(): boolean {
-        // TODO - zohladnit aj aktualny readOnly stav
-        return !this.xAssoc.isNullable && !(this.props.readOnly ?? false);
-    }
-
-    getValueFromObject(): any {
-        const object: XObject | null = this.props.form.state.object;
-        let assocObject = object !== null ? object[this.props.assocField] : null;
-        // ak je undefined, pre istotu dame na null, null je standard
-        if (assocObject === undefined) {
-            assocObject = null;
-        }
-        return assocObject;
+    isNotNull(): boolean {
+        return !this.xAssoc.isNullable;
     }
 
     render() {
@@ -88,7 +71,7 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
         const setDialogOpened = (dialogOpened: boolean) => {this.setState({dialogOpened: dialogOpened});}
 
         const computeInputValue = (): any => {
-            let inputValue = null;
+            let inputValue;
             if (!inputChanged) {
                 // TODO - pridat cez generikum typ fieldu (ak sa da)
                 // poznamka: ak assocObject === null tak treba do inputu zapisovat prazdny retazec, ak by sme pouzili null, neprejavila by sa zmena v modeli na null
@@ -101,12 +84,6 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
             return inputValue;
         }
 
-        let label = props.label ?? props.assocField;
-        if (this.checkNotNull()) {
-            label = XUtils.markNotNull(label);
-        }
-
-        const readOnly = props.readOnly ?? false;
         const size = props.size ?? xDisplayField.length;
 
         const onInputValueChange = (e: any) => {
@@ -146,14 +123,13 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
         }
 
         const setValueToModel = (row: any) => {
-            const error: string | undefined = this.validateOnChange(row);
-            props.form.onFieldChange(props.assocField, row, error);
+            this.onValueChangeBase(row);
             setInputChanged(false);
         }
 
         const onClickSearch = (e: any) => {
             console.log("zavolany onClickSearch");
-            if (!readOnly) {
+            if (!this.isReadOnly()) {
                 setDialogOpened(true);
                 // POVODNY KOD
                 //overlayPanelEl.current.toggle(e);
@@ -195,10 +171,10 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
 
         return (
             <div className="field grid">
-                <label htmlFor={props.assocField} className="col-fixed" style={{width: XUtils.FIELD_LABEL_WIDTH}}>{label}</label>
+                <label htmlFor={props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <div className="x-search-button-base">
                     <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur}
-                               readOnly={readOnly} ref={this.inputTextEl} maxLength={xDisplayField.length} size={size} style={props.inputStyle}
+                               readOnly={this.isReadOnly()} ref={this.inputTextEl} maxLength={xDisplayField.length} size={size} style={props.inputStyle}
                                {...this.getClassNameTooltip()}/>
                     <Button label="..." onClick={onClickSearch}/>
                 </div>

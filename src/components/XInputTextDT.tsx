@@ -20,7 +20,6 @@ export const XInputTextDT = (props: {form: XFormBase; entity: string; field: str
     }
 
     const onValueChange = (field: string, rowData: any, newValue: any) => {
-        //console.log("onBodyValueChange");
 
         // zmenime hodnotu v modeli (odtial sa hodnota cita)
         rowData[field] = stringFromUI(newValue);

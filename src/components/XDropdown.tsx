@@ -1,12 +1,9 @@
 import React from "react";
-import { XObject } from "./XObject";
 import {Dropdown} from "primereact/dropdown";
 import {XUtils} from "./XUtils";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XFormComponent, XFormComponentProps} from "./XFormComponent";
 import {XAssoc} from "../serverApi/XEntityMetadata";
-import {XUtilsCommon} from "../serverApi/XUtilsCommon";
-import {InputText} from "primereact/inputtext";
 
 export interface XDropdownProps extends XFormComponentProps {
     assocField: string;
@@ -31,30 +28,32 @@ export class XDropdown extends XFormComponent<XDropdownProps> {
         };
 
         props.form.addField(props.assocField + '.' + props.displayField);
+
+        this.onValueChange = this.onValueChange.bind(this);
     }
 
-    getFieldForEdit(): string | undefined {
-        // TODO - zohladnit aj aktualny readOnly stav
-        const readOnly = this.props.readOnly ?? false;
-        if (!readOnly) {
-            return this.props.assocField;
-        }
-        return undefined;
+    getField(): string {
+        return this.props.assocField;
     }
 
-    checkNotNull(): boolean {
-        // TODO - zohladnit aj aktualny readOnly stav
-        return !this.xAssoc.isNullable && !(this.props.readOnly ?? false);
+    isNotNull(): boolean {
+        return !this.xAssoc.isNullable;
     }
 
-    getValueFromObject(): any {
-        const object: XObject | null = this.props.form.state.object;
-        let assocObject = object !== null ? object[this.props.assocField] : null;
-        // ak je undefined, pre istotu dame na null, null je standard
-        if (assocObject === undefined) {
-            assocObject = null;
-        }
+    getValue(): any | null {
+        const assocObject: any | null = this.getValueFromObject();
         return assocObject;
+    }
+
+    onValueChange(e: any) {
+        let newValueOrNull: any;
+        // specialna null polozka nema ziadne atributy
+        if (Object.keys(e.target.value).length === 0) {
+            newValueOrNull = null;
+        } else {
+            newValueOrNull = e.target.value;
+        }
+        this.onValueChangeBase(newValueOrNull);
     }
 
     componentDidMount() {
@@ -69,43 +68,18 @@ export class XDropdown extends XFormComponent<XDropdownProps> {
     }
 
     render() {
-        const props = this.props;
-
         // TODO - pridat cez generikum typ objektu v Dropdown-e (ak sa da)
         const options: any[] = this.state.options;
 
-        let label = props.label ?? props.assocField;
-        if (this.checkNotNull()) {
-            label = XUtils.markNotNull(label);
-        }
-
-        const readOnly = props.readOnly ?? false;
-
-        const labelStyle = props.labelStyle ?? {width: XUtils.FIELD_LABEL_WIDTH};
-
-        const onValueChange = (e: any) => {
-            let newValueOrNull: any;
-            // specialna null polozka nema ziadne atributy
-            if (Object.keys(e.target.value).length === 0) {
-                newValueOrNull = null;
-            } else {
-                newValueOrNull = e.target.value;
-            }
-            const error: string | undefined = this.validateOnChange(newValueOrNull);
-            props.form.onFieldChange(props.assocField, newValueOrNull, error);
-        }
-
         // TODO - readOnly implementovat
+
         // Dropdown setuje do atributu object.assocField asociovany objekt zo zoznamu objektov ktore ziskame podla asociacie
-
-        let assocObject = this.getValueFromObject();
-
         // appendTo={document.body} appenduje overlay panel na element body - eliminuje "skakanie" formularu na mobile pri kliknuti na dropdown
         return (
             <div className="field grid">
-                <label htmlFor={props.assocField} className="col-fixed" style={labelStyle}>{label}</label>
-                <Dropdown appendTo={document.body} id={props.assocField} optionLabel={props.displayField} value={assocObject} options={options}
-                          onChange={onValueChange} {...this.getClassNameTooltip()}/>
+                <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
+                <Dropdown appendTo={document.body} id={this.props.assocField} optionLabel={this.props.displayField} value={this.getValue()} options={options}
+                          onChange={this.onValueChange} {...this.getClassNameTooltip()}/>
             </div>
         );
     }

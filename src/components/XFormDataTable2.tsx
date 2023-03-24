@@ -2,12 +2,16 @@ import {XFormBase} from "./XFormBase";
 import {XObject} from "./XObject";
 import React, {Component, ReactChild} from "react";
 import {XDropdownDT} from "./XDropdownDT";
-import {DataTable} from "primereact/datatable";
+import {
+    DataTable,
+    DataTableFilterMeta,
+    DataTableFilterMetaData,
+    DataTableOperatorFilterMetaData
+} from "primereact/datatable";
 import {Column} from "primereact/column";
 import {XButton} from "./XButton";
 import {XInputTextDT} from "./XInputTextDT";
 import {XSearchButtonDT} from "./XSearchButtonDT";
-import {Filters, FilterValue} from "../serverApi/FindParam";
 import {XAssoc, XEntity, XField} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XUtils} from "./XUtils";
@@ -16,6 +20,7 @@ import {XInputDecimalDT} from "./XInputDecimalDT";
 import {XInputDateDT} from "./XInputDateDT";
 import {XCheckboxDT} from "./XCheckboxDT";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
+import {FilterMatchMode, FilterOperator} from "primereact/api";
 
 export interface XDropdownOptionsMap {
     [assocField: string]: any[];
@@ -28,6 +33,7 @@ export interface XFormDataTableProps {
     dataKey?: string;
     paginator?: boolean;
     rows?: number;
+    filterDisplay: "menu" | "row";
     scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
     scrollWidth?: string; // default 100%, hodnota "none" vypne horizontalne scrollovanie
     scrollHeight?: string; // default '200vh', hodnota "none" vypne vertikalne scrollovanie (ale lepsie je nechat '200vh')
@@ -43,6 +49,7 @@ export interface XFormDataTableProps {
 export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
     public static defaultProps = {
+        filterDisplay: "row",
         scrollable: true,
         scrollWidth: '100%', // hodnota '100%' zapne horizontalne scrollovanie, ak je tabulka sirsia ako parent element (a ten by mal byt max 100vw) (hodnota 'auto' (podobna ako '100%') nefunguje dobre)
         scrollHeight: '200vh', // ak by sme dali 'none' (do DataTable by islo undefined), tak nam nezarovnava header a body (v body chyba disablovany vertikalny scrollbar),
@@ -58,7 +65,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
     state: {
         selectedRow: {} | undefined;
         dropdownOptionsMap: XDropdownOptionsMap;
-        filters: Filters;
+        filters: DataTableFilterMeta;
     };
 
     constructor(props: XFormDataTableProps) {
@@ -74,7 +81,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         this.state = {
             selectedRow: undefined,
             dropdownOptionsMap: {},
-            filters: {}
+            filters: this.createInitFilters()
         };
         this.onClickAddRowDefault = this.onClickAddRowDefault.bind(this);
         this.onClickRemoveRowDefault = this.onClickRemoveRowDefault.bind(this);
@@ -89,7 +96,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
         //props.form.addField(props.assocField + '.*FAKE*'); - vzdy mame aspon 1 field, nie je to potrebne
         for (const child of props.children) {
-            const childColumn = child as any as {props: XFormColumnProps}; // nevedel som to krajsie...
+            const childColumn = child as {props: XFormColumnProps}; // nevedel som to krajsie...
             const field = props.assocField + '.' + XFormDataTable2.getPathForColumn(childColumn.props);
             props.form.addField(field);
         }
@@ -153,6 +160,54 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         return this.entity;
     }
 
+    createInitFilters(): DataTableFilterMeta {
+
+        const initFilters: DataTableFilterMeta = {};
+
+        const xEntity: XEntity = XUtilsMetadata.getXEntity(this.getEntity());
+
+        // TODO - asi by bolo fajn si tieto field, xField niekam ulozit a iterovat ulozene hodnoty, pouziva sa to na viacerych miestach
+        for (const child of this.props.children) {
+            const childColumn = child as {props: XFormColumnProps}; // nevedel som to krajsie...
+            const field: string = XFormDataTable2.getPathForColumn(childColumn.props);
+            const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
+            // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
+            const filterMatchMode: FilterMatchMode = this.getFilterMatchMode(xField);
+            let filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData;
+            if (this.props.filterDisplay === "menu") {
+                // DataTableOperatorFilterMetaData: operator + filter values
+                filterItem = {
+                    operator: FilterOperator.OR,
+                    constraints: [{value: null, matchMode: filterMatchMode}]
+                };
+            }
+            else {
+                // props.filterDisplay === "row"
+                // DataTableFilterMetaData: filter value
+                filterItem = {value: null, matchMode: filterMatchMode};
+            }
+            initFilters[field] = filterItem;
+        }
+
+        return initFilters;
+    }
+
+    getFilterMatchMode(xField: XField): FilterMatchMode {
+        let filterMatchMode: FilterMatchMode;
+        if (xField.type === "string") {
+            filterMatchMode = FilterMatchMode.STARTS_WITH;
+        }
+        // zatial vsetky ostatne EQUALS
+        else if (xField.type === "decimal" || xField.type === "number" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
+            filterMatchMode = FilterMatchMode.EQUALS;
+        }
+        else {
+            throw `XField ${xField.name}: unknown xField.type = ${xField.type}`;
+        }
+
+        return filterMatchMode;
+    }
+
     onSelectionChange(event: any): void {
         console.log("zavolany onSelectionChange");
         console.log(event.value);
@@ -175,20 +230,21 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
     onCheckboxFilterChange(field: string, checkboxValue: boolean | null) {
         // TODO - treba vyklonovat?
-        const filtersCloned: Filters = {...this.state.filters};
+        const filtersCloned: DataTableFilterMeta = {...this.state.filters};
         if (checkboxValue !== null) {
-            filtersCloned[field] = {value: checkboxValue ? "true" : "false", matchMode: "equals"};
+            filtersCloned[field] = {value: checkboxValue ? "true" : "false", matchMode: FilterMatchMode.EQUALS};
         }
         else {
             // pouzivatel zrusil hodnotu vo filtri (vybral prazdny stav v checkboxe), zrusime polozku z filtra
-            delete filtersCloned[field];
+            //delete filtersCloned[field];
+            filtersCloned[field] = {value: null, matchMode: FilterMatchMode.EQUALS};
         }
         this.setState({filters: filtersCloned});
     }
 
     getCheckboxFilterValue(field: string) : boolean | null {
         let checkboxValue: boolean | null = null;
-        const filterValue: FilterValue = this.state.filters[field];
+        const filterValue: DataTableFilterMetaData = this.state.filters[field] as DataTableFilterMetaData;
         if (filterValue !== undefined && filterValue !== null) {
             if (filterValue.value === 'true') {
                 checkboxValue = true;
@@ -202,26 +258,30 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
     onDropdownFilterChange(field: string, displayValue: any) {
         // TODO - treba vyklonovat?
-        const filtersCloned: Filters = {...this.state.filters};
+        const filtersCloned: DataTableFilterMeta = {...this.state.filters};
         if (displayValue !== XUtils.dropdownEmptyOptionValue) {
-            filtersCloned[field] = {value: displayValue, matchMode: "equals"};
+            filtersCloned[field] = {value: displayValue, matchMode: FilterMatchMode.EQUALS};
         }
         else {
             // pouzivatel zrusil hodnotu vo filtri (vybral prazdny riadok), zrusime polozku z filtra
-            delete filtersCloned[field];
+            //delete filtersCloned[field];
+            filtersCloned[field] = {value: null, matchMode: FilterMatchMode.EQUALS};
         }
         this.setState({filters: filtersCloned});
     }
 
     getDropdownFilterValue(field: string) : any {
         let dropdownValue: any = XUtils.dropdownEmptyOptionValue;
-        const filterValue: FilterValue = this.state.filters[field];
+        const filterValue: DataTableFilterMetaData = this.state.filters[field] as DataTableFilterMetaData;
         if (filterValue !== undefined && filterValue !== null) {
-            dropdownValue = filterValue.value;
+            if (filterValue.value !== null) {
+                dropdownValue = filterValue.value;
+            }
         }
         return dropdownValue;
     }
 
+/*  pravdepodobne zombie
     onBodyValueChange (field: string, rowData: any, newValue: any) {
         //console.log("onBodyValueChange");
 
@@ -230,7 +290,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         // kedze "rowData" je sucastou "props.form.state.object", tak nam staci zavolat setState({object: object}), aby sa zmena prejavila
         this.props.form.onObjectDataChange();
     }
-
+*/
     // body={(rowData: any) => bodyTemplate(childColumn.props.field, rowData)}
     bodyTemplate (columnProps: XFormColumnProps, rowData: any, xEntity: XEntity): any {
         let body: any;
@@ -325,13 +385,14 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             style.maxWidth = 'min-content'; // ak nic nedame (nechame auto), tak (v pripade ak nebudeme mat horizontalny scrollbar) natiahne tabulku na celu sirku stranky, co nechceme
         }
 
-        let tableStyle;
+        // pri prechode z Primereact 6.x na 9.x sa tableLayout zmenil z fixed na auto a nefungovalo nastavenie sirok stlpcov - docasne teda takto
+        let tableStyle: React.CSSProperties = {tableLayout: 'fixed'};
         if (this.props.width !== undefined) {
             let width: string = this.props.width;
             if (!isNaN(Number(width))) { // if width is number
                 width = width + 'rem';
             }
-            tableStyle = {width: width};
+            tableStyle = {...tableStyle, width: width};
         }
 
         // pre lepsiu citatelnost vytvarame stlpce uz tu
@@ -341,7 +402,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 // ak chceme zmenit child element, tak treba bud vytvorit novy alebo vyklonovat
                 // priklad je na https://soshace.com/building-react-components-using-children-props-and-context-api/
                 // (vzdy musime robit manipulacie so stlpcom, lebo potrebujeme pridat filter={true} sortable={true}
-                const childColumn = child as any as {props: XFormColumnProps}; // nevedel som to krajsie...
+                const childColumn = child as {props: XFormColumnProps}; // nevedel som to krajsie...
                 const childColumnProps = childColumn.props;
                 // je dolezite, aby field obsahoval cely path az po zobrazovany atribut, lebo podla neho sa vykonava filtrovanie a sortovanie
                 // (aj ked, da sa to prebit na stlpcoch (na elemente Column), su na to atributy)
@@ -364,10 +425,31 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                     filterElement = <XDropdownDTFilter entity={thisLocal.getEntity()} path={field} value={dropdownValue} onValueChange={thisLocal.onDropdownFilterChange}/>
                 }
 
+                // *********** showFilterMenu ***********
+                let showFilterMenu: boolean;
+                if (childColumnProps.showFilterMenu !== undefined) {
+                    showFilterMenu = childColumnProps.showFilterMenu;
+                }
+                else {
+                    showFilterMenu = true; // default
+                    if (thisLocal.props.filterDisplay === "row") {
+                        if (xField.type === "boolean" || childColumnProps.dropdownInFilter) {
+                            showFilterMenu = false;
+                        }
+                    }
+                }
+
+                // *********** showClearButton ***********
+                // pre filterDisplay = "row" nechceme clear button, chceme setrit miesto
+                let showClearButton: boolean = thisLocal.props.filterDisplay === "menu";
+
                 // *********** width/headerStyle ***********
                 let width: string | undefined = XUtils.processPropWidth(childColumn.props.width);
                 if (width === undefined || width === "default") {
-                    width = XUtilsMetadata.computeColumnWidth(xField, childColumnProps.type, header);
+                    // TODO - if filter not used at all, then buttons flags should be false
+                    const filterMenuInFilterRow: boolean = thisLocal.props.filterDisplay === "row" && showFilterMenu;
+                    const filterButtonInHeader: boolean = thisLocal.props.filterDisplay === "menu";
+                    width = XUtilsMetadata.computeColumnWidth(xField, filterMenuInFilterRow, childColumnProps.type, header, filterButtonInHeader);
                 }
                 let headerStyle: React.CSSProperties = {};
                 if (width !== undefined) {
@@ -375,7 +457,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 }
 
                 // *********** align ***********
-                let align = "left"; // default
+                let align: "left" | "center" | "right" | undefined = undefined; // default undefined (left)
                 // do buducna
                 // if (childColumnProps.align !== undefined) {
                 //     align = childColumnProps.align;
@@ -391,16 +473,9 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 }
                 // }
 
-                // *********** style ***********
-                let style: React.CSSProperties = {};
-                // TODO - pouzit className a nie style
-                if (align === "center" || align === "right") {
-                    style = {textAlign: align};
-                    headerStyle = {...headerStyle, ...style}; // headerStyle overrides style in TH cell
-                }
-
-                return <Column field={field} header={header} filter={true} sortable={true} filterElement={filterElement}
-                               headerStyle={headerStyle} style={style}
+                return <Column field={field} header={header} filter={true} sortable={true}
+                               filterElement={filterElement} showFilterMenu={showFilterMenu} showClearButton={showClearButton}
+                               headerStyle={headerStyle} align={align}
                                body={(rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, rowData, xEntity);}}/>;
             }
         );
@@ -414,7 +489,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 <div className="flex justify-content-center">
                     <DataTable ref={(el) => this.dt = el} value={valueList} dataKey={this.dataKey} paginator={paginator} rows={rows}
                                totalRecords={valueList.length}
-                               filters={this.state.filters} onFilter={this.onFilter}
+                               filterDisplay={this.props.filterDisplay} filters={this.state.filters} onFilter={this.onFilter}
                                sortMode="multiple" removableSort={true}
                                selectionMode="single" selection={this.state.selectedRow} onSelectionChange={this.onSelectionChange}
                                className="p-datatable-sm x-form-datatable" resizableColumns columnResizeMode="expand" tableStyle={tableStyle}
@@ -436,6 +511,7 @@ export interface XFormColumnProps {
     header?: any;
     readOnly?: boolean;
     dropdownInFilter?: boolean; // moze byt len na stlpcoch ktore zobrazuju asociavany atribut (dlzka path >= 2)
+    showFilterMenu?: boolean;
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
 }
 

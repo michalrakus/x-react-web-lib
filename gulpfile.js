@@ -32,6 +32,7 @@ function generateApi(cb) {
         "./lib/components/XInputDate",
         "./lib/components/XInputDecimal",
         "./lib/components/XInputText",
+        "./lib/components/XInputTextarea",
         "./lib/components/XLazyDataTable",
         "./lib/components/XLoginDialog",
         "./lib/components/XLoginForm",

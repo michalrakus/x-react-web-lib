@@ -1,5 +1,11 @@
 import React, {ReactChild, useEffect, useRef, useState} from 'react';
-import {DataTable} from 'primereact/datatable';
+import {
+    DataTable,
+    DataTableFilterMeta,
+    DataTableFilterMetaData,
+    DataTableOperatorFilterMetaData,
+    DataTableSortMeta
+} from 'primereact/datatable';
 import {Column} from 'primereact/column';
 import {XButton} from "./XButton";
 import {XUtils} from "./XUtils";
@@ -9,12 +15,13 @@ import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XEntity, XField} from "../serverApi/XEntityMetadata";
 import {dateAsUI, datetimeAsUI, numberAsUI} from "./XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
-import {Filters, FilterValue, FindParam, ResultType, SortMeta} from "../serverApi/FindParam";
+import {FindParam, ResultType} from "../serverApi/FindParam";
 import {XButtonIconSmall} from "./XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {CsvParam, ExportParam, ExportType} from "../serverApi/ExportImportParam";
 import {XExportRowsDialog} from "./XExportRowsDialog";
+import {FilterMatchMode, FilterOperator} from "primereact/api";
 
 export interface XEditModeHandlers {
     onStart: () => void;
@@ -32,6 +39,7 @@ export interface XLazyDataTableProps {
     dataKey?: string;
     paginator: boolean;
     rows: number;
+    filterDisplay: "menu" | "row";
     scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
     scrollWidth: string; // hodnota "none" vypne horizontalne scrollovanie
     scrollHeight: string; // hodnota "none" vypne vertikalne scrollovanie
@@ -51,22 +59,73 @@ export interface XLazyDataTableProps {
 
 export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
+    // must be here, is used in createInitFilters()
+    const xEntity: XEntity = XUtilsMetadata.getXEntity(props.entity);
+
+    const createInitFilters = () : DataTableFilterMeta => {
+
+        const initFilters: DataTableFilterMeta = {};
+
+        //let columns = dataTableEl.current.props.children; - does not work
+        let columns = props.children;
+        for (let column of columns) {
+            const xLazyColumn = column as {props: XLazyColumnProps}; // nevedel som to krajsie...
+            const field: string = xLazyColumn.props.field;
+            const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
+            // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
+            const filterMatchMode: FilterMatchMode = getFilterMatchMode(xField);
+            let filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData;
+            if (props.filterDisplay === "menu") {
+                // DataTableOperatorFilterMetaData: operator + filter values
+                filterItem = {
+                    operator: FilterOperator.OR,
+                    constraints: [{value: null, matchMode: filterMatchMode}]
+                };
+            }
+            else {
+                // props.filterDisplay === "row"
+                // DataTableFilterMetaData: filter value
+                filterItem = {value: null, matchMode: filterMatchMode};
+            }
+            initFilters[field] = filterItem;
+        }
+
+        return initFilters;
+    }
+
+    const getFilterMatchMode = (xField: XField) : FilterMatchMode => {
+        let filterMatchMode: FilterMatchMode;
+        if (xField.type === "string") {
+            filterMatchMode = FilterMatchMode.STARTS_WITH;
+        }
+        // zatial vsetky ostatne EQUALS
+        else if (xField.type === "decimal" || xField.type === "number" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
+            filterMatchMode = FilterMatchMode.EQUALS;
+        }
+        else {
+            throw `XField ${xField.name}: unknown xField.type = ${xField.type}`;
+        }
+
+        return filterMatchMode;
+    }
+
     const dataTableEl = useRef<any>(null);
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0});
     const [loading, setLoading] = useState(false);
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(props.paginator ? props.rows : undefined);
-    let filtersInit: Filters = {};
+    let filtersInit: DataTableFilterMeta = createInitFilters();
     if (props.searchTableParams !== undefined && props.searchTableParams.filter !== undefined) {
+        // TODO - zohladnit "menu" filtrovanie
         filtersInit[props.searchTableParams.displayField] = {value: props.searchTableParams.filter, matchMode: "startsWith"};
     }
-    const [filters, setFilters] = useState<Filters>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
-    const [multiSortMeta, setMultiSortMeta] = useState<SortMeta[]>([]);
+    const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
+    const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>([]);
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
     const [exportRowsDialogOpened, setExportRowsDialogOpened] = useState<boolean>(false);
     const [exportRowsDialogRowCount, setExportRowsDialogRowCount] = useState<number>(); // param pre dialog
-    const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<Filters>(filtersInit); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
+    const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<DataTableFilterMeta>(filtersInit); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
 
     // parameter [] zabezpeci ze sa metoda zavola len po prvom renderingu (a nie po kazdej zmene stavu (zavolani setNieco()))
     useEffect(() => {
@@ -96,6 +155,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
     }); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // TODO - preco je to tu? presunut dole ak sa da...
     const dataKey = props.dataKey !== undefined ? props.dataKey : XUtilsMetadata.getXEntity(props.entity).idField;
 
     const onPage = async (event: any) => {
@@ -315,22 +375,26 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
     }
 
+    // ****** checkbox vo filtri ********
+    // pouziva sa len pre simple filtrovanie (filterDisplay="row")
+
     const onCheckboxFilterChange = (field: string, checkboxValue: boolean | null) => {
         // TODO - treba vyklonovat?
-        const filtersCloned: Filters = {...filters};
+        const filtersCloned: DataTableFilterMeta = {...filters};
         if (checkboxValue !== null) {
-            filtersCloned[field] = {value: checkboxValue ? "1" : "0", matchMode: "equals"};
+            filtersCloned[field] = {value: checkboxValue ? "1" : "0", matchMode: FilterMatchMode.EQUALS};
         }
         else {
             // pouzivatel zrusil hodnotu vo filtri (vybral prazdny stav v checkboxe), zrusime polozku z filtra
-            delete filtersCloned[field];
+            //delete filtersCloned[field];
+            filtersCloned[field] = {value: null, matchMode: FilterMatchMode.EQUALS};
         }
         setFilters(filtersCloned);
     }
 
     const getCheckboxFilterValue = (field: string) : boolean | null => {
         let checkboxValue: boolean | null = null;
-        const filterValue: FilterValue = filters[field];
+        const filterValue: DataTableFilterMetaData = filters[field] as DataTableFilterMetaData;
         if (filterValue !== undefined && filterValue !== null) {
             if (filterValue.value === '1') {
                 checkboxValue = true;
@@ -342,24 +406,30 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return checkboxValue;
     }
 
+    // ****** dropdown vo filtri ********
+    // pouziva sa len pre simple filtrovanie (filterDisplay="row")
+
     const onDropdownFilterChange = (field: string, displayValue: any) => {
         // TODO - treba vyklonovat?
-        const filtersCloned: Filters = {...filters};
+        const filtersCloned: DataTableFilterMeta = {...filters};
         if (displayValue !== XUtils.dropdownEmptyOptionValue) {
-            filtersCloned[field] = {value: displayValue, matchMode: "equals"};
+            filtersCloned[field] = {value: displayValue, matchMode: FilterMatchMode.EQUALS};
         }
         else {
             // pouzivatel zrusil hodnotu vo filtri (vybral prazdny riadok), zrusime polozku z filtra
-            delete filtersCloned[field];
+            //delete filtersCloned[field];
+            filtersCloned[field] = {value: null, matchMode: FilterMatchMode.EQUALS};
         }
         setFilters(filtersCloned);
     }
 
     const getDropdownFilterValue = (field: string) : any => {
         let dropdownValue: any = XUtils.dropdownEmptyOptionValue;
-        const filterValue: FilterValue = filters[field];
+        const filterValue: DataTableFilterMetaData = filters[field] as DataTableFilterMetaData;
         if (filterValue !== undefined && filterValue !== null) {
-            dropdownValue = filterValue.value;
+            if (filterValue.value !== null) {
+                dropdownValue = filterValue.value;
+            }
         }
         return dropdownValue;
     }
@@ -407,9 +477,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return bodyValue;
     }
 
-    const xEntity: XEntity = XUtilsMetadata.getXEntity(props.entity);
-
-    // ak mame scrollWidth/scrollHeight = viewport (default), vyratame scrollWidth/scrollHeight tak aby tabulka "sadla" okna (viewport-u)
+    // ak mame scrollWidth/scrollHeight = viewport (default), vyratame scrollWidth/scrollHeight tak aby tabulka "sadla" do okna (viewport-u)
 
     let scrollWidth: string | undefined = undefined; // vypnute horizontalne scrollovanie
     let scrollHeight: string | undefined = undefined; // vypnute vertikalne scrollovanie
@@ -437,17 +505,20 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 if (props.searchTableParams === undefined) {
                     // sme v standardnom formulari
                     viewHeight = '100vh';
-                    headerFooterHeight = XUtils.toPX0('20.89rem') - XUtils.toPX0('4.43rem'); // experimentalne zistena vyska header/footer (body - table body) bez formFooterHeight
+                    // experimentalne zistena vyska header/footer
+                    // da sa vyratat ako vysku body (celej stranky) - vyska div-u ktory sa scrolluje (div na ktorom je style="max-height: calc(100vh - 266.42px);)
+                    // (treba odratat vysku paginatora a formFooterHeight (lebo tie sa odratavaju nizsie))
+                    headerFooterHeight = XUtils.toPX0('10.89rem');
                 }
                 else {
                     // sme v dialogu
                     if (XUtils.isMobile()) {
                         viewHeight = '98vh'; // .p-dialog pre mobil ma max-height: 98%
-                        headerFooterHeight = XUtils.toPX0('17.60rem'); // rucne zratane
+                        headerFooterHeight = XUtils.toPX0('12.03rem'); // rucne zratane
                     }
                     else {
                         viewHeight = '90vh'; // .p-dialog pre desktop ma max-height: 90%
-                        headerFooterHeight = XUtils.toPX0('18.60rem'); // rucne zratane (desktop ma vecsi margin dole na dialogu)
+                        headerFooterHeight = XUtils.toPX0('13.03rem'); // rucne zratane (desktop ma vecsi margin dole na dialogu)
                     }
                 }
                 // pridame vysku paging-u, ak treba
@@ -472,13 +543,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         style.maxWidth = 'min-content'; // ak nic nedame (nechame auto), tak (v pripade ak nebudeme mat horizontalny scrollbar) natiahne tabulku na celu sirku stranky, co nechceme
     }
 
-    let tableStyle;
+    // pri prechode z Primereact 6.x na 9.x sa tableLayout zmenil z fixed na auto a nefungovalo nastavenie sirok stlpcov - docasne teda takto
+    let tableStyle: React.CSSProperties = {tableLayout: 'fixed'};
     if (props.width !== undefined) {
         let width: string = props.width;
         if (!isNaN(Number(width))) { // if width is number
             width = width + 'rem';
         }
-        tableStyle = {width: width};
+        tableStyle = {...tableStyle, width: width};
     }
 
     // check
@@ -546,6 +618,24 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field} value={dropdownValue} onValueChange={onDropdownFilterChange}/>
             }
 
+            // *********** showFilterMenu ***********
+            let showFilterMenu: boolean;
+            if (childColumn.props.showFilterMenu !== undefined) {
+                showFilterMenu = childColumn.props.showFilterMenu;
+            }
+            else {
+                showFilterMenu = true; // default
+                if (props.filterDisplay === "row") {
+                    if (xField.type === "boolean" || childColumn.props.dropdownInFilter) {
+                        showFilterMenu = false;
+                    }
+                }
+            }
+
+            // *********** showClearButton ***********
+            // pre filterDisplay = "row" nechceme clear button, chceme setrit miesto
+            let showClearButton: boolean = props.filterDisplay === "menu";
+
             // *********** body ***********
             // TODO - mozno by bolo dobre vytvarat body pre kazdy field, nech je to vsetko konzistentne
             let body;
@@ -556,7 +646,10 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             // *********** width/headerStyle ***********
             let width: string | undefined = XUtils.processPropWidth(childColumn.props.width);
             if (width === undefined || width === "default") {
-                width = XUtilsMetadata.computeColumnWidth(xField, undefined, headerLabel);
+                // TODO - if filter not used at all, then buttons flags should be false
+                const filterMenuInFilterRow: boolean = props.filterDisplay === "row" && showFilterMenu;
+                const filterButtonInHeader: boolean = props.filterDisplay === "menu";
+                width = XUtilsMetadata.computeColumnWidth(xField, filterMenuInFilterRow, undefined, headerLabel, filterButtonInHeader);
             }
             let headerStyle: React.CSSProperties = {};
             if (width !== undefined) {
@@ -564,7 +657,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             }
 
             // *********** align ***********
-            let align = "left"; // default
+            let align: "left" | "center" | "right" | undefined = undefined; // default undefined (left)
             if (childColumn.props.align !== undefined && childColumn.props.align !== null) {
                 align = childColumn.props.align;
             }
@@ -578,16 +671,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 }
             }
 
-            // *********** style ***********
-            let style: React.CSSProperties = {};
-            // TODO - pouzit className a nie style
-            if (align === "center" || align === "right") {
-                style = {'textAlign': align};
-                headerStyle = {...headerStyle, ...style}; // headerStyle overrides style in TH cell
-            }
-
             return <Column field={childColumn.props.field} header={header} filter={true} sortable={true}
-                           filterElement={filterElement} body={body} headerStyle={headerStyle} style={style}/>;
+                           filterElement={filterElement} showFilterMenu={showFilterMenu} showClearButton={showClearButton}
+                           body={body} headerStyle={headerStyle} align={align}/>;
         }
     );
 
@@ -599,7 +685,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             <div className="flex justify-content-center">
                 <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator} rows={rows} totalRecords={value.totalRecords}
                            lazy={true} first={first} onPage={onPage} loading={loading}
-                           filters={filters} onFilter={onFilter}
+                           filterDisplay={props.filterDisplay} filters={filters} onFilter={onFilter}
                            sortMode="multiple" removableSort={true} multiSortMeta={multiSortMeta} onSort={onSort}
                            selectionMode="single" selection={selectedRow} onSelectionChange={onSelectionChange}
                            onRowDoubleClick={onRowDoubleClick}
@@ -625,6 +711,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 XLazyDataTable.defaultProps = {
     paginator: true,
     rows: 10,
+    filterDisplay: "row",
     scrollable: true,
     scrollWidth: 'viewport', // nastavi sirku tabulky na (100vw - nieco) (ak bude obsah sirsi, zapne horizontalny scrollbar)
     scrollHeight: 'viewport', // nastavi vysku tabulky na (100vh - nieco) (ak bude obsah vecsi, zapne vertikalny scrollbar)
@@ -636,6 +723,7 @@ export interface XLazyColumnProps {
     header?: any;
     align?: "left" | "center" | "right";
     dropdownInFilter?: boolean;
+    showFilterMenu?: boolean;
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
 }
 

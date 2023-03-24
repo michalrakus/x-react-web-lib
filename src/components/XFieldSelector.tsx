@@ -1,9 +1,9 @@
 import React, {useEffect, useState} from "react";
 import {TreeTable} from "primereact/treetable";
 import {Column} from "primereact/column";
-import TreeNode from "primereact/components/treenode/TreeNode";
 import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import TreeNode from "primereact/treenode";
 
 export const XFieldSelector = (props: {entity: string; assocSelectable: boolean; selectionField?: string; onSelectionChange: (selectedField: string) => void;}) => {
 
@@ -39,7 +39,7 @@ export const XFieldSelector = (props: {entity: string; assocSelectable: boolean;
     }
 
     return (
-        <TreeTable value={treeNodeList} selectionMode="single" selectionKeys={props.selectionField} onSelectionChange={e => props.onSelectionChange(e.value)}
+        <TreeTable value={treeNodeList} selectionMode="single" selectionKeys={props.selectionField} onSelectionChange={e => props.onSelectionChange(Object.keys(e.value)[0])}
                    className="x-field-treetable p-treetable-sm" scrollable scrollHeight="20rem">
             <Column field="name" header="Field name" headerStyle={{width: "15.7rem"}} expander></Column>
             <Column field="type" header="Type" headerStyle={{width: "9.3rem"}}></Column>

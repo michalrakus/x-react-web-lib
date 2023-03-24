@@ -1,6 +1,9 @@
 import React, {Component} from "react";
 import {XFormBase} from "./XFormBase";
 import {XError} from "./XErrors";
+import {XObject} from "./XObject";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XUtils} from "./XUtils";
 
 export interface XFormComponentProps {
     form: XFormBase;
@@ -10,33 +13,88 @@ export interface XFormComponentProps {
     inline?: boolean;
 }
 
-export class XFormComponent<P extends XFormComponentProps> extends Component<P> {
+export abstract class XFormComponent<P extends XFormComponentProps> extends Component<P> {
 
-    constructor(props: P) {
+    protected constructor(props: P) {
         super(props);
 
         props.form.addXFormComponent(this);
     }
 
-    // pomocna metodka, sluzi napr. na validaciu not null atributov
-    // should be overriden
-    getFieldForEdit(): string | undefined {
-        return undefined;
+    // nazov fieldu, pod ktorym sa hodnota uklada do objektu form.state.object
+    // pri jednoduchych inputoch nazov fieldu (props.field), pri asociacnych inputoch nazov asociacie (props.assocField)
+    // pouziva sa aj ako id-cko fieldu pre errorMap pri validacii (form.state.errorMap)
+    // must be overridden
+    abstract getField(): string;
+
+    // ******** read and write from/into form.state.object ***********
+
+    // reads value from form.state.object
+    // can be overridden, but this should work for every component
+    getValueFromObject(): any {
+        let objectValue: any = null;
+        const object: XObject | null = this.props.form.state.object;
+        if (object !== null) {
+            objectValue = XUtilsCommon.getValueByPath(object, this.getField());
+            //  pre istotu dame na null, null je standard
+            if (objectValue === undefined) {
+                objectValue = null;
+            }
+        }
+        return objectValue;
     }
 
+    // writes value into form.state.object
+    onValueChangeBase(value: any) {
+        const error: string | undefined = this.validateOnChange(value);
+        this.props.form.onFieldChange(this.getField(), value, error);
+    }
+
+    // ******** properties (not only) for rendering ***********
+
+    // must be overridden
+    abstract isNotNull(): boolean;
+
+    isReadOnly(): boolean {
+        // tuto do buducna planujeme pridat aj dynamicky readOnly, bude ho treba ukladat do form.state podobne ako sa ukladaju errory do form.state.errorMap
+        return XUtils.isReadOnly(this.getField(), this.props.readOnly);
+    }
+
+    getLabel(): string {
+        let label = this.props.label ?? this.getField();
+        // test na readOnly je tu hlavne koli tomu aby sme nemali * pri ID atribute, ktory sa pri inserte generuje az pri zapise do DB
+        if (this.isNotNull() && !this.isReadOnly()) {
+            label = XUtils.markNotNull(label);
+        }
+        return label;
+    }
+
+    getLabelStyle(): React.CSSProperties {
+        let labelStyle: React.CSSProperties = this.props.labelStyle ?? {};
+        const inline: boolean = this.props.inline ?? false;
+        if (!inline) {
+            XUtils.addCssPropIfNotExists(labelStyle, {width: XUtils.FIELD_LABEL_WIDTH});
+        }
+        else {
+            XUtils.addCssPropIfNotExists(labelStyle, {width: 'auto'}); // podla dlzky labelu
+            XUtils.addCssPropIfNotExists(labelStyle, {marginLeft: '1rem'});
+        }
+        return labelStyle;
+    }
+
+    // *********** validation support ************
+
     // volane po kliknuti na Save
-    // vrati error message ak nezbehne "field validacia", ak zbehne, vrati undefined
+    // vrati (field, XError) ak nezbehne "field validacia", ak zbehne, vrati undefined
     validate(): {field: string; xError: XError} | undefined {
+        // TODO - FILOZOFICKA OTAZKA - volat validaciu aj ked je field readOnly (this.isReadOnly() === true)? zatial dame ze hej...
         const value: any = this.getValueFromObject();
         // not null validacia + custom field validacia volana na onChange
         let errorOnChange: string | undefined = this.validateOnChange(value);
         // custom field validacia volana na onBlur (focus lost)
         // TODO
         if (errorOnChange) {
-            const field = this.getFieldForEdit();
-            if (field) {
-                return {field: field, xError: {onChange: errorOnChange}};
-            }
+            return {field: this.getField(), xError: {onChange: errorOnChange, fieldLabel: this.getLabel()}};
         }
         return undefined;
     }
@@ -52,53 +110,15 @@ export class XFormComponent<P extends XFormComponentProps> extends Component<P> 
     }
 
     validateNotNull(value: any): string | undefined {
-        if (this.checkNotNull() && value === null) {
+        // validacia by mala sediet s metodou getLabel(), kde sa pridava * , preto tu mame aj test !this.isReadOnly() - id fieldy pri inserte nechceme testovat
+        // otazka je ci nevypinat validaciu pre readOnly fieldy vzdy (aj ked napr. readOnly vznikne dynamicky)
+        if (this.isNotNull() && !this.isReadOnly() && value === null) {
             return "Field is required.";
         }
         return undefined;
     }
 
-    // should be overriden
-    checkNotNull(): boolean {
-        return false;
-    }
-
-    // should be overriden
-    getValueFromObject(): any {
-        return null;
-    }
-
-    // vrati error message z form.state.errorMap
-    getError(): string | undefined {
-        const field = this.getFieldForEdit();
-        if (field) {
-            const error: XError = this.props.form.state.errorMap[field];
-            if (error) {
-                if (error.onChange || error.onBlur || error.form) {
-                    let message: string = '';
-                    if (error.onChange) {
-                        message += error.onChange;
-                    }
-                    if (error.onBlur) {
-                        if (message !== '') {
-                            message += ' ';
-                        }
-                        message += error.onBlur;
-                    }
-                    if (error.form) {
-                        if (message !== '') {
-                            message += ' ';
-                        }
-                        message += error.form;
-                    }
-                    return message;
-                }
-            }
-        }
-        return undefined;
-    }
-
-    // deprecated - nie je to pekne riesenie - do komponentu treba posielat error message (string) a nie props
+    // deprecated - nie je to pekne riesenie - do komponentu treba posielat error message (string) a nie props (asi ako v XAutoComplete)
     getClassNameTooltip(): {} {
         const error = this.getError();
         return error ? {
@@ -106,5 +126,11 @@ export class XFormComponent<P extends XFormComponentProps> extends Component<P> 
             tooltip: error,
             tooltipOptions: {className: 'pink-tooltip', position: 'bottom'}
         } : {};
+    }
+
+    // vrati error message z form.state.errorMap
+    getError(): string | undefined {
+        const error: XError = this.props.form.state.errorMap[this.getField()];
+        return error ? XUtils.getXErrorMessage(error) : undefined;
     }
 }

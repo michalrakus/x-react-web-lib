@@ -6,6 +6,7 @@ import {CsvDecimalFormat, CsvSeparator, ExportType} from "../serverApi/ExportImp
 import {XResponseError} from "./XResponseError";
 import React from "react";
 import {XEnvVar} from "./XEnvVars";
+import {XError} from "./XErrors";
 
 export enum OperationType {
     None,
@@ -348,7 +349,7 @@ export class XUtils {
         return label + ' *';
     }
 
-    static showErrorMessage(message: string, e: Error) {
+    static showErrorMessage(message: string, e: unknown) {
         let msg = message + XUtilsCommon.newLine;
         if (e instanceof XResponseError) {
             msg += e.message + XUtilsCommon.newLine;
@@ -357,12 +358,40 @@ export class XUtils {
         else if (e instanceof Error) {
             msg += e.message;
         }
+        else if (typeof e === 'string' || typeof e === 'number') {
+            // chyba typu: throw 'nieco'
+            msg += e;
+        }
         alert(msg);
     }
 
     // pouziva sa hlavne na inputy
     static createErrorProps(error: string | undefined): {} {
         return error ? {className: "p-invalid", tooltip: error, tooltipOptions: { className: 'pink-tooltip', position: 'bottom' }} : {};
+    }
+
+    // pomocna metodka
+    static getXErrorMessage(xError: XError): string | undefined {
+        if (xError.onChange || xError.onBlur || xError.form) {
+            let message: string = '';
+            if (xError.onChange) {
+                message += xError.onChange;
+            }
+            if (xError.onBlur) {
+                if (message !== '') {
+                    message += ' ';
+                }
+                message += xError.onBlur;
+            }
+            if (xError.form) {
+                if (message !== '') {
+                    message += ' ';
+                }
+                message += xError.form;
+            }
+            return message;
+        }
+        return undefined;
     }
 
     // pomocna metodka pouzivana (zatial len) pre autocomplete na ignorovanie velkych-malych znakov a diakritiky
