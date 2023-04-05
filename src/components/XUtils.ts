@@ -7,6 +7,7 @@ import {XResponseError} from "./XResponseError";
 import React from "react";
 import {XEnvVar} from "./XEnvVars";
 import {XError} from "./XErrors";
+import {FindParam, ResultType, XCustomFilter} from "../serverApi/FindParam";
 
 export enum OperationType {
     None,
@@ -171,6 +172,13 @@ export class XUtils {
 
     static fetchMany(path: string, value: any, usePublicToken?: boolean | XToken): Promise<any[]> {
         return XUtils.fetch(path, value, usePublicToken);
+    }
+
+    // pomocna metodka pouzivajuca lazyDataTable service
+    static async fetchRows(entity: string, customFilter: XCustomFilter | undefined, sortField?: string): Promise<any[]> {
+        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilter: customFilter, multiSortMeta: sortField ? [{field: sortField, order: 1}] : undefined};
+        const {rowList}: {rowList: any[];} = await XUtils.fetchOne('lazyDataTableFindRows', findParam);
+        return rowList;
     }
 
     static fetchOne(path: string, value: any, usePublicToken?: boolean | XToken): Promise<any> {
@@ -401,5 +409,21 @@ export class XUtils {
             value = value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         }
         return value;
+    }
+
+    // pomocna metodka
+    static filterAnd(filter1: XCustomFilter | undefined, filter2: XCustomFilter | undefined): XCustomFilter | undefined {
+        if (filter1 && filter2) {
+            return {filter: `(${filter1.filter}) AND (${filter2.filter})`, values: {...filter1.values, ...filter2.values}};
+        }
+        else if (filter1 && filter2 === undefined) {
+            return filter1;
+        }
+        else if (filter1 === undefined && filter2) {
+            return filter2;
+        }
+        else {
+            return undefined;
+        }
     }
 }

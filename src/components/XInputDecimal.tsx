@@ -6,7 +6,7 @@ import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {XUtils} from "./XUtils";
 import {XFormComponentProps} from "./XFormComponent";
 
-export interface XInputDecimalProps extends XFormComponentProps {
+export interface XInputDecimalProps extends XFormComponentProps<number> {
     field: string;
     size?: number;
     inputStyle?: React.CSSProperties;
@@ -70,7 +70,7 @@ export const XInputDecimal = (props: XInputDecimalProps) => {
     return (
         <div className="field grid">
             <label htmlFor={props.field} className="col-fixed" style={labelStyle}>{label}</label>
-            <InputNumber id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} mode="decimal" locale="de-DE"
+            <InputNumber id={props.field} value={fieldValue} onChange={onValueChange} readOnly={readOnly} mode="decimal" locale="de-DE"
                          useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}
                          size={sizeInput} style={props.inputStyle}/>
         </div>

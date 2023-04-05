@@ -23,6 +23,7 @@ function generateApi(cb) {
         "./lib/components/XDropdown",
         "./lib/components/XEnvVars",
         "./lib/components/XErrors",
+        "./lib/components/XFieldChangeEvent",
         "./lib/components/XFormBase",
         "./lib/components/XFormBaseT",
         "./lib/components/XFormDataTable2",
@@ -43,6 +44,7 @@ function generateApi(cb) {
         "./lib/components/XUtilsConversions",
         "./lib/components/XUtilsMetadata",
 
+        "./lib/serverApi/FindParam",
         "./lib/serverApi/XUtilsCommon",
 
         "./lib/administration/XUserBrowse",

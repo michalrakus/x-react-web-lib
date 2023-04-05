@@ -83,6 +83,11 @@ export class XUtilsCommon {
         }
         return result;
     }
+
+    static findFirstMatch(pattern: RegExp, value: string): string | null {
+        const match: RegExpExecArray | null = pattern.exec(value);
+        return match != null ? match[0] : null;
+    }
 }
 
 // nevedel som importnut dateFormat, tak som to dal sem aby som nemusel vsade pouzivat require("dateformat")

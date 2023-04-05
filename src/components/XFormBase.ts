@@ -1,7 +1,7 @@
 import {Component} from "react";
 import {XObject} from "./XObject";
 import {OperationType, XUtils} from "./XUtils";
-import {XFormComponent} from "./XFormComponent";
+import {FieldOnChange, XFormComponent} from "./XFormComponent";
 import {XFormDataTable2} from "./XFormDataTable2";
 import {XErrorMap, XErrors} from "./XErrors";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
@@ -35,7 +35,7 @@ export abstract class XFormBase extends Component<FormProps> {
     state: {object: XObject | null; errorMap: XErrorMap} | any; // poznamka: mohli by sme sem dat aj typ any...
     // poznamka 2: " | any" sme pridali aby sme mohli do state zapisovat aj neperzistentne atributy typu "this.state.passwordNew"
 
-    xFormComponentList: Array<XFormComponent<any>>; // zoznam jednoduchych komponentov na formulari (vcetne XDropdown, XSearchButton, ...)
+    xFormComponentList: Array<XFormComponent<any, any>>; // zoznam jednoduchych komponentov na formulari (vcetne XDropdown, XSearchButton, ...)
     xFormDataTableList: Array<XFormDataTable2>; // zoznam detailovych tabuliek (obsahuju zoznam dalsich komponentov)
 
     constructor(props: FormProps) {
@@ -67,14 +67,18 @@ export abstract class XFormBase extends Component<FormProps> {
     }
 
     async componentDidMount() {
+        console.log("volany XFormBase.componentDidMount()");
         // kontrola (musi byt tu, v konstruktore este property nie je nastavena)
         if (this.entity === undefined) {
             throw "XFormBase: Property entity is not defined - use decorator @Form.";
         }
+        let object: XObject;
+        let operationType: OperationType.Insert | OperationType.Update;
         if (this.props.id !== undefined) {
             //console.log('XFormBase.componentDidMount ide nacitat objekt');
             //console.log(this.fields);
-            const object: XObject = await XUtils.fetchById(this.entity, Array.from(this.fields), this.props.id);
+            object = await XUtils.fetchById(this.entity, Array.from(this.fields), this.props.id);
+            operationType = OperationType.Update;
             //console.log('XFormBase.componentDidMount nacital objekt:');
             //console.log(object);
             // const price = (object as any).price;
@@ -83,8 +87,15 @@ export abstract class XFormBase extends Component<FormProps> {
             // const date = (object as any).carDate;
             // console.log(typeof date);
             // console.log(date);
-            this.setState({object: object});
         }
+        else {
+            // add new row
+            object = this.state.object;
+            operationType = OperationType.Insert;
+        }
+        this.preInitForm(object, operationType);
+        console.log("volany XFormBase.componentDidMount() - ideme setnut object");
+        this.setState({object: object}, () => console.log("volany XFormBase.componentDidMount() - callback setState"));
     }
 
     getEntity(): string {
@@ -109,13 +120,18 @@ export abstract class XFormBase extends Component<FormProps> {
         return this.props.id === undefined;
     }
 
-    onFieldChange(field: string, value: any, error?: string | undefined) {
+    onFieldChange(field: string, value: any, error?: string | undefined, onChange?: FieldOnChange, assocObjectChange?: OperationType) {
 
         const object: XObject = this.getXObject();
         object[field] = value;
 
         const errorMap: XErrorMap = this.state.errorMap;
         errorMap[field] = {...errorMap[field], onChange: error};
+
+        // tu zavolame onChange komponentu - object uz ma zapisanu zmenenu hodnotu, onChange nasledne zmeni dalsie hodnoty a nasledne sa zavola setState
+        if (onChange) {
+            onChange({object: object, assocObjectChange: assocObjectChange});
+        }
 
         // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
         this.setState({object: object, errorMap: errorMap});
@@ -133,6 +149,15 @@ export abstract class XFormBase extends Component<FormProps> {
         const object: XObject | null = this.state.object;
         // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
         this.setState({object: object});
+    }
+
+    // lepsi nazov ako onObjectDataChange
+    // ak niekto zmenil this.state.object alebo this.state.errorMap, zmena sa prejavi vo formulari
+    // pouzivame napr. po zavolani onChange na XInputText
+    setStateXForm() {
+        // TODO - je to ok ze object menime takto?
+        // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
+        this.setState({object: this.state.object, errorMap: this.state.errorMap});
     }
 
     onTableAddRow(assocField: string, newRow: any, dataKey?: string, selectedRow?: {}) {
@@ -193,11 +218,11 @@ export abstract class XFormBase extends Component<FormProps> {
         this.fields.add(field);
     }
 
-    addXFormComponent(xFormComponent: XFormComponent<any>) {
+    addXFormComponent(xFormComponent: XFormComponent<any, any>) {
         this.xFormComponentList.push(xFormComponent);
     }
 
-    findXFormComponent(field: string): XFormComponent<any> | undefined {
+    findXFormComponent(field: string): XFormComponent<any, any> | undefined {
         // TODO - vytvorit mapu (field, ref(xFormComponent)), bude to rychlejsie
         // vytvorit len mapu (a list zrusit) je problem - mozme mat pre jeden field viacero (napr. asociacnych) componentov
         for (const xFormComponent of this.xFormComponentList) {
@@ -239,7 +264,7 @@ export abstract class XFormBase extends Component<FormProps> {
         //console.log(this.state.object);
         let object: XObject;
         try {
-            object = await XUtils.fetch('saveRow', {entity: this.getEntity(), object: this.state.object, reload: this.props.onSaveOrCancel !== undefined});
+            object = await this.saveRow();
         }
         catch (e) {
             XUtils.showErrorMessage("Save row failed.", e);
@@ -299,7 +324,7 @@ export abstract class XFormBase extends Component<FormProps> {
         for (const [field, error] of Object.entries(xErrors)) {
             if (error) {
                 // skusime zistit label
-                const xFormComponent: XFormComponent<any> | undefined = this.findXFormComponent(field);
+                const xFormComponent: XFormComponent<any, any> | undefined = this.findXFormComponent(field);
                 const fieldLabel: string | undefined = xFormComponent ? xFormComponent.getLabel() : undefined;
                 xErrorMap[field] = {...xErrorMap[field], form: error, fieldLabel: fieldLabel};
             }
@@ -325,6 +350,10 @@ export abstract class XFormBase extends Component<FormProps> {
         return xErrorMap;
     }
 
+    // this method can be overriden in subclass if needed (to modify/save object after read from DB and before set into the form)
+    preInitForm(object: XObject, operationType: OperationType.Insert | OperationType.Update) {
+    }
+
     // this method can be overriden in subclass if needed (custom validation)
     validate(object: XObject): XErrors {
         return {};
@@ -332,5 +361,10 @@ export abstract class XFormBase extends Component<FormProps> {
 
     // this method can be overriden in subclass if needed (to modify object before save)
     preSave(object: XObject) {
+    }
+
+    // this method can be overriden in subclass if needed (to use another service then default 'saveRow')
+    async saveRow(): Promise<any> {
+        return XUtils.fetch('saveRow', {entity: this.getEntity(), object: this.state.object, reload: this.props.onSaveOrCancel !== undefined});
     }
 }

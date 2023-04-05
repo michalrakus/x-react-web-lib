@@ -8,7 +8,7 @@ import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {XUtils} from "./XUtils";
 
-export const XInputDate = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean}) => {
+export const XInputDate = (props: {form: XFormBase; field: string; label?: string; readOnly?: boolean; labelStyle?: React.CSSProperties;}) => {
 
     props.form.addField(props.field);
 
@@ -54,9 +54,12 @@ export const XInputDate = (props: {form: XFormBase; field: string; label?: strin
         // fieldValue zostalo undefined (konvertujeme null -> undefined) - Calendar pozaduje undefined, nechce null
     }
 
+    let labelStyle: React.CSSProperties = props.labelStyle ?? {};
+    XUtils.addCssPropIfNotExists(labelStyle, {width: XUtils.FIELD_LABEL_WIDTH});
+
     return (
         <div className="field grid">
-            <label htmlFor={props.field} className="col-fixed" style={{width: XUtils.FIELD_LABEL_WIDTH}}>{label}</label>
+            <label htmlFor={props.field} className="col-fixed" style={labelStyle}>{label}</label>
             <Calendar id={props.field} value={fieldValue} onChange={onValueChange} disabled={readOnly} showIcon={true}
                       dateFormat={dateFormatCalendar()} showTime={showTime} showSeconds={showTime} inputClassName={cssClassName} showOnFocus={false}/>
         </div>

@@ -3,17 +3,28 @@ import {XFormBase} from "./XFormBase";
 import {XError} from "./XErrors";
 import {XObject} from "./XObject";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
-import {XUtils} from "./XUtils";
+import {OperationType, XUtils} from "./XUtils";
+import {XFieldChangeEvent} from "./XFieldChangeEvent";
+import {XCustomFilter} from "../serverApi/FindParam";
 
-export interface XFormComponentProps {
+// typ metody pre onChange - pouzil som XFieldChangeEvent<any>, pri deklarovani onChange metody na komponente
+// sa da vdaka tomu pouzit (e: XFieldChangeEvent<Dobrovolnik>) a kompilator sa nestazuje. Je to hack, mozno existuje krajsie riesenie
+export type FieldOnChange = (e: XFieldChangeEvent<any>) => void;
+
+// typ metody pre getFilter - pouziva sa na assoc fieldoch (XAutoComplete, XDropdown, ...)
+// pouzivame (zatial) parameter typu any aby sme na formulari vedeli pouzit konkretny typ (alebo XObject)
+export type GetFilter = (object: any) => XCustomFilter | undefined;
+
+export interface XFormComponentProps<T> {
     form: XFormBase;
     label?: string;
     readOnly?: boolean;
     labelStyle?: React.CSSProperties;
     inline?: boolean;
+    onChange?: FieldOnChange;
 }
 
-export abstract class XFormComponent<P extends XFormComponentProps> extends Component<P> {
+export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extends Component<P> {
 
     protected constructor(props: P) {
         super(props);
@@ -45,9 +56,9 @@ export abstract class XFormComponent<P extends XFormComponentProps> extends Comp
     }
 
     // writes value into form.state.object
-    onValueChangeBase(value: any) {
+    onValueChangeBase(value: any, onChange?: FieldOnChange, assocObjectChange?: OperationType) {
         const error: string | undefined = this.validateOnChange(value);
-        this.props.form.onFieldChange(this.getField(), value, error);
+        this.props.form.onFieldChange(this.getField(), value, error, onChange, assocObjectChange);
     }
 
     // ******** properties (not only) for rendering ***********
@@ -132,5 +143,28 @@ export abstract class XFormComponent<P extends XFormComponentProps> extends Comp
     getError(): string | undefined {
         const error: XError = this.props.form.state.errorMap[this.getField()];
         return error ? XUtils.getXErrorMessage(error) : undefined;
+    }
+
+    callOnChangeFromOnBlur() {
+        if (this.props.onChange) {
+            const object: XObject = this.props.form.getXObject();
+            // developer v onChange nastavi atributy na object-e
+            this.props.onChange({object: object});
+            // rovno zavolame form.setState({...}), nech to nemusi robit developer
+            this.props.form.setStateXForm();
+        }
+    }
+
+    // len pre assoc fieldy sa pouziva
+    getFilterBase(getFilter: GetFilter | undefined): XCustomFilter | undefined {
+        let filter: XCustomFilter | undefined = undefined;
+        if (getFilter) {
+            //const object: XObject = this.props.form.getXObject();
+            const object: XObject = this.props.form.state.object;
+            if (object) {
+                filter = getFilter(object);
+            }
+        }
+        return filter;
     }
 }

@@ -9,13 +9,13 @@ import {
 import {Column} from 'primereact/column';
 import {XButton} from "./XButton";
 import {XUtils} from "./XUtils";
-import {SearchTableParams} from "./SearchTableParams";
+import {SearchTableParams, XFieldFilter} from "./SearchTableParams";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XEntity, XField} from "../serverApi/XEntityMetadata";
 import {dateAsUI, datetimeAsUI, numberAsUI} from "./XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
-import {FindParam, ResultType} from "../serverApi/FindParam";
+import {FindParam, ResultType, XCustomFilter} from "../serverApi/FindParam";
 import {XButtonIconSmall} from "./XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
@@ -49,6 +49,7 @@ export interface XLazyDataTableProps {
     onEdit?: (selectedRow: any) => void;
     removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean;
     appButtons?: any;
+    initSortField?: string;
     searchTableParams?: SearchTableParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
     editMode?: boolean;
@@ -74,20 +75,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
             // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
             const filterMatchMode: FilterMatchMode = getFilterMatchMode(xField);
-            let filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData;
-            if (props.filterDisplay === "menu") {
-                // DataTableOperatorFilterMetaData: operator + filter values
-                filterItem = {
-                    operator: FilterOperator.OR,
-                    constraints: [{value: null, matchMode: filterMatchMode}]
-                };
-            }
-            else {
-                // props.filterDisplay === "row"
-                // DataTableFilterMetaData: filter value
-                filterItem = {value: null, matchMode: filterMatchMode};
-            }
-            initFilters[field] = filterItem;
+            initFilters[field] = createFilterItem(props.filterDisplay, {value: null, matchMode: filterMatchMode});
         }
 
         return initFilters;
@@ -109,18 +97,43 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return filterMatchMode;
     }
 
+    const createFilterItem = (filterDisplay: "menu" | "row", constraint: DataTableFilterMetaData): DataTableFilterMetaData | DataTableOperatorFilterMetaData => {
+        let filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData;
+        if (filterDisplay === "menu") {
+            // DataTableOperatorFilterMetaData: operator + filter values
+            filterItem = {
+                operator: FilterOperator.OR, // default
+                constraints: [constraint]
+            };
+        }
+        else {
+            // props.filterDisplay === "row"
+            // DataTableFilterMetaData: filter value
+            filterItem = constraint;
+        }
+        return filterItem;
+    }
+
+    // premenne platne pre cely component (obdoba member premennych v class-e)
     const dataTableEl = useRef<any>(null);
+    let customFilter: XCustomFilter | undefined = undefined;
+
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0});
     const [loading, setLoading] = useState(false);
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(props.paginator ? props.rows : undefined);
     let filtersInit: DataTableFilterMeta = createInitFilters();
-    if (props.searchTableParams !== undefined && props.searchTableParams.filter !== undefined) {
-        // TODO - zohladnit "menu" filtrovanie
-        filtersInit[props.searchTableParams.displayField] = {value: props.searchTableParams.filter, matchMode: "startsWith"};
+    if (props.searchTableParams !== undefined) {
+        const displayFieldFilter: XFieldFilter | undefined = props.searchTableParams.displayFieldFilter;
+        if (displayFieldFilter !== undefined) {
+            filtersInit[displayFieldFilter.field] = createFilterItem(props.filterDisplay, displayFieldFilter.constraint);
+        }
+        if (props.searchTableParams.customFilter !== undefined) {
+            customFilter = props.searchTableParams.customFilter;
+        }
     }
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
-    const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>([]);
+    const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.initSortField ? [{field: props.initSortField, order: 1}] : []);
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
     const [exportRowsDialogOpened, setExportRowsDialogOpened] = useState<boolean>(false);
@@ -163,7 +176,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onPage");
 
         setFirst(event.first);
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: event.first, rows: rows, filters: filters, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: event.first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()});
     }
 
     const onFilter = (event: any) => {
@@ -181,7 +194,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onSort - event.multiSortMeta = " + JSON.stringify(event.multiSortMeta));
 
         setMultiSortMeta(event.multiSortMeta);
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields()});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields()});
     }
 
     const onClickFilter = () => {
@@ -192,7 +205,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     };
 
     const loadData = () => {
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()});
     }
 
     const loadDataBase = async (findParam: FindParam) => {
@@ -317,7 +330,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
         // exportujeme zaznamy zodpovedajuce filtru
         // najprv zistime pocet zaznamov
-        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, first: first, rows: rows, filters: filtersAfterFiltering, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()};
+        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, first: first, rows: rows, filters: filtersAfterFiltering, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()};
         //setLoading(true); - iba co preblikuje, netreba nam
         const findResult = await findByFilter(findParam);
         //setLoading(false);

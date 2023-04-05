@@ -4,13 +4,13 @@ import {XInput, XInputProps} from "./XInput";
 import {InputTextarea} from "primereact/inputtextarea";
 import {XUtils} from "./XUtils";
 
-export interface XInputTextareaProps extends XInputProps {
+export interface XInputTextareaProps extends XInputProps<string> {
     rows: number;
     cols?: number | "full"; // full - maximalna sirka (width:100%)
     labelOnTop?: boolean;
 }
 
-export class XInputTextarea extends XInput<XInputTextareaProps> {
+export class XInputTextarea extends XInput<string, XInputTextareaProps> {
 
     public static defaultProps = {
         cols: "full",

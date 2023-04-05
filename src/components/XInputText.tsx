@@ -3,16 +3,17 @@ import {stringAsUI, stringFromUI} from "./XUtilsConversions";
 import {InputText} from "primereact/inputtext";
 import {XInput, XInputProps} from "./XInput";
 
-export interface XInputTextProps extends XInputProps {
+export interface XInputTextProps extends XInputProps<string> {
     size?: number;
 }
 
-export class XInputText extends XInput<XInputTextProps> {
+export class XInputText extends XInput<string, XInputTextProps> {
 
     constructor(props: XInputTextProps) {
         super(props);
 
         this.onValueChange = this.onValueChange.bind(this);
+        this.onBlur = this.onBlur.bind(this);
     }
 
     getValue(): string {
@@ -26,6 +27,12 @@ export class XInputText extends XInput<XInputTextProps> {
         this.onValueChangeBase(value);
     }
 
+    // nedame do onChange inputu, lebo by sa nas onChange volal po kazdej zmene pismenka
+    // ak bude treba, mozme este dorobit metodu "onChange2", ktora sa bude volat po kazdej zmene pismenka (asi iba do XInputText)
+    onBlur(e: any) {
+        this.callOnChangeFromOnBlur();
+    }
+
     render() {
         const size = this.props.size ?? this.xField.length;
 
@@ -34,7 +41,7 @@ export class XInputText extends XInput<XInputTextProps> {
             <div className="field grid">
                 <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <InputText id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} maxLength={this.xField.length} size={size} style={this.props.inputStyle}
-                           {...this.getClassNameTooltip()}/>
+                           {...this.getClassNameTooltip()} onBlur={this.onBlur}/>
             </div>
         );
     }

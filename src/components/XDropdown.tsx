@@ -4,13 +4,14 @@ import {XUtils} from "./XUtils";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XFormComponent, XFormComponentProps} from "./XFormComponent";
 import {XAssoc} from "../serverApi/XEntityMetadata";
+import {XObject} from "./XObject";
 
-export interface XDropdownProps extends XFormComponentProps {
+export interface XDropdownProps extends XFormComponentProps<XObject> {
     assocField: string;
     displayField: string;
 }
 
-export class XDropdown extends XFormComponent<XDropdownProps> {
+export class XDropdown extends XFormComponent<XObject, XDropdownProps> {
 
     protected xAssoc: XAssoc;
 
@@ -53,7 +54,7 @@ export class XDropdown extends XFormComponent<XDropdownProps> {
         } else {
             newValueOrNull = e.target.value;
         }
-        this.onValueChangeBase(newValueOrNull);
+        this.onValueChangeBase(newValueOrNull, this.props.onChange);
     }
 
     componentDidMount() {

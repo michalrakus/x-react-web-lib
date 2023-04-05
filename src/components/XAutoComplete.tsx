@@ -1,21 +1,23 @@
 import React from "react";
-import {XFormComponent, XFormComponentProps} from "./XFormComponent";
+import {GetFilter, XFormComponent, XFormComponentProps} from "./XFormComponent";
 import {XAssoc} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {OperationType, XUtils} from "./XUtils";
 import {XAutoCompleteBase} from "./XAutoCompleteBase";
 import {XError} from "./XErrors";
+import {XObject} from "./XObject";
 
-export interface XAutoCompleteProps extends XFormComponentProps {
+export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     assocField: string;
     displayField: string;
     searchTable?: any; // do buducna
     assocForm?: any; // na insert/update
+    getFilter?: GetFilter;
     size?: number;
     inputStyle?: React.CSSProperties;
 }
 
-export class XAutoComplete extends XFormComponent<XAutoCompleteProps> {
+export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
 
     protected xAssoc: XAssoc;
     protected errorInBase: string | undefined; // sem si odkladame info o nevalidnosti XAutoCompleteBase (nevalidnost treba kontrolovat na stlacenie Save)
@@ -41,11 +43,12 @@ export class XAutoComplete extends XFormComponent<XAutoCompleteProps> {
     }
 
     componentDidMount() {
+        console.log("volany XAutoComplete.componentDidMount()");
         this.readAndSetSuggestions();
     }
 
     async readAndSetSuggestions() {
-        const suggestions: any[] = await XUtils.fetchMany('findRows', {entity: this.xAssoc.entityName, sortMeta: {field: this.props.displayField, order: 1}});
+        const suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.getFilter), this.props.displayField);
         this.setState({suggestions: suggestions});
     }
 
@@ -63,7 +66,7 @@ export class XAutoComplete extends XFormComponent<XAutoCompleteProps> {
     }
 
     onChangeAutoCompleteBase(object: any, objectChange: OperationType) {
-        this.onValueChangeBase(object);
+        this.onValueChangeBase(object, this.props.onChange, objectChange);
 
         if (objectChange !== OperationType.None) {
             // zmenil sa zaznam dobrovolnika v DB

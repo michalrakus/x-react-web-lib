@@ -8,7 +8,7 @@ import {XUtilsMetadata} from "./XUtilsMetadata";
 
 export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocField: string; displayField: string, searchTable: any; assocForm?: any; rowData: any; readOnly?: boolean}) => {
 
-    const inputTextEl = useRef<any>(null);
+    const inputTextRef = useRef<any>(null);
 
     const [inputChanged, setInputChanged] = useState(false); // priznak, ci uzivatel typovanim zmenil hodnotu v inpute
     const [inputValueState, setInputValueState] = useState<any>(null); // pouzivane, len ak inputChanged === true, je tu zapisana zmenena hodnota v inpute
@@ -103,7 +103,7 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
         setDialogOpened(false);
         // ak mame v inpute neplatnu hodnotu, musime vratit kurzor na input
         if (inputChanged) {
-            inputTextEl.current.element.focus(); // neviem preco tu trebalo pridat "element", asi primereact wrapuje react element
+            inputTextRef.current.focus();
         }
     }
 
@@ -116,7 +116,7 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
     return (
         <div>
             <div className="x-search-button-base">
-                <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur} readOnly={readOnly} ref={inputTextEl}/>
+                <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur} readOnly={readOnly} ref={inputTextRef}/>
                 <Button label="..." onClick={onClickSearch} />
             </div>
             <Dialog visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>

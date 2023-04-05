@@ -2,9 +2,9 @@ import React from "react";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XInput, XInputProps} from "./XInput";
 
-export class XCheckbox extends XInput<XInputProps> {
+export class XCheckbox extends XInput<boolean, XInputProps<boolean>> {
 
-    constructor(props: XInputProps) {
+    constructor(props: XInputProps<boolean>) {
         super(props);
 
         this.onValueChange = this.onValueChange.bind(this);

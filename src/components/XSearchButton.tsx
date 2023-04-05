@@ -4,23 +4,27 @@ import {Button} from "primereact/button";
 import {XUtils} from "./XUtils";
 import {Dialog} from "primereact/dialog";
 import {XUtilsMetadata} from "./XUtilsMetadata";
-import {XFormComponent, XFormComponentProps} from "./XFormComponent";
+import {GetFilter, XFormComponent, XFormComponentProps} from "./XFormComponent";
 import {XAssoc} from "../serverApi/XEntityMetadata";
+import {XObject} from "./XObject";
+import {XCustomFilter} from "../serverApi/FindParam";
+import {SearchTableParams} from "./SearchTableParams";
 
-export interface XSearchButtonProps extends XFormComponentProps {
+export interface XSearchButtonProps extends XFormComponentProps<XObject> {
     assocField: string;
     displayField: string;
     searchTable: any;
     assocForm?: any;
+    getFilter?: GetFilter;
     size?: number;
     inputStyle?: React.CSSProperties;
 }
 
-export class XSearchButton extends XFormComponent<XSearchButtonProps> {
+export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
 
     protected xAssoc: XAssoc;
 
-    inputTextEl: any;
+    inputTextRef: any;
 
     state: {
         inputChanged: boolean; // priznak, ci uzivatel typovanim zmenil hodnotu v inpute
@@ -33,7 +37,7 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
 
         this.xAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.form.getEntity()), props.assocField);
 
-        this.inputTextEl = React.createRef();
+        this.inputTextRef = React.createRef();
         // POVODNY KOD
         //this.overlayPanelEl = React.createRef();
 
@@ -96,15 +100,19 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
             if (inputChanged) {
                 //console.log('onBlur = ' + e.target.value + ' - ideme testovat');
                 // TODO - mozno je lepsie uz na klientovi zistit entitu za asociaciou - zatial takto (findRowsForAssoc)
-                if (e.target.value === '') {
+                if (e.target.value === '' || e.target.value === undefined || e.target.value === null) {
                     setValueToModel(null); // prazdny retazec znamena null hodnotu
                 } else {
-                    const rows: any[] = await XUtils.fetchMany('findRowsForAssoc', {
-                        entity: props.form.entity,
-                        assocField: props.assocField,
-                        displayField: props.displayField,
-                        filter: e.target.value
-                    });
+                    // deprecated code
+                    // const rows: any[] = await XUtils.fetchMany('findRowsForAssoc', {
+                    //     entity: props.form.entity,
+                    //     assocField: props.assocField,
+                    //     displayField: props.displayField,
+                    //     filter: e.target.value
+                    // });
+                    const displayFieldFilter: XCustomFilter = {filter: `[${props.displayField}] LIKE :xDisplayFieldValue`, values: {"xDisplayFieldValue": `${e.target.value}%`}};
+                    const customFilter: XCustomFilter | undefined = this.getFilterBase(this.props.getFilter);
+                    const rows: any[] = await XUtils.fetchRows(this.xAssoc.entityName, XUtils.filterAnd(displayFieldFilter, customFilter));
                     if (rows.length === 0) {
                         // POVODNY KOD
                         //overlayPanelEl.current.toggle(e);
@@ -123,7 +131,7 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
         }
 
         const setValueToModel = (row: any) => {
-            this.onValueChangeBase(row);
+            this.onValueChangeBase(row, this.props.onChange);
             setInputChanged(false);
         }
 
@@ -159,12 +167,21 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
             setDialogOpened(false);
             // ak mame v inpute neplatnu hodnotu, musime vratit kurzor na input
             if (inputChanged) {
-                this.inputTextEl.current.element.focus(); // neviem preco tu trebalo pridat "element", asi primereact wrapuje react element
+                this.inputTextRef.current.focus();
             }
         }
 
         // {React.createElement(props.searchTable, {searchTableParams: {onChoose: onChoose, displayField: props.displayField, filter: (inputChanged ? inputValueState : undefined)}, ...props.searchTableProps}, null)}
         // <BrandSearchTable searchTableParams={{onChoose: onChoose, displayField: props.displayField, filter: (inputChanged ? inputValueState : undefined)}} qqq="fiha"/>
+
+        // takto cez metodku, mozno sa metodka vola len ked sa otvori dialog a usetrime nieco...
+        const createSearchTableParams = (): SearchTableParams => {
+            return {
+                onChoose: onChoose,
+                displayFieldFilter: (inputChanged ? {field: props.displayField, constraint: {value: inputValueState, matchMode: "startsWith"}} : undefined),
+                customFilter: this.getFilterBase(this.props.getFilter)
+            };
+        }
 
         // vypocitame inputValue
         const inputValue = computeInputValue();
@@ -174,18 +191,14 @@ export class XSearchButton extends XFormComponent<XSearchButtonProps> {
                 <label htmlFor={props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <div className="x-search-button-base">
                     <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur}
-                               readOnly={this.isReadOnly()} ref={this.inputTextEl} maxLength={xDisplayField.length} size={size} style={props.inputStyle}
+                               readOnly={this.isReadOnly()} ref={this.inputTextRef} maxLength={xDisplayField.length} size={size} style={props.inputStyle}
                                {...this.getClassNameTooltip()}/>
                     <Button label="..." onClick={onClickSearch}/>
                 </div>
                 <Dialog visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>
                     {/* klonovanim elementu pridame atribut searchTableParams */}
                     {React.cloneElement(props.searchTable, {
-                        searchTableParams: {
-                            onChoose: onChoose,
-                            displayField: props.displayField,
-                            filter: (inputChanged ? inputValueState : undefined)
-                        }
+                        searchTableParams: createSearchTableParams()
                     }, props.searchTable.children)}
                 </Dialog>
             </div>

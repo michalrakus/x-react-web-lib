@@ -21,6 +21,7 @@
     "jsx": "react",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "strictNullChecks": true,
 
     "declaration": true,
     "outDir": "./lib"
