@@ -4,7 +4,7 @@ import {Button} from "primereact/button";
 import {XUtils} from "./XUtils";
 import {Dialog} from "primereact/dialog";
 import {XUtilsMetadata} from "./XUtilsMetadata";
-import {GetFilter, XFormComponent, XFormComponentProps} from "./XFormComponent";
+import {XFilterProp, XFormComponent, XFormComponentProps} from "./XFormComponent";
 import {XAssoc} from "../serverApi/XEntityMetadata";
 import {XObject} from "./XObject";
 import {XCustomFilter} from "../serverApi/FindParam";
@@ -15,7 +15,7 @@ export interface XSearchButtonProps extends XFormComponentProps<XObject> {
     displayField: string;
     searchTable: any;
     assocForm?: any;
-    getFilter?: GetFilter;
+    filter?: XFilterProp;
     size?: number;
     inputStyle?: React.CSSProperties;
 }
@@ -111,7 +111,7 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
                     //     filter: e.target.value
                     // });
                     const displayFieldFilter: XCustomFilter = {filter: `[${props.displayField}] LIKE :xDisplayFieldValue`, values: {"xDisplayFieldValue": `${e.target.value}%`}};
-                    const customFilter: XCustomFilter | undefined = this.getFilterBase(this.props.getFilter);
+                    const customFilter: XCustomFilter | undefined = this.getFilterBase(this.props.filter);
                     const rows: any[] = await XUtils.fetchRows(this.xAssoc.entityName, XUtils.filterAnd(displayFieldFilter, customFilter));
                     if (rows.length === 0) {
                         // POVODNY KOD
@@ -179,7 +179,7 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
             return {
                 onChoose: onChoose,
                 displayFieldFilter: (inputChanged ? {field: props.displayField, constraint: {value: inputValueState, matchMode: "startsWith"}} : undefined),
-                customFilter: this.getFilterBase(this.props.getFilter)
+                customFilter: this.getFilterBase(this.props.filter)
             };
         }
 

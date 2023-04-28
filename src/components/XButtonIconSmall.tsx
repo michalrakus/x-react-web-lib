@@ -1,8 +1,9 @@
 import React from "react";
-import {Button} from "primereact/button";
+import {Button, ButtonProps} from "primereact/button";
 import {XUtils} from "./XUtils";
+import {IconType} from "primereact/utils";
 
-export const XButtonIconSmall = (props: {icon: string; onClick: ((event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void); disabled?: boolean; tooltip?: any;}) => {
+export const XButtonIconSmall = (props: {icon: IconType<ButtonProps>; onClick: ((event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void); disabled?: boolean; tooltip?: any;}) => {
 
     return (
         <Button icon={props.icon} onClick={props.onClick} disabled={props.disabled}

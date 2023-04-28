@@ -17,6 +17,8 @@ function generateApi(cb) {
         "./lib/components/XAutoComplete",
         "./lib/components/XAutoCompleteBase",
         "./lib/components/XButton",
+        "./lib/components/XButtonIconNarrow",
+        "./lib/components/XButtonIconSmall",
         "./lib/components/XBrowse",
         "./lib/components/XChangePasswordForm",
         "./lib/components/XCheckbox",

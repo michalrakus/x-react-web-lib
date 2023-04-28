@@ -38,6 +38,19 @@ export function numberAsUI(value: number | null, fractionDigits?: number): strin
     }
 }
 
+// v modeli na klientovi by mal byt vzdy number, teraz je tam niekedy string (z json-u zo servera) a niekedy number (z komponentu)
+// provizorne zatial takato konverzia
+export function numberFromModel(value: any): number | null {
+    let numberValue: number | null = null;
+    if (typeof value === 'string') {
+        numberValue = parseFloat(value);
+    }
+    else if (typeof value === 'number') {
+        numberValue = value;
+    }
+    return numberValue;
+}
+
 // v modeli na klientovi by mal byt vzdy Date, teraz je tam niekedy string (z json-u zo servera) a niekedy Date (z komponentu)
 // provizorne zatial takato konverzia
 export function dateFromModel(value: any): Date | null {

@@ -133,7 +133,7 @@ export class XUtilsMetadata {
     //static CHAR_SIZE: number = 0.57; // 0.57rem (8px)
     static CHAR_SIZE: number = 0.5; // 0.5rem (7px) - skusime
 
-    static computeColumnWidth(xField: XField, filterMenuInFilterRow: boolean, formColumnType: string | undefined, header: string | undefined, filterButtonInHeader: boolean): string | undefined {
+    static computeColumnWidth(xField: XField, filterMenuInFilterRow: boolean, formColumnType: string | undefined, header: string | undefined, sortableButtonInHeader: boolean, filterButtonInHeader: boolean): string | undefined {
         let width: number | undefined;
         if (formColumnType === undefined) {
             // lazy datatable (no inputs, no buttons, only text and padding)
@@ -181,7 +181,7 @@ export class XUtilsMetadata {
                     throw `XField ${xField.name}: unknown xField.type = ${xField.type}`;
                 }
             }
-            else if (formColumnType === "dropdown" || formColumnType === "searchButton" || formColumnType === "autoComplete") {
+            else if (formColumnType === "dropdown" || formColumnType === "autoComplete" || formColumnType === "searchButton") {
                 // vyratame sirku inputu
                 const padding = 0.21 + 0.07 + 0.5; // padding is 2.94px + 1px border + 7px padding in input
                 if (xField.type === "string") {
@@ -198,7 +198,7 @@ export class XUtilsMetadata {
                     width = XUtilsMetadata.computeColumnWidthBase(10 + 9, padding + padding); // napr. 31.12.2021 03:03:00
                 }
                 else {
-                    throw `XField ${xField.name}: xField.type = ${xField.type} not implemented for dropdown/searchButton/autoComplete`;
+                    throw `XField ${xField.name}: xField.type = ${xField.type} not implemented for dropdown/autoComplete/searchButton`;
                 }
                 // pridame sirku buttonu
                 if (formColumnType === "dropdown") {
@@ -206,13 +206,15 @@ export class XUtilsMetadata {
                         width += 2; // button for dropdown
                     }
                 }
+                else if (formColumnType === "autoComplete") {
+                    if (width !== undefined) {
+                        width += 1.56; // button for auto complete
+                    }
+                }
                 else if (formColumnType === "searchButton") {
                     if (width !== undefined) {
                         width += 2.18; // button for search button
                     }
-                }
-                else if (formColumnType === "autoComplete") {
-                    throw `XField ${xField.name}: computing button width not implemented for autoComplete`;
                 }
             }
             else {
@@ -227,7 +229,10 @@ export class XUtilsMetadata {
         }
         // ak je label dlhsi ako sirka stlpca, tak sirka stlpca bude podla label-u
         if (header !== undefined) {
-            let widthHeader = XUtilsMetadata.computeColumnWidthBase(header.length, 0.5 + 0.5 + 1.28); // padding (7px) + space (7px) + sort icon (18px)
+            let widthHeader = XUtilsMetadata.computeColumnWidthBase(header.length, 0.5); // padding (7px)
+            if (sortableButtonInHeader && widthHeader !== undefined) {
+                widthHeader += 0.5 + 1.28; // sort icon (25px = 7px (space/margin) + 18px (icon body))
+            }
             if (filterButtonInHeader && widthHeader !== undefined) {
                 widthHeader += 1.5; // filter icon (21px = 14px (icon body) + 7px (right padding))
             }

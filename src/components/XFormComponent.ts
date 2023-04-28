@@ -11,9 +11,10 @@ import {XCustomFilter} from "../serverApi/FindParam";
 // sa da vdaka tomu pouzit (e: XFieldChangeEvent<Dobrovolnik>) a kompilator sa nestazuje. Je to hack, mozno existuje krajsie riesenie
 export type FieldOnChange = (e: XFieldChangeEvent<any>) => void;
 
-// typ metody pre getFilter - pouziva sa na assoc fieldoch (XAutoComplete, XDropdown, ...)
+// typ property pre pridanie filtra na vyber associable rows - pouziva sa na assoc fieldoch (XAutoComplete, XDropdown, ...)
+// bud sa do property zapise priamo XCustomFilter alebo sa vytvara funkcia ktora XCustomFilter vrati (v tomto pripade moze XCustomFilter zavisiet od aktualne editovaneho objektu "object")
 // pouzivame (zatial) parameter typu any aby sme na formulari vedeli pouzit konkretny typ (alebo XObject)
-export type GetFilter = (object: any) => XCustomFilter | undefined;
+export type XFilterProp = XCustomFilter | ((object: any) => XCustomFilter | undefined);
 
 export interface XFormComponentProps<T> {
     form: XFormBase;
@@ -142,7 +143,7 @@ export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extend
     // vrati error message z form.state.errorMap
     getError(): string | undefined {
         const error: XError = this.props.form.state.errorMap[this.getField()];
-        return error ? XUtils.getXErrorMessage(error) : undefined;
+        return error ? XUtils.getErrorMessage(error) : undefined;
     }
 
     callOnChangeFromOnBlur() {
@@ -156,15 +157,20 @@ export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extend
     }
 
     // len pre assoc fieldy sa pouziva
-    getFilterBase(getFilter: GetFilter | undefined): XCustomFilter | undefined {
-        let filter: XCustomFilter | undefined = undefined;
-        if (getFilter) {
+    getFilterBase(filter: XFilterProp | undefined): XCustomFilter | undefined {
+        let customFilter: XCustomFilter | undefined = undefined;
+        if (typeof filter === 'object') {
+            customFilter = filter;
+        }
+        if (typeof filter === 'function') {
             //const object: XObject = this.props.form.getXObject();
             const object: XObject = this.props.form.state.object;
-            if (object) {
-                filter = getFilter(object);
-            }
+            // zatial zakomentujeme, aby sa zavolal aj pre XAutoComplete (tam zatial nemame k dispozicii object
+            // (componentDidMount pre XAutoComplete sa vola skor ako componentDidMount pre XFormBase))
+            //if (object) {
+                customFilter = filter(object);
+            //}
         }
-        return filter;
+        return customFilter;
     }
 }

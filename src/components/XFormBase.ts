@@ -2,9 +2,10 @@ import {Component} from "react";
 import {XObject} from "./XObject";
 import {OperationType, XUtils} from "./XUtils";
 import {FieldOnChange, XFormComponent} from "./XFormComponent";
-import {XFormDataTable2} from "./XFormDataTable2";
+import {TableFieldOnChange, XFormDataTable2, XRowTechData} from "./XFormDataTable2";
 import {XErrorMap, XErrors} from "./XErrors";
-import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+
+export type XOnSaveOrCancelProp = (object: XObject | null, objectChange: OperationType) => void;
 
 // poznamka - v assoc button-e (XSearchButton, XToOneAssocButton, XFormSearchButtonColumn) je mozne zadat nazov formulara cez property assocForm={<BrandForm/>}
 // pri tomto zapise sa nezadava property id (id sa doplni automaticky pri otvoreni assoc formularu cez klonovanie elementu)
@@ -12,7 +13,7 @@ import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 export interface FormProps {
     id?: number;
     object?: XObject; // pri inserte (id je undefined) mozme cez tuto property poslat do formulara objekt s uz nastavenymi niektorymi hodnotami
-    onSaveOrCancel?: (object: XObject | null, objectChange: OperationType) => void; // pouziva sa pri zobrazeni formulara v dialogu (napr. v XAutoCompleteBase) - pri onSave odovzdava updatnuty/insertnuty objekt, pri onCancel odovzdava null
+    onSaveOrCancel?: XOnSaveOrCancelProp; // pouziva sa pri zobrazeni formulara v dialogu (napr. v XAutoCompleteBase) - pri onSave odovzdava updatnuty/insertnuty objekt, pri onCancel odovzdava null
 }
 
 // class decorator ktory nastavuje property entity (dalo by sa to nastavovat v konstruktore ale decorator je menej ukecany)
@@ -137,16 +138,36 @@ export abstract class XFormBase extends Component<FormProps> {
         this.setState({object: object, errorMap: errorMap});
     }
 
-    onTableFieldChange(assocField: string, rowIndex: number, field: string, value: any) {
+    onTableFieldChange(rowData: any, field: string, value: any, error?: string | undefined, onChange?: TableFieldOnChange, assocObjectChange?: OperationType) {
+
         const object: XObject = this.getXObject();
-        const rowList: any[] = object[assocField];
-        rowList[rowIndex][field] = value;
+        rowData[field] = value;
+
+        // nastavime error do rowData do tech fieldu
+        const errorMap: XErrorMap = XFormBase.getXRowTechData(rowData).errorMap;
+        errorMap[field] = {...errorMap[field], onChange: error};
+
+        // tu zavolame onChange komponentu - object uz ma zapisanu zmenenu hodnotu, onChange nasledne zmeni dalsie hodnoty a nasledne sa zavola setState
+        if (onChange) {
+            onChange({object: object, tableRow: rowData, assocObjectChange: assocObjectChange});
+        }
+
         // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
-        this.setState({object: object});
+        this.setState({object: object/*, errorMap: errorMap*/});
     }
 
-    onObjectDataChange() {
+    /**
+     * @deprecated - mal by sa pouzivat onTableFieldChange
+     */
+    onObjectDataChange(row?: any, onChange?: TableFieldOnChange) {
         const object: XObject | null = this.state.object;
+
+        // tu zavolame onChange komponentu - object uz ma zapisanu zmenenu hodnotu, onChange nasledne zmeni dalsie hodnoty a nasledne sa zavola setState
+        if (onChange) {
+            // TODO - assocObjectChange dorobit
+            onChange({object: object, tableRow: row, assocObjectChange: undefined});
+        }
+
         // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
         this.setState({object: object});
     }
@@ -212,6 +233,22 @@ export abstract class XFormBase extends Component<FormProps> {
         rowList.splice(index, 1);
         // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
         this.setState({object: object});
+    }
+
+    // tato metoda (aj vsetky ostatne metody precujuce s row-mi) by mali byt skor na XFormDataTable2 (ta pozna "assocField" (OneToMany asociaciu))
+    static getXRowTechData(row: any): XRowTechData {
+        // ak este nemame rowTechData, tak ho vytvorime
+        if (row.__x_rowTechData === undefined) {
+            // field '__x_rowTechData' vytvorime takymto specialnym sposobom, aby mal "enumerable: false", tympadom ho JSON.stringify nezaserializuje
+            // pri posielani objektu formulara na backend (pozor, zaroven sa neda tento field iterovat cez in operator a pod.)
+            const xRowTechData: XRowTechData = {xFormComponentDTList: [], errorMap: {}};
+            Object.defineProperty(row, '__x_rowTechData', {
+                value: xRowTechData,
+                writable: false,
+                enumerable: false
+            });
+        }
+        return row.__x_rowTechData;
     }
 
     addField(field: string) {
@@ -296,15 +333,12 @@ export abstract class XFormBase extends Component<FormProps> {
 
         const xErrorMap: XErrorMap = this.validateForm();
 
-        // zatial takto
-        let msg: string = "";
-        for (const [field, xError] of Object.entries(xErrorMap)) {
-            if (xError) {
-                const errorMessage: string | undefined = XUtils.getXErrorMessage(xError);
-                if (errorMessage) {
-                    msg += `${xError.fieldLabel ?? field}: ${errorMessage}${XUtilsCommon.newLine}`;
-                }
-            }
+        // zatial takto jednoducho
+        let msg: string = XUtils.getErrorMessages(xErrorMap);
+
+        // este spracujeme editovatelne tabulky
+        for (const xFormDataTable of this.xFormDataTableList) {
+            msg += xFormDataTable.getErrorMessages();
         }
 
         let ok: boolean = true;
@@ -331,7 +365,8 @@ export abstract class XFormBase extends Component<FormProps> {
         }
 
         // TODO - optimalizacia - netreba setovat stav ak by sme sli prec z formulara (ak by zbehla validacia aj save a isli by sme naspet do browsu)
-        this.setState({errorMap: xErrorMap});
+        // setujeme aj this.state.object, lebo mohli pribudnut/odbudnut chyby na rowData v editovatelnych tabulkach
+        this.setState({object: this.state.object, errorMap: xErrorMap});
         return xErrorMap;
     }
 
@@ -345,7 +380,7 @@ export abstract class XFormBase extends Component<FormProps> {
             }
         }
         for (const xFormDataTable of this.xFormDataTableList) {
-            // TODO - validate table
+            xFormDataTable.validate();
         }
         return xErrorMap;
     }

@@ -6,7 +6,7 @@ import {CsvDecimalFormat, CsvSeparator, ExportType} from "../serverApi/ExportImp
 import {XResponseError} from "./XResponseError";
 import React from "react";
 import {XEnvVar} from "./XEnvVars";
-import {XError} from "./XErrors";
+import {XError, XErrorMap} from "./XErrors";
 import {FindParam, ResultType, XCustomFilter} from "../serverApi/FindParam";
 
 export enum OperationType {
@@ -340,6 +340,33 @@ export class XUtils {
         }
     }
 
+    // helper function
+    static arraySort(array: any[], fieldOrStringFunction: string | ((item: any) => string)): any[] {
+
+        let stringFunction: ((item: any) => string);
+        if (typeof fieldOrStringFunction === 'string') {
+            stringFunction = (item: any) => item[fieldOrStringFunction];
+        }
+        else {
+            stringFunction = fieldOrStringFunction;
+        }
+
+        return array.sort((suggestion1: any, suggestion2: any) => {
+            const value1 = stringFunction(suggestion1);
+            const value2 = stringFunction(suggestion2);
+
+            if (value1 > value2) {
+                return 1;
+            }
+            else if (value1 < value2) {
+                return -1;
+            }
+            else {
+                return 0;
+            }
+        });
+    }
+
     // helper
     static isReadOnly(path: string, readOnlyInit?: boolean): boolean {
         // ak mame path dlzky 2 a viac, field je vzdy readOnly
@@ -378,8 +405,36 @@ export class XUtils {
         return error ? {className: "p-invalid", tooltip: error, tooltipOptions: { className: 'pink-tooltip', position: 'bottom' }} : {};
     }
 
+    // pomocna metodka - prida className do props, ak uz className v props existuje tak len pripoji dalsiu hodnotu
+    // pouzivame ju, lebo XUtils.createErrorProps nam prebijal className
+    static addClassName(props: {[key: string]: any;}, className: string): {[key: string]: any;} {
+        let propsClassName: string = props.className;
+        if (propsClassName !== undefined) {
+            propsClassName += " " + className;
+        }
+        else {
+            propsClassName = className;
+        }
+        props.className = propsClassName;
+        return props;
+    }
+
     // pomocna metodka
-    static getXErrorMessage(xError: XError): string | undefined {
+    // ak nie su v xErrorMap ziadne chyby, vrati ""
+    static getErrorMessages(xErrorMap: XErrorMap): string {
+        let msg: string = "";
+        for (const [field, xError] of Object.entries(xErrorMap)) {
+            if (xError) {
+                const errorMessage: string | undefined = XUtils.getErrorMessage(xError);
+                if (errorMessage) {
+                    msg += `${xError.fieldLabel ?? field}: ${errorMessage}${XUtilsCommon.newLine}`;
+                }
+            }
+        }
+        return msg;
+    }
+
+    static getErrorMessage(xError: XError): string | undefined {
         if (xError.onChange || xError.onBlur || xError.form) {
             let message: string = '';
             if (xError.onChange) {

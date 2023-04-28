@@ -8,7 +8,7 @@ import {
 } from 'primereact/datatable';
 import {Column} from 'primereact/column';
 import {XButton} from "./XButton";
-import {XUtils} from "./XUtils";
+import {OperationType, XUtils} from "./XUtils";
 import {SearchTableParams, XFieldFilter} from "./SearchTableParams";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
@@ -22,6 +22,7 @@ import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {CsvParam, ExportParam, ExportType} from "../serverApi/ExportImportParam";
 import {XExportRowsDialog} from "./XExportRowsDialog";
 import {FilterMatchMode, FilterOperator} from "primereact/api";
+import {XOnSaveOrCancelProp} from "./XFormBase";
 
 export interface XEditModeHandlers {
     onStart: () => void;
@@ -48,7 +49,9 @@ export interface XLazyDataTableProps {
     onAddRow?: () => void;
     onEdit?: (selectedRow: any) => void;
     removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean;
+    onRemoveRow?: XOnSaveOrCancelProp;
     appButtons?: any;
+    customFilter?: XCustomFilter; // (programatorsky) filter ktory sa aplikuje na zobrazovane data (uzivatel ho nedokaze zmenit)
     initSortField?: string;
     searchTableParams?: SearchTableParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
@@ -116,7 +119,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     // premenne platne pre cely component (obdoba member premennych v class-e)
     const dataTableEl = useRef<any>(null);
-    let customFilter: XCustomFilter | undefined = undefined;
+    let customFilter: XCustomFilter | undefined = props.customFilter;
 
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0});
     const [loading, setLoading] = useState(false);
@@ -128,9 +131,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         if (displayFieldFilter !== undefined) {
             filtersInit[displayFieldFilter.field] = createFilterItem(props.filterDisplay, displayFieldFilter.constraint);
         }
-        if (props.searchTableParams.customFilter !== undefined) {
-            customFilter = props.searchTableParams.customFilter;
-        }
+        // ak mame props.searchTableParams.customFilter, pridame ho
+        customFilter = XUtils.filterAnd(customFilter, props.searchTableParams.customFilter);
     }
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.initSortField ? [{field: props.initSortField, order: 1}] : []);
@@ -306,6 +308,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 }
                 if (reread) {
                     loadData();
+                    if (props.onRemoveRow) {
+                        props.onRemoveRow(selectedRow, OperationType.Remove);
+                    }
                 }
             }
             else {
@@ -318,6 +323,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                         XUtils.showErrorMessage("Remove row failed.", e);
                     }
                     loadData();
+                    if (props.onRemoveRow) {
+                        props.onRemoveRow(selectedRow, OperationType.Remove);
+                    }
                 }
             }
         }
@@ -662,7 +670,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 // TODO - if filter not used at all, then buttons flags should be false
                 const filterMenuInFilterRow: boolean = props.filterDisplay === "row" && showFilterMenu;
                 const filterButtonInHeader: boolean = props.filterDisplay === "menu";
-                width = XUtilsMetadata.computeColumnWidth(xField, filterMenuInFilterRow, undefined, headerLabel, filterButtonInHeader);
+                width = XUtilsMetadata.computeColumnWidth(xField, filterMenuInFilterRow, undefined, headerLabel, true, filterButtonInHeader);
             }
             let headerStyle: React.CSSProperties = {};
             if (width !== undefined) {

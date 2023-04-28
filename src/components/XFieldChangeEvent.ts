@@ -10,3 +10,9 @@ export interface XFieldChangeEvent<M = XObject> {
     object: M;
     assocObjectChange?: OperationType
 }
+
+export interface XTableFieldChangeEvent<M = XObject, R = any> {
+    object: M;
+    tableRow: R;
+    assocObjectChange?: OperationType
+}

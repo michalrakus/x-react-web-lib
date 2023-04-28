@@ -1,24 +1,21 @@
-import React from "react";
-import {XFilterProp, XFormComponent, XFormComponentProps} from "./XFormComponent";
-import {XAssoc} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import React from "react";
+import {XFormComponentDT, XFormComponentDTProps} from "./XFormComponentDT";
+import {XAssoc} from "../serverApi/XEntityMetadata";
 import {OperationType, XUtils} from "./XUtils";
-import {XAutoCompleteBase} from "./XAutoCompleteBase";
 import {XError} from "./XErrors";
-import {XObject} from "./XObject";
-import {XFormAutoCompleteColumnProps} from "./XFormDataTable2";
+import {XAutoCompleteBase} from "./XAutoCompleteBase";
+import {XTableFieldFilterProp} from "./XFormDataTable2";
 
-export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
+export interface XAutoCompleteDTProps extends XFormComponentDTProps {
     assocField: string;
     displayField: string | ((suggestion: any) => string);
     searchTable?: any; // do buducna
     assocForm?: any; // na insert/update
-    filter?: XFilterProp;
-    size?: number;
-    inputStyle?: React.CSSProperties;
+    filter?: XTableFieldFilterProp;
 }
 
-export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
+export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
 
     protected xAssoc: XAssoc;
     protected errorInBase: string | undefined; // sem si odkladame info o nevalidnosti XAutoCompleteBase (nevalidnost treba kontrolovat na stlacenie Save)
@@ -27,10 +24,10 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
         suggestions: any[];
     };
 
-    constructor(props: XAutoCompleteProps) {
+    constructor(props: XAutoCompleteDTProps) {
         super(props);
 
-        this.xAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.form.getEntity()), props.assocField);
+        this.xAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.entity), props.assocField);
         this.errorInBase = undefined;
 
         this.state = {
@@ -39,24 +36,9 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
 
         this.onChangeAutoCompleteBase = this.onChangeAutoCompleteBase.bind(this);
         this.onErrorChangeAutoCompleteBase = this.onErrorChangeAutoCompleteBase.bind(this);
-
-        props.form.addField(props.assocField + '.' + this.getDisplayFieldOrId());
-    }
-
-    getDisplayFieldOrId(): string {
-        // toto je hack - ak ratame displayField cez funkciu, tak nam potom chyba (hociaky) atribut asociovaneho objektu
-        // podobne ako na XFormDataTable2, podsunieme id-ckovy atribut
-        if (typeof this.props.displayField === 'string') {
-            return this.props.displayField; // vsetko ok
-        }
-        else {
-            // v displayField mame funkciu, zistime id-ckovy atribut
-            return XUtilsMetadata.getXEntity(this.xAssoc.entityName).idField;
-        }
     }
 
     componentDidMount() {
-        console.log("volany XAutoComplete.componentDidMount()");
         this.readAndSetSuggestions();
     }
 
@@ -78,7 +60,7 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
     }
 
     getValue(): any | null {
-        const assocObject: any | null = this.getValueFromObject();
+        const assocObject: any | null = this.getValueFromRowData();
         return assocObject;
     }
 
@@ -102,14 +84,14 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
     validate(): {field: string; xError: XError} | undefined {
         if (this.errorInBase) {
             // error message dame na onChange, mohli by sme aj na onSet (predtym onBlur), je to jedno viac-menej
-            return {field: this.getField(), xError: {onChange: this.errorInBase, fieldLabel: this.getLabel()}};
+            // TODO - fieldLabel
+            return {field: this.getField(), xError: {onChange: this.errorInBase, fieldLabel: undefined}};
         }
         // zavolame povodnu metodu
         return super.validate();
     }
 
     render() {
-
         const xEntityAssoc = XUtilsMetadata.getXEntity(this.xAssoc.entityName);
         //const xDisplayField = XUtilsMetadata.getXFieldByPath(xEntityAssoc, this.props.displayField);
 
@@ -120,12 +102,9 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
 
         // div className="col" nam zabezpeci aby XAutoCompleteBase nezaberal celu dlzku grid-u (ma nastaveny width=100% vdaka "formgroup-inline")
         return (
-            <div className="field grid">
-                <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
-                <XAutoCompleteBase value={this.getValue()} suggestions={this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
-                                   field={this.props.displayField} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
-                                   error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}/>
-            </div>
+            <XAutoCompleteBase value={this.getValue()} suggestions={this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
+                               field={this.props.displayField} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
+                               error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}/>
         );
     }
 }

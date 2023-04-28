@@ -1,10 +1,8 @@
-import {XObject} from "./XObject";
 import React from "react";
 import {InputNumber} from "primereact/inputnumber";
 import {XUtilsMetadata} from "./XUtilsMetadata";
-import {XUtilsCommon} from "../serverApi/XUtilsCommon";
-import {XUtils} from "./XUtils";
 import {XFormComponentProps} from "./XFormComponent";
+import {XInput} from "./XInput";
 
 export interface XInputDecimalProps extends XFormComponentProps<number> {
     field: string;
@@ -12,67 +10,52 @@ export interface XInputDecimalProps extends XFormComponentProps<number> {
     inputStyle?: React.CSSProperties;
 }
 
-export const XInputDecimal = (props: XInputDecimalProps) => {
+export class XInputDecimal extends XInput<number, XInputDecimalProps> {
 
-    props.form.addField(props.field);
+    constructor(props: XInputDecimalProps) {
+        super(props);
 
-    const xField = XUtilsMetadata.getXFieldByPathStr(props.form.getEntity(), props.field);
-    const {useGrouping, fractionDigits, min, max, size} = XUtilsMetadata.getParamsForInputNumber(xField);
-
-    let label = props.label ?? props.field;
-    const readOnly: boolean = XUtils.isReadOnly(props.field, props.readOnly);
-    if (!xField.isNullable && !readOnly) {
-        label = XUtils.markNotNull(label);
+        this.onValueChange = this.onValueChange.bind(this);
+        this.onBlur = this.onBlur.bind(this);
     }
 
-    const sizeInput = props.size !== undefined ? props.size : size;
-
-    const inline = props.inline ?? false;
-
-    let labelStyle: React.CSSProperties = props.labelStyle ?? {};
-    if (!inline) {
-        XUtils.addCssPropIfNotExists(labelStyle, {width: XUtils.FIELD_LABEL_WIDTH});
-    }
-    else {
-        XUtils.addCssPropIfNotExists(labelStyle, {width: 'auto'}); // podla dlzky labelu
-        XUtils.addCssPropIfNotExists(labelStyle, {marginLeft: '1rem'});
-    }
-
-    const onValueChange = (e: any) => {
-        // z InputNumber prichadza e.value - typ number alebo null
-        props.form.onFieldChange(props.field, e.value);
-    }
-
-    let fieldValue: number | undefined = undefined;
-    const object: XObject | null = props.form.state.object;
-    if (object !== null) {
-        let objectValue = XUtilsCommon.getValueByPath(object, props.field);
-        //  pre istotu dame na null, null je standard
-        //if (objectValue === undefined) {
-        //    objectValue = null;
-        //}
-
-        // TODO - konvertovat null hodnotu na "" (vo funkcii stringAsUI) je dolezite aby sa prejavila zmena na null v modeli
-        // - otestovat ci zmena na null funguje dobre -
-        //fieldValue = stringAsUI(objectValue);
-
+    getValue(): number | undefined {
+        let value: number | undefined = undefined;
+        const objectValue: string | number | null = this.getValueFromObject();
         // tuto zatial hack, mal by prist number
         if (typeof objectValue === 'string') {
-            fieldValue = parseFloat(objectValue);
+            value = parseFloat(objectValue);
         }
         else if (typeof objectValue === 'number') {
-            fieldValue = objectValue;
+            value = objectValue;
         }
-        // fieldValue zostalo undefined (konvertujeme null -> undefined) - InputNumber pozaduje undefined, nechce null
+        // value zostalo undefined ak nebol vykonany ziaden if (konvertujeme null -> undefined) - InputNumber pozaduje undefined, nechce null
+        return value;
     }
 
-    // note: style overrides size (width of the input according to character count)
-    return (
-        <div className="field grid">
-            <label htmlFor={props.field} className="col-fixed" style={labelStyle}>{label}</label>
-            <InputNumber id={props.field} value={fieldValue} onChange={onValueChange} readOnly={readOnly} mode="decimal" locale="de-DE"
-                         useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}
-                         size={sizeInput} style={props.inputStyle}/>
-        </div>
-    );
+    onValueChange(e: any) {
+        // z InputNumber prichadza e.value - typ number alebo null
+        this.onValueChangeBase(e.value);
+    }
+
+    // nedame do onChange inputu, lebo by sa nas onChange volal po kazdej zmene pismenka
+    // ak bude treba, mozme este dorobit metodu "onChange2", ktora sa bude volat po kazdej zmene pismenka (asi iba do XInputText)
+    onBlur(e: any) {
+        this.callOnChangeFromOnBlur();
+    }
+
+    render() {
+        const {useGrouping, fractionDigits, min, max, size} = XUtilsMetadata.getParamsForInputNumber(this.xField);
+        const sizeInput = this.props.size ?? size;
+
+        // note: style overrides size (width of the input according to character count)
+        return (
+            <div className="field grid">
+                <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
+                <InputNumber id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} mode="decimal" locale="de-DE"
+                             useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}
+                             size={sizeInput} style={this.props.inputStyle} {...this.getClassNameTooltip()} onBlur={this.onBlur}/>
+            </div>
+        );
+    }
 }

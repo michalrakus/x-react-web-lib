@@ -1,14 +1,15 @@
 import React, {Component} from "react";
-import {AutoComplete} from "primereact/autocomplete";
+import {AutoComplete, AutoCompleteChangeEvent} from "primereact/autocomplete";
 import {SplitButton} from "primereact/splitbutton";
 import {Dialog} from "primereact/dialog";
 import {OperationType, XUtils} from "./XUtils";
+import {Button} from "primereact/button";
 
 export interface XAutoCompleteBaseProps {
     value: any;
     suggestions: any[];
     onChange: (object: any, objectChange: OperationType) => void; // odovzda vybraty objekt, ak bol vybraty objekt zmeneny cez dialog (aj v DB), tak vrati objectChange !== OperationType.None
-    field: string; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
+    field: string | ((suggestion: any) => string); // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions), pripadne funkcia ktora vrati zobrazovanu hodnotu
     valueForm?: any; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
     maxLength?: number;
@@ -55,12 +56,25 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         this.onBlur = this.onBlur.bind(this);
         this.formDialogOnSaveOrCancel = this.formDialogOnSaveOrCancel.bind(this);
         this.formDialogOnHide = this.formDialogOnHide.bind(this);
+        this.itemTemplate = this.itemTemplate.bind(this);
     }
 
     componentDidMount() {
         if (this.props.setFocusOnCreate) {
             this.setFocusToInput();
         }
+    }
+
+    getDisplayValue(suggestion: any): string {
+        let displayValue: string;
+        if (typeof this.props.field === 'string') {
+            displayValue = suggestion[this.props.field];
+        }
+        else {
+            // this.props.field is function returning string
+            displayValue = this.props.field(suggestion);
+        }
+        return displayValue;
     }
 
     completeMethod(event: {query: string;}) {
@@ -71,7 +85,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         else {
             const queryNormalized = XUtils.normalizeString(event.query);
             filteredSuggestions = this.props.suggestions.filter((suggestion) => {
-                const fieldValue: string = suggestion[this.props.field];
+                const fieldValue: string = this.getDisplayValue(suggestion);
                 // bolo:
                 //return XUtils.normalizeString(fieldValue).startsWith(queryNormalized);
                 return XUtils.normalizeString(fieldValue).indexOf(queryNormalized) !== -1;
@@ -81,7 +95,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         this.setState({filteredSuggestions: filteredSuggestions});
     }
 
-    onChange(e: any) {
+    onChange(e: AutoCompleteChangeEvent) {
         if (typeof e.value === 'string') {
             this.setState({inputChanged: true, inputValueState: e.value});
         }
@@ -91,7 +105,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         this.setObjectValue(e.value, OperationType.None);
     }
 
-    onBlur(e: any) {
+    onBlur(e: React.FocusEvent<HTMLInputElement>) {
         // optimalizacia - testujeme len ak inputChanged === true
         if (this.state.inputChanged) {
             if (e.target.value === '') {
@@ -131,6 +145,9 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     //setTimeout(() => {this.onBlurInvalidInput();}, 100);
 
                     // najnovsi sposob
+                    // TODO - problem - ak zapisem nejake znaky a vyselektujem nejaky zaznam tak vznikne cerveny preblik (az nasledny onSelect zrusi state.notValid = true)
+                    // zial neviem odlisit event sposobeny selektnutim zaznamu a event sposobeny kliknutim niekam vedla
+                    //console.log(e);
                     this.setState({notValid: true}); // ocervenime input
                     this.props.onErrorChange(this.createErrorMessage()); // ohlasime nevalidnost parentovi
                 }
@@ -205,7 +222,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         if (!this.state.inputChanged) {
             // poznamka: ak object === null tak treba do inputu zapisovat prazdny retazec, ak by sme pouzili null, neprejavila by sa zmena v modeli na null
             const object = this.props.value;
-            inputValue = (object !== null) ? object : ""; // TODO - je "" ok?
+            if (typeof this.props.field === 'string') {
+                inputValue = (object !== null) ? object : ""; // TODO - je "" ok?
+            }
+            else {
+                inputValue = (object !== null) ? this.props.field(object) : "";
+            }
         }
         else {
             inputValue = this.state.inputValueState;
@@ -213,12 +235,18 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         return inputValue;
     }
 
+    itemTemplate(suggestion: any, index: number): React.ReactNode {
+        // @ts-ignore
+        return this.props.field(suggestion);
+    }
+
     render() {
 
-        // menu na pripadne CRUD operacie
-        const splitButtonItems = [];
-
+        let dropdownButton: JSX.Element;
         if (this.props.valueForm) {
+            // mame CRUD operacie, potrebujeme SplitButton
+            const splitButtonItems = [];
+
             splitButtonItems.push(
                 {
                     icon: 'pi pi-plus',
@@ -227,7 +255,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                         this.formDialogObjectId = undefined;
                         this.formDialogInitObjectForInsert = {};
                         // ak mame nevalidnu hodnotu, tak ju predplnime (snaha o user friendly)
-                        if (this.state.inputChanged) {
+                        if (this.state.inputChanged && typeof this.props.field === 'string') {
                             this.formDialogInitObjectForInsert[this.props.field] = this.state.inputValueState;
                         }
                         this.setState({formDialogOpened: true});
@@ -256,7 +284,6 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                         }
                     }
                 });
-        }
             // remove nebudeme podporovat, je technicky problematicky - nemozme vymazat zaznam z DB koli FK constraintu
             // {
             //     icon: 'pi pi-times',
@@ -265,24 +292,39 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             //     }
             // },
 
-        splitButtonItems.push(
-            {
-                icon: 'pi pi-chevron-down',
-                command: (e: any) => {
-                    // zobrazi cely suggestions list, zide sa ak chceme vidiet vsetky moznosti
-                    // neprakticke ak mame vela poloziek v suggestions list
+            splitButtonItems.push(
+                {
+                    icon: 'pi pi-chevron-down',
+                    command: (e: any) => {
+                        // zobrazi cely suggestions list, zide sa ak chceme vidiet vsetky moznosti
+                        // neprakticke ak mame vela poloziek v suggestions list
 
-                    // krasne zobrazi cely objekt!
-                    // this.autoCompleteRef.current je element <AutoComplete .../>, ktory vytvarame v render metode
-                    //console.log(this.autoCompleteRef.current);
+                        // krasne zobrazi cely objekt!
+                        // this.autoCompleteRef.current je element <AutoComplete .../>, ktory vytvarame v render metode
+                        //console.log(this.autoCompleteRef.current);
 
-                    // otvori dropdown (search je metoda popisana v API, volanie sme skopcili zo zdrojakov primereact)
-                    this.autoCompleteRef.current.search(e, '', 'dropdown');
-                }
-            });
+                        // otvori dropdown (search je metoda popisana v API, volanie sme skopcili zo zdrojakov primereact)
+                        this.autoCompleteRef.current.search(e, '', 'dropdown');
+                    }
+                });
+            dropdownButton = <SplitButton model={splitButtonItems} className={'x-splitbutton-only-dropdown' + XUtils.mobileCssSuffix()} menuClassName={'x-splitbutton-only-dropdown-menu' + XUtils.mobileCssSuffix()}/>;
+        }
+        else {
+            // mame len 1 operaciu - dame jednoduchy button
+            dropdownButton = <Button icon="pi pi-chevron-down" onClick={(e: any) => this.autoCompleteRef.current.search(e, '', 'dropdown')} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>;
+        }
 
         // vypocitame inputValue
         const inputValue = this.computeInputValue();
+
+        // poznamka: asi by sa dalo pouzivat vzdy len itemTemplate (nepouzivat field)
+        let fieldOrItemTemplate: {field?: string; itemTemplate?: React.ReactNode | ((suggestion: any, index: number) => React.ReactNode)};
+        if (typeof this.props.field === 'string') {
+            fieldOrItemTemplate = {field: this.props.field};
+        }
+        else {
+            fieldOrItemTemplate = {itemTemplate: this.itemTemplate};
+        }
 
         let error: string | undefined;
         if (this.state.notValid) {
@@ -299,10 +341,10 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         // formgroup-inline lepi SplitButton na autocomplete a zarovna jeho vysku
         return (
             <div className="x-auto-complete-base">
-                <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} field={this.props.field}
+                <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} {...fieldOrItemTemplate}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} maxLength={this.props.maxLength}
                               ref={this.autoCompleteRef} {...XUtils.createErrorProps(error)}/>
-                <SplitButton model={splitButtonItems} className={'x-splitbutton-only-dropdown' + XUtils.mobileCssSuffix()} menuClassName={'x-splitbutton-only-dropdown-menu' + XUtils.mobileCssSuffix()}/>
+                {dropdownButton}
                 {this.props.valueForm != undefined ?
                     <Dialog visible={this.state.formDialogOpened} onHide={this.formDialogOnHide} header={this.formDialogObjectId ? 'Modification' : 'New record'}>
                         {/* klonovanim elementu pridame atributy id, object, onSaveOrCancel */}
