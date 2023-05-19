@@ -17,7 +17,7 @@ export const XInputDate = (props: {form: XFormBase; field: string; label?: strin
     const cssClassName = showTime ? 'x-input-datetime' : 'x-input-date';
 
     let label = props.label ?? props.field;
-    const readOnly: boolean = XUtils.isReadOnly(props.field, props.readOnly);
+    const readOnly: boolean = XUtils.isReadOnly(props.field, props.readOnly) || props.form.formReadOnlyBase(props.field);
     if (!xField.isNullable && !readOnly) {
         label = XUtils.markNotNull(label);
     }

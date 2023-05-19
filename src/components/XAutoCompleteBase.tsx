@@ -13,6 +13,7 @@ export interface XAutoCompleteBaseProps {
     valueForm?: any; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
     maxLength?: number;
+    readOnly?: boolean;
     error?: string; // chybova hlaska, ak chceme field oznacit za nevalidny (pozor! netreba sem davat error z onErrorCahnge, ten si riesi XAutoCompleteBase sam)
     onErrorChange: (error: string | undefined) => void; // "vystup" pre validacnu chybu ktoru "ohlasi" AutoComplete; chyba by mala byt ohlasena vzdy ked this.state.inputChanged = true (a nemame focus na inpute)
     setFocusOnCreate?: boolean; // ak je true, nastavi focus do inputu po vytvoreni komponentu
@@ -242,6 +243,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
     render() {
 
+        const readOnly: boolean = this.props.readOnly ?? false;
+
         let dropdownButton: JSX.Element;
         if (this.props.valueForm) {
             // mame CRUD operacie, potrebujeme SplitButton
@@ -307,11 +310,11 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                         this.autoCompleteRef.current.search(e, '', 'dropdown');
                     }
                 });
-            dropdownButton = <SplitButton model={splitButtonItems} className={'x-splitbutton-only-dropdown' + XUtils.mobileCssSuffix()} menuClassName={'x-splitbutton-only-dropdown-menu' + XUtils.mobileCssSuffix()}/>;
+            dropdownButton = <SplitButton model={splitButtonItems} className={'x-splitbutton-only-dropdown' + XUtils.mobileCssSuffix()} menuClassName={'x-splitbutton-only-dropdown-menu' + XUtils.mobileCssSuffix()} disabled={readOnly}/>;
         }
         else {
             // mame len 1 operaciu - dame jednoduchy button
-            dropdownButton = <Button icon="pi pi-chevron-down" onClick={(e: any) => this.autoCompleteRef.current.search(e, '', 'dropdown')} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>;
+            dropdownButton = <Button icon="pi pi-chevron-down" onClick={(e: any) => this.autoCompleteRef.current.search(e, '', 'dropdown')} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()} disabled={readOnly}/>;
         }
 
         // vypocitame inputValue
@@ -343,9 +346,9 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             <div className="x-auto-complete-base">
                 <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} {...fieldOrItemTemplate}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} maxLength={this.props.maxLength}
-                              ref={this.autoCompleteRef} {...XUtils.createErrorProps(error)}/>
+                              ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createErrorProps(error)}/>
                 {dropdownButton}
-                {this.props.valueForm != undefined ?
+                {this.props.valueForm != undefined && !readOnly ?
                     <Dialog visible={this.state.formDialogOpened} onHide={this.formDialogOnHide} header={this.formDialogObjectId ? 'Modification' : 'New record'}>
                         {/* klonovanim elementu pridame atributy id, object, onSaveOrCancel */}
                         {React.cloneElement(this.props.valueForm, {

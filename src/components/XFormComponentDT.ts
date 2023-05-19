@@ -58,8 +58,36 @@ export abstract class XFormComponentDT<P extends XFormComponentDTProps> extends 
     abstract isNotNull(): boolean;
 
     isReadOnly(): boolean {
-        // tuto do buducna planujeme pridat aj dynamicky readOnly, bude ho treba ukladat do form.state podobne ako sa ukladaju errory do form.state.errorMap
-        return XUtils.isReadOnly(this.getField(), this.props.readOnly);
+
+        let readOnly: boolean;
+        if (!XUtilsCommon.isSingleField(this.getField())) {
+            // if the length of field is 2 or more, then readOnly
+            readOnly = true;
+        }
+        // formReadOnlyBase is called on the level XFormDataTable2
+        // else if (this.props.form.formReadOnlyBase("xxx")) {
+        //     readOnly = true;
+        // }
+        else if (typeof this.props.readOnly === 'boolean') {
+            readOnly = this.props.readOnly;
+        }
+        // else if (typeof this.props.readOnly === 'function') {
+        //     // TODO - tazko povedat ci niekedy bude object === null (asi ano vid metodu getFilterBase)
+                // TODO - use also this.props.rowData
+        //     const object: XObject = this.props.form.state.object;
+        //     if (object) {
+        //         readOnly = this.props.readOnly(this.props.form.getXObject());
+        //     }
+        //     else {
+        //         readOnly = true;
+        //     }
+        // }
+        else {
+            // readOnly is undefined
+            readOnly = false;
+        }
+
+        return readOnly;
     }
 
     // *********** validation support ************

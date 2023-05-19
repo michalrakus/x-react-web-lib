@@ -72,7 +72,9 @@ export class XDropdown extends XFormComponent<XObject, XDropdownProps> {
         // TODO - pridat cez generikum typ objektu v Dropdown-e (ak sa da)
         const options: any[] = this.state.options;
 
-        // TODO - readOnly implementovat
+        // TODO - mozno by nebolo od veci pouzivat InputText ak readOnly === true (chybala by len sipka (rozbalovac)) a dalo by sa copy-paste-ovat
+        // propertiesy na Dropdown-e: readOnly vyseduje, disabled znemoznuje vyber polozky
+        const readOnly: boolean = this.isReadOnly();
 
         // Dropdown setuje do atributu object.assocField asociovany objekt zo zoznamu objektov ktore ziskame podla asociacie
         // appendTo={document.body} appenduje overlay panel na element body - eliminuje "skakanie" formularu na mobile pri kliknuti na dropdown
@@ -80,7 +82,7 @@ export class XDropdown extends XFormComponent<XObject, XDropdownProps> {
             <div className="field grid">
                 <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <Dropdown appendTo={document.body} id={this.props.assocField} optionLabel={this.props.displayField} value={this.getValue()} options={options}
-                          onChange={this.onValueChange} {...this.getClassNameTooltip()}/>
+                          onChange={this.onValueChange} readOnly={readOnly} disabled={readOnly} {...this.getClassNameTooltip()}/>
             </div>
         );
     }

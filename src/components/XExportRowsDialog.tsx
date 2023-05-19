@@ -11,7 +11,7 @@ import {numberAsUI} from "./XUtilsConversions";
 export const XExportRowsDialog = (props: {dialogOpened: boolean; rowCount?: number; onHideDialog: (ok: boolean, exportType: ExportType | undefined, csvParam: CsvParam | undefined) => void;}) => {
 
     const [exportType, setExportType] = useState(ExportType.Csv);
-    const [createHeaderLine, setCreateHeaderLine] = useState(false);
+    const [createHeaderLine, setCreateHeaderLine] = useState(true);
     const [csvSeparator, setCsvSeparator] = useState(CsvSeparator.Semicolon);
     const [decimalFormat, setDecimalFormat] = useState(CsvDecimalFormat.Comma);
 
@@ -19,7 +19,7 @@ export const XExportRowsDialog = (props: {dialogOpened: boolean; rowCount?: numb
     const onShow = () => {
 
         setExportType(ExportType.Csv);
-        setCreateHeaderLine(false); // excel hadze hlasky koli prvemu riadku header-ov
+        setCreateHeaderLine(true); // excel hadze hlasky koli prvemu riadku header-ov
         setCsvSeparator(CsvSeparator.Semicolon);
         setDecimalFormat(CsvDecimalFormat.Comma);
     }

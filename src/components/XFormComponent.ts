@@ -11,6 +11,8 @@ import {XCustomFilter} from "../serverApi/FindParam";
 // sa da vdaka tomu pouzit (e: XFieldChangeEvent<Dobrovolnik>) a kompilator sa nestazuje. Je to hack, mozno existuje krajsie riesenie
 export type FieldOnChange = (e: XFieldChangeEvent<any>) => void;
 
+export type XReadOnlyProp = boolean | ((object: any) => boolean);
+
 // typ property pre pridanie filtra na vyber associable rows - pouziva sa na assoc fieldoch (XAutoComplete, XDropdown, ...)
 // bud sa do property zapise priamo XCustomFilter alebo sa vytvara funkcia ktora XCustomFilter vrati (v tomto pripade moze XCustomFilter zavisiet od aktualne editovaneho objektu "object")
 // pouzivame (zatial) parameter typu any aby sme na formulari vedeli pouzit konkretny typ (alebo XObject)
@@ -19,7 +21,7 @@ export type XFilterProp = XCustomFilter | ((object: any) => XCustomFilter | unde
 export interface XFormComponentProps<T> {
     form: XFormBase;
     label?: string;
-    readOnly?: boolean;
+    readOnly?: XReadOnlyProp;
     labelStyle?: React.CSSProperties;
     inline?: boolean;
     onChange?: FieldOnChange;
@@ -68,8 +70,36 @@ export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extend
     abstract isNotNull(): boolean;
 
     isReadOnly(): boolean {
-        // tuto do buducna planujeme pridat aj dynamicky readOnly, bude ho treba ukladat do form.state podobne ako sa ukladaju errory do form.state.errorMap
-        return XUtils.isReadOnly(this.getField(), this.props.readOnly);
+
+        let readOnly: boolean;
+        if (!XUtilsCommon.isSingleField(this.getField())) {
+            // if the length of field is 2 or more, then readOnly
+            readOnly = true;
+        }
+        // the purpose of formReadOnly is to put the whole form to read only mode,
+        // that's why the formReadOnly has higher prio then property this.props.readOnly
+        else if (this.props.form.formReadOnlyBase(this.getField())) {
+            readOnly = true;
+        }
+        else if (typeof this.props.readOnly === 'boolean') {
+            readOnly = this.props.readOnly;
+        }
+        else if (typeof this.props.readOnly === 'function') {
+            // TODO - tazko povedat ci niekedy bude object === null (asi ano vid metodu getFilterBase)
+            const object: XObject = this.props.form.state.object;
+            if (object) {
+                readOnly = this.props.readOnly(this.props.form.getXObject());
+            }
+            else {
+                readOnly = true;
+            }
+        }
+        else {
+            // readOnly is undefined
+            readOnly = false;
+        }
+
+        return readOnly;
     }
 
     getLabel(): string {

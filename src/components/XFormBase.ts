@@ -274,6 +274,11 @@ export abstract class XFormBase extends Component<FormProps> {
         this.xFormDataTableList.push(xFormDataTable);
     }
 
+    formReadOnlyBase(field: string): boolean {
+        // TODO - bude this.state.object vzdycky !== undefined?
+        return this.formReadOnly(this.state.object, field);
+    }
+
     async onClickSave() {
         //console.log("zavolany onClickSave");
 
@@ -383,6 +388,13 @@ export abstract class XFormBase extends Component<FormProps> {
             xFormDataTable.validate();
         }
         return xErrorMap;
+    }
+
+    // this method can be overriden in subclass if needed
+    // (the purpose is to put the whole form to read only mode (maybe with exception a few fields))
+    // if returns true for the param "field", then the field is read only, otherwise the property readOnly of the XInput* is processed
+    formReadOnly(object: XObject, field: string): boolean {
+        return false;
     }
 
     // this method can be overriden in subclass if needed (to modify/save object after read from DB and before set into the form)

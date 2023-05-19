@@ -361,7 +361,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         if (csvParam && csvParam.useHeaderLine) {
             csvParam.headers = getHeaders();
         }
-        const exportParam: ExportParam = {exportType: exportType, filters: filtersAfterFiltering, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), csvParam: csvParam};
+        const exportParam: ExportParam = {exportType: exportType, filters: filtersAfterFiltering, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), csvParam: csvParam};
         let response;
         try {
             response = await XUtils.fetchBasicJson(path, exportParam);

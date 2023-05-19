@@ -95,15 +95,13 @@ export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
         const xEntityAssoc = XUtilsMetadata.getXEntity(this.xAssoc.entityName);
         //const xDisplayField = XUtilsMetadata.getXFieldByPath(xEntityAssoc, this.props.displayField);
 
-        // TODO - readOnly
-
         // TODO - size
         //const size = this.props.size ?? xDisplayField.length;
 
         // div className="col" nam zabezpeci aby XAutoCompleteBase nezaberal celu dlzku grid-u (ma nastaveny width=100% vdaka "formgroup-inline")
         return (
             <XAutoCompleteBase value={this.getValue()} suggestions={this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
-                               field={this.props.displayField} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
+                               field={this.props.displayField} valueForm={this.props.assocForm} idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
                                error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}/>
         );
     }

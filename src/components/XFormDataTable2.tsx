@@ -30,6 +30,7 @@ import {XButtonIconSmall} from "./XButtonIconSmall";
 import {XButtonIconNarrow} from "./XButtonIconNarrow";
 import {IconType} from "primereact/utils";
 import {ButtonProps} from "primereact/button";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 // typ pre technicky field row.__x_rowTechData (row je item zoznamu editovaneho v XFormDataTable2)
 export interface XRowTechData {
@@ -356,23 +357,25 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
     }
 */
     // body={(rowData: any) => bodyTemplate(childColumn.props.field, rowData)}
-    bodyTemplate (columnProps: XFormColumnProps, rowData: any, xEntity: XEntity): any {
+    bodyTemplate(columnProps: XFormColumnProps, tableReadOnly: boolean, rowData: any, xEntity: XEntity): any {
         let body: any;
         if (columnProps.type === "inputSimple") {
             const columnPropsInputSimple = (columnProps as XFormInputSimpleColumnProps);
+            // tableReadOnly has higher prio then property readOnly
+            const readOnly: boolean = tableReadOnly || (columnPropsInputSimple.readOnly ?? false);
             const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, columnPropsInputSimple.field);
             if (xField.type === "decimal" || xField.type === "number") {
-                body = <XInputDecimalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly} onChange={columnPropsInputSimple.onChange}/>;
+                body = <XInputDecimalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly} onChange={columnPropsInputSimple.onChange}/>;
             }
             else if (xField.type === "date" || xField.type === "datetime") {
-                body = <XInputDateDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
+                body = <XInputDateDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly}/>;
             }
             else if (xField.type === "boolean") {
-                body = <XCheckboxDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
+                body = <XCheckboxDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly}/>;
             }
             else {
                 // xField.type === "string", pripadne ine jednoduche typy
-                body = <XInputTextDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={columnPropsInputSimple.readOnly}/>;
+                body = <XInputTextDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly}/>;
             }
         }
         else if (columnProps.type === "dropdown") {
@@ -381,7 +384,9 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
-            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchTable={columnPropsAutoComplete.searchTable} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} rowData={rowData}/>;
+            // tableReadOnly has higher prio then property readOnly
+            const readOnly: boolean = tableReadOnly || (columnPropsAutoComplete.readOnly ?? false);
+            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchTable={columnPropsAutoComplete.searchTable} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} rowData={rowData} readOnly={readOnly}/>;
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
@@ -454,6 +459,37 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         return msg;
     }
 
+    // TODO - velmi podobna funkcia ako XFormComponent.isReadOnly() - zjednotit ak sa da
+    isReadOnly(): boolean {
+
+        let readOnly: boolean;
+        // the purpose of formReadOnly is to put the whole form to read only mode,
+        // that's why the formReadOnly has higher prio then property this.props.readOnly
+        if (this.props.form.formReadOnlyBase(this.props.assocField)) {
+            readOnly = true;
+        }
+        else if (typeof this.props.readOnly === 'boolean') {
+            readOnly = this.props.readOnly;
+        }
+        // TODO
+        // else if (typeof this.props.readOnly === 'function') {
+        //     // TODO - tazko povedat ci niekedy bude object === null (asi ano vid metodu getFilterBase)
+        //     const object: XObject = this.props.form.state.object;
+        //     if (object) {
+        //         readOnly = this.props.readOnly(this.props.form.getXObject());
+        //     }
+        //     else {
+        //         readOnly = true;
+        //     }
+        // }
+        else {
+            // readOnly is undefined
+            readOnly = false;
+        }
+
+        return readOnly;
+    }
+
     render() {
         const paginator: boolean = this.props.paginator !== undefined ? this.props.paginator : false;
         let rows: number | undefined = undefined;
@@ -467,7 +503,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         const filterDisplay: "menu" | "row" | undefined = this.props.filterDisplay !== "none" ? this.props.filterDisplay : undefined;
         const label = this.props.label !== undefined ? this.props.label : this.props.assocField;
-        const readOnly = this.props.readOnly !== undefined ? this.props.readOnly : false;
+        const readOnly = this.isReadOnly();
 
         // v bloku function (child) nejde pouzit priamo this, thisLocal uz ide pouzit
         const thisLocal = this;
@@ -592,12 +628,12 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 return <Column field={field} header={header} filter={thisLocal.props.filterDisplay !== "none"} sortable={thisLocal.props.sortable}
                                filterElement={filterElement} showFilterMenu={showFilterMenu} showClearButton={showClearButton}
                                headerStyle={headerStyle} align={align}
-                               body={(rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, rowData, xEntity);}}/>;
+                               body={(rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, readOnly, rowData, xEntity);}}/>;
             }
         );
         if (this.props.removeButtonInRow) {
             // je dolezite nastavit sirku header-a, lebo inac ma stlpec sirku 0 a nevidno ho
-            columnElemList.push(<Column key="removeButton" headerStyle={{width: '2rem'}} body={(rowData: any) => <XButtonIconNarrow icon="pi pi-times" onClick={() => this.removeRow(rowData)} addMargin={false}/>}/>);
+            columnElemList.push(<Column key="removeButton" headerStyle={{width: '2rem'}} body={(rowData: any) => <XButtonIconNarrow icon="pi pi-times" onClick={() => this.removeRow(rowData)} disabled={readOnly} addMargin={false}/>}/>);
         }
 
         return (
@@ -618,8 +654,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                     </DataTable>
                 </div>
                 <div className="flex justify-content-center">
-                    <XButton icon={this.props.addRowIcon} label={this.props.addRowLabel} onClick={this.onClickAddRow}/>
-                    {this.props.removeButtonInRow ? undefined : <XButton icon={this.props.removeRowIcon} label={this.props.removeRowLabel} onClick={this.onClickRemoveRowBySelection}/>}
+                    <XButton icon={this.props.addRowIcon} label={this.props.addRowLabel} onClick={this.onClickAddRow} disabled={readOnly}/>
+                    {this.props.removeButtonInRow ? undefined : <XButton icon={this.props.removeRowIcon} label={this.props.removeRowLabel} onClick={this.onClickRemoveRowBySelection} disabled={readOnly}/>}
                 </div>
             </div>
         );

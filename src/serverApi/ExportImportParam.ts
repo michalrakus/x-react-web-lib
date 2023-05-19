@@ -1,6 +1,7 @@
 // ExportType a ExportParam sa pouzivaju v samostatnom servise ktory data streamuje
 // (na rozdiel od ResultType.AllRows ktory by sa ani nemal pouzivat - nemali by sa vsetky rows tahat na klienta v jednom velkom requeste)
 import {DataTableFilterMeta, DataTableSortMeta} from "primereact/datatable";
+import {XCustomFilter} from "./FindParam";
 
 export enum ExportType {
     Csv = "csv",
@@ -10,6 +11,7 @@ export enum ExportType {
 export interface ExportParam {
     exportType: ExportType;
     filters: DataTableFilterMeta;
+    customFilter?: XCustomFilter;
     multiSortMeta?: DataTableSortMeta[]; // typ []
     entity: string;
     fields: string[];
