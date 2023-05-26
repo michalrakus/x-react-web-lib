@@ -87,6 +87,10 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             const queryNormalized = XUtils.normalizeString(event.query);
             filteredSuggestions = this.props.suggestions.filter((suggestion) => {
                 const fieldValue: string = this.getDisplayValue(suggestion);
+                // specialna null polozka (prazdny objekt) - test dame az za test fieldValue na undefined - koli performance
+                if (fieldValue === undefined && Object.keys(suggestion).length === 0) {
+                    return false;
+                }
                 // bolo:
                 //return XUtils.normalizeString(fieldValue).startsWith(queryNormalized);
                 return XUtils.normalizeString(fieldValue).indexOf(queryNormalized) !== -1;

@@ -1,7 +1,8 @@
-import {XAssoc, XAssocMap, XEntity, XEntityMap, XField} from "../serverApi/XEntityMetadata";
+import {XAssoc, XAssocMap, XEntity, XEntityMap, XField, XRelationType} from "../serverApi/XEntityMetadata";
 import {XUtils} from "./XUtils";
 import {XBrowseMeta, XBrowseMetaMap} from "../serverApi/XBrowseMetadata";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XBetweenFilterProp} from "./XLazyDataTable";
 
 // idelany nazov: UtilsEntityMetadata - ale strasne dlhy
 // tato funkcionalita by mala ist bud do tried XEntity, XField alebo lepsie do nejakeho servisu
@@ -48,7 +49,7 @@ export class XUtilsMetadata {
             return XUtilsMetadata.getXField(xEntity, field);
         }
         else {
-            const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(xEntity, field);
+            const xAssoc: XAssoc = XUtilsMetadata.getXAssoc(xEntity, field);
             const xAssocEntity = XUtilsMetadata.getXEntity(xAssoc.entityName);
             return XUtilsMetadata.getXFieldByPath(xAssocEntity, restPath);
         }
@@ -58,20 +59,38 @@ export class XUtilsMetadata {
         return XUtilsMetadata.getXFieldByPath(XUtilsMetadata.getXEntity(entity), path);
     }
 
+    static getXAssocByPath(xEntity: XEntity, path: string): XAssoc {
+        const [field, restPath] = XUtilsCommon.getFieldAndRestPath(path);
+        if (restPath === null) {
+            return XUtilsMetadata.getXAssoc(xEntity, field);
+        }
+        else {
+            const xAssoc: XAssoc = XUtilsMetadata.getXAssoc(xEntity, field);
+            const xAssocEntity = XUtilsMetadata.getXEntity(xAssoc.entityName);
+            return XUtilsMetadata.getXAssocByPath(xAssocEntity, restPath);
+        }
+    }
+
+    // for path assoc1.assoc2.field returns assoc2 (last assoc before field)
+    static getLastXAssocByPath(xEntity: XEntity, path: string): XAssoc {
+        const pathToAssoc: string = XUtilsCommon.getPathToAssoc(path);
+        return XUtilsMetadata.getXAssocByPath(xEntity, pathToAssoc);
+    }
+
     static getXAssocToOne(xEntity: XEntity, assocField: string): XAssoc {
-        return XUtilsMetadata.getXAssoc(xEntity, xEntity.assocToOneMap, assocField);
+        return XUtilsMetadata.getXAssoc(xEntity, assocField, ["many-to-one", "one-to-one"]);
     }
 
     static getXAssocToMany(xEntity: XEntity, assocField: string): XAssoc {
-        return XUtilsMetadata.getXAssoc(xEntity, xEntity.assocToManyMap, assocField);
+        return XUtilsMetadata.getXAssoc(xEntity, assocField, ["one-to-many", "many-to-many"]);
     }
 
     static getXAssocToOneByAssocEntity(xEntity: XEntity, assocEntityName: string): XAssoc {
-        return XUtilsMetadata.getXAssocByAssocEntity(xEntity, xEntity.assocToOneMap, assocEntityName);
+        return XUtilsMetadata.getXAssocByAssocEntity(xEntity, assocEntityName, ["many-to-one", "one-to-one"]);
     }
 
     static getXAssocToManyByAssocEntity(xEntity: XEntity, assocEntityName: string): XAssoc {
-        return XUtilsMetadata.getXAssocByAssocEntity(xEntity, xEntity.assocToManyMap, assocEntityName);
+        return XUtilsMetadata.getXAssocByAssocEntity(xEntity, assocEntityName, ["one-to-many", "many-to-many"]);
     }
 
     static getXEntityForAssocToOne(xEntity: XEntity, assocField: string): XEntity {
@@ -86,11 +105,22 @@ export class XUtilsMetadata {
         const xFieldList: XField[] = [];
         for (const [key, xField] of Object.entries(xEntity.fieldMap)) {
             // assoc fieldy sa nachadzaju aj v xEntity.fieldMap ako typ number (netusim preco), preto ich vyfiltrujeme
-            if (xEntity.assocToOneMap[xField.name] === undefined) {
+            if (xEntity.assocMap[xField.name] === undefined) {
                 xFieldList.push(xField);
             }
         }
         return xFieldList;
+    }
+
+    static getXAssocList(xEntity: XEntity, relationTypeList?: XRelationType[]): XAssoc[] {
+        //const xAssocList: XAssoc[] = Array.from(xEntity.assocMap, (v: XAssoc, k: string) => v);
+        const xAssocList: XAssoc[] = [];
+        for (const [key, xAssoc] of Object.entries(xEntity.assocMap)) {
+            if (relationTypeList === undefined || relationTypeList.includes(xAssoc.relationType)) {
+                xAssocList.push(xAssoc);
+            }
+        }
+        return xAssocList;
     }
 
     // docasne sem, kym nemame jednotny XInputDecimal/XInputDecimalDT
@@ -133,7 +163,7 @@ export class XUtilsMetadata {
     //static CHAR_SIZE: number = 0.57; // 0.57rem (8px)
     static CHAR_SIZE: number = 0.5; // 0.5rem (7px) - skusime
 
-    static computeColumnWidth(xField: XField, filterMenuInFilterRow: boolean, formColumnType: string | undefined, header: string | undefined, sortableButtonInHeader: boolean, filterButtonInHeader: boolean): string | undefined {
+    static computeColumnWidth(xField: XField, betweenFilter: XBetweenFilterProp, filterMenuInFilterRow: boolean, formColumnType: string | undefined, header: string | undefined, sortableButtonInHeader: boolean, filterButtonInHeader: boolean): string | undefined {
         let width: number | undefined;
         if (formColumnType === undefined) {
             // lazy datatable (no inputs, no buttons, only text and padding)
@@ -145,16 +175,19 @@ export class XUtilsMetadata {
                 width = XUtilsMetadata.computeColumnWidthBase(size, 0.5 + 0.5);
             }
             else if (xField.type === "date") {
-                width = XUtilsMetadata.computeColumnWidthBase(10, 0.5 + 0.5); // napr. 31.12.2021
+                width = XUtilsMetadata.computeColumnWidthBase(10, 0.25 + 1.25 + 0.25); // napr. 31.12.2021, 1.25 rem date picker button
             }
             else if (xField.type === "datetime") {
-                width = XUtilsMetadata.computeColumnWidthBase(10 + 9, 0.5 + 0.5); // napr. 31.12.2021 03:03:00
+                width = XUtilsMetadata.computeColumnWidthBase(10 + 9, 0.25 + 1.25 + 0.25); // napr. 31.12.2021 03:03:00
             }
             else if (xField.type === "boolean") {
                 width = 1.43 + 0.5 + 0.5; // checkbox ma sirku 20px
             }
             else {
                 throw `XField ${xField.name}: unknown xField.type = ${xField.type}`;
+            }
+            if (betweenFilter === "row" && width) {
+                width *= 2;
             }
         }
         else {
@@ -167,12 +200,25 @@ export class XUtilsMetadata {
                 else if (xField.type === "decimal" || xField.type === "number") {
                     const {size} = XUtilsMetadata.getParamsForInputNumber(xField);
                     width = XUtilsMetadata.computeColumnWidthBase(size, padding + padding);
+                    if (betweenFilter === "row" && width) {
+                        width *= 2; // not tested, only estimation
+                    }
                 }
                 else if (xField.type === "date") {
-                    width = 0.21 + 6 + 2.36 + 0.21; // padding + input (also in App.css defined) + button + padding
+                    if (betweenFilter === "row") {
+                        width = (0.21 + 6 + 1.25 + 0.21) * 2; // not tested, only estimation
+                    }
+                    else {
+                        width = 0.21 + 6 + 2.36 + 0.21; // padding + input (also in App.css defined) + button + padding
+                    }
                 }
                 else if (xField.type === "datetime") {
-                    width = 0.21 + 10 + 2.36 + 0.21; // padding + input (also in App.css defined) + button + padding
+                    if (betweenFilter === "row") {
+                        width = (0.21 + 10 + 1.25 + 0.21) * 2; // not tested, only estimation
+                    }
+                    else {
+                        width = 0.21 + 10 + 2.36 + 0.21; // padding + input (also in App.css defined) + button + padding
+                    }
                 }
                 else if (xField.type === "boolean") {
                     width = 1.43 + 0.5 + 0.5; // checkbox ma sirku 20px
@@ -276,17 +322,21 @@ export class XUtilsMetadata {
         return key;
     }
 
-    private static getXAssoc(xEntity: XEntity, assocMap: XAssocMap, assocField: string): XAssoc {
-        const xAssoc: XAssoc = assocMap[assocField];
+    private static getXAssoc(xEntity: XEntity, assocField: string, relationTypeList?: XRelationType[]): XAssoc {
+        const xAssoc: XAssoc = xEntity.assocMap[assocField];
         if (xAssoc === undefined) {
             throw `Assoc ${assocField} was not found in entity = ${xEntity.name}`;
+        }
+        // relationTypeList is optional and is only for check (not to get some unwanted type of assoc)
+        if (relationTypeList !== undefined && !relationTypeList.includes(xAssoc.relationType)) {
+            throw `Assoc ${assocField} in entity ${xEntity.name} is of type ${xAssoc.relationType} and required type is ${JSON.stringify(relationTypeList)}`;
         }
         return xAssoc;
     }
 
-    private static getXAssocByAssocEntity(xEntity: XEntity, assocMap: XAssocMap, assocEntityName: string): XAssoc {
+    private static getXAssocByAssocEntity(xEntity: XEntity, assocEntityName: string, relationTypeList?: XRelationType[]): XAssoc {
         let xAssocFound: XAssoc | undefined = undefined;
-        for (const [key, xAssoc] of Object.entries(assocMap)) {
+        for (const [key, xAssoc] of Object.entries(xEntity.assocMap)) {
             if (xAssoc.entityName === assocEntityName) {
                 if (xAssocFound === undefined) {
                     xAssocFound = xAssoc;
@@ -298,6 +348,10 @@ export class XUtilsMetadata {
         }
         if (xAssocFound === undefined) {
             throw `Assoc for assocEntityName = ${assocEntityName} not found in entity ${xEntity.name}`;
+        }
+        // relationTypeList is optional and is only for check (not to get some unwanted type of assoc)
+        if (relationTypeList !== undefined && !relationTypeList.includes(xAssocFound.relationType)) {
+            throw `Assoc for assocEntityName = ${assocEntityName} in entity ${xEntity.name} is of type ${xAssocFound.relationType} and required type is ${JSON.stringify(relationTypeList)}`;
         }
         return xAssocFound;
     }

@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from "react";
 import {TreeTable} from "primereact/treetable";
 import {Column} from "primereact/column";
-import {XEntity} from "../serverApi/XEntityMetadata";
+import {XAssoc, XEntity} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import TreeNode from "primereact/treenode";
 
@@ -26,7 +26,8 @@ export const XFieldSelector = (props: {entity: string; assocSelectable: boolean;
                 children: []
             });
         }
-        for (const [key, xAssoc] of Object.entries(xEntity.assocToOneMap)) {
+        const assocToOneList: XAssoc[] = XUtilsMetadata.getXAssocList(xEntity, ["many-to-one", "one-to-one"]);
+        for (const xAssoc of assocToOneList) {
             const itemKey = keyPrefix + xAssoc.name;
             treeNodeList.push({
                 key: itemKey,

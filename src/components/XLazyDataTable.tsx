@@ -6,14 +6,14 @@ import {
     DataTableOperatorFilterMetaData,
     DataTableSortMeta
 } from 'primereact/datatable';
-import {Column} from 'primereact/column';
+import {Column, ColumnBodyOptions, ColumnFilterElementTemplateOptions} from 'primereact/column';
 import {XButton} from "./XButton";
 import {OperationType, XUtils} from "./XUtils";
 import {SearchTableParams, XFieldFilter} from "./SearchTableParams";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XEntity, XField} from "../serverApi/XEntityMetadata";
-import {dateAsUI, datetimeAsUI, numberAsUI} from "./XUtilsConversions";
+import {dateAsUI, dateFormatCalendar, datetimeAsUI, numberAsUI} from "./XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
 import {FindParam, ResultType, XCustomFilter} from "../serverApi/FindParam";
 import {XButtonIconSmall} from "./XButtonIconSmall";
@@ -23,6 +23,11 @@ import {CsvParam, ExportParam, ExportType} from "../serverApi/ExportImportParam"
 import {XExportRowsDialog} from "./XExportRowsDialog";
 import {FilterMatchMode, FilterOperator} from "primereact/api";
 import {XOnSaveOrCancelProp} from "./XFormBase";
+import {Calendar, CalendarChangeEvent} from "primereact/calendar";
+import {XCalendar} from "./XCalendar";
+import {XInputDecimalBase} from "./XInputDecimalBase";
+
+export type XBetweenFilterProp = "row" | "column" | undefined;
 
 export interface XEditModeHandlers {
     onStart: () => void;
@@ -41,6 +46,7 @@ export interface XLazyDataTableProps {
     paginator: boolean;
     rows: number;
     filterDisplay: "menu" | "row";
+    betweenFilter?: XBetweenFilterProp, // umiestnenie inputov od do: "row" - vedla seba, "column" - pod sebou; plati pre vsetky stlpce typu date/datetime/decimal/number ak nemaju definovany svoj betweenFilter
     scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
     scrollWidth: string; // hodnota "none" vypne horizontalne scrollovanie
     scrollHeight: string; // hodnota "none" vypne vertikalne scrollovanie
@@ -396,63 +402,104 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
     }
 
-    // ****** checkbox vo filtri ********
-    // pouziva sa len pre simple filtrovanie (filterDisplay="row")
-
-    const onCheckboxFilterChange = (field: string, checkboxValue: boolean | null) => {
-        // TODO - treba vyklonovat?
-        const filtersCloned: DataTableFilterMeta = {...filters};
-        if (checkboxValue !== null) {
-            filtersCloned[field] = {value: checkboxValue ? "1" : "0", matchMode: FilterMatchMode.EQUALS};
-        }
-        else {
-            // pouzivatel zrusil hodnotu vo filtri (vybral prazdny stav v checkboxe), zrusime polozku z filtra
-            //delete filtersCloned[field];
-            filtersCloned[field] = {value: null, matchMode: FilterMatchMode.EQUALS};
-        }
-        setFilters(filtersCloned);
-    }
-
-    const getCheckboxFilterValue = (field: string) : boolean | null => {
-        let checkboxValue: boolean | null = null;
-        const filterValue: DataTableFilterMetaData = filters[field] as DataTableFilterMetaData;
-        if (filterValue !== undefined && filterValue !== null) {
-            if (filterValue.value === '1') {
-                checkboxValue = true;
-            }
-            else if (filterValue.value === '0') {
-                checkboxValue = false;
-            }
-        }
-        return checkboxValue;
-    }
-
     // ****** dropdown vo filtri ********
     // pouziva sa len pre simple filtrovanie (filterDisplay="row")
 
     const onDropdownFilterChange = (field: string, displayValue: any) => {
-        // TODO - treba vyklonovat?
-        const filtersCloned: DataTableFilterMeta = {...filters};
-        if (displayValue !== XUtils.dropdownEmptyOptionValue) {
-            filtersCloned[field] = {value: displayValue, matchMode: FilterMatchMode.EQUALS};
-        }
-        else {
-            // pouzivatel zrusil hodnotu vo filtri (vybral prazdny riadok), zrusime polozku z filtra
-            //delete filtersCloned[field];
-            filtersCloned[field] = {value: null, matchMode: FilterMatchMode.EQUALS};
-        }
-        setFilters(filtersCloned);
+        const filterValue: any | null = displayValue !== XUtils.dropdownEmptyOptionValue ? displayValue : null;
+        setFilterValue(field, filterValue, FilterMatchMode.EQUALS);
     }
 
     const getDropdownFilterValue = (field: string) : any => {
-        let dropdownValue: any = XUtils.dropdownEmptyOptionValue;
-        const filterValue: DataTableFilterMetaData = filters[field] as DataTableFilterMetaData;
-        if (filterValue !== undefined && filterValue !== null) {
-            if (filterValue.value !== null) {
-                dropdownValue = filterValue.value;
-            }
+        const filterValue: any | null = getFilterValue(field);
+        return filterValue !== null ? filterValue : XUtils.dropdownEmptyOptionValue;
+    }
+
+    // ****** vseobecne metodky pre set/get do/z filtra ********
+    // zatial funguje len pre simple filtrovanie (filterDisplay="row")
+
+    // vseobecna specialna metodka pouzvana pri custom filtri (XLazyColumn.filterElement)
+    const setFilterItem: XSetFilterItem = (field: string, filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData) => {
+        filters[field] = filterItem;
+        // neskusal som, ci treba aj toto klonovat ale pravdepodobne hej
+        const filtersCloned: DataTableFilterMeta = {...filters};
+        setFilters(filtersCloned);
+    }
+
+    // vseobecna metodka - nastavi hodnotu do filtra
+    // ak je matchMode === undefined, tak zachova povodnu hodnotu matchMode
+    const setFilterValue = (field: string, value: any | null, matchMode?: any) => {
+
+        const filterValue: DataTableFilterMetaData = filters[field] as DataTableFilterMetaData; // funguje len pre filterDisplay="row"
+        filterValue.value = value;
+        if (matchMode !== undefined) {
+            filterValue.matchMode = matchMode;
         }
-        return dropdownValue;
+        // treba klonovat, inac react nezobrazi zmenenu hodnotu
+        const filtersCloned: DataTableFilterMeta = {...filters};
+        setFilters(filtersCloned);
+    }
+
+    // vseobecna metodka - precita hodnotu z filtra (vrati napr. typ Date | null)
+    const getFilterValue = (field: string) : any | null => {
+        const filterValue: DataTableFilterMetaData = filters[field] as DataTableFilterMetaData; // funguje len pre filterDisplay="row"
+        return filterValue.value;
+    }
+
+    // ****** vseobecne metodky pre set/get do/z filtra - pre betweenFilter ********
+    // do DataTableFilterMetaData.value ulozime dvojprvkove pole [value1, value2]
+    // na backende spracujeme toto dvojprvkove pole
+
+    const setFilterValue1 = (field: string, value: any | null) => {
+        // na zaciatku (po inicializacii lazy table) je filterValue = null
+        let filterValue: any[2] | null = getFilterValue(field);
+        if (filterValue !== null) {
+            filterValue[0] = value;
+        }
+        else {
+            filterValue = [value, null];
+        }
+        setFilterValue(field, filterValue, FilterMatchMode.BETWEEN);
+    }
+
+    const setFilterValue2 = (field: string, value: any | null) => {
+        // na zaciatku (po inicializacii lazy table) je filterValue = null
+        let filterValue: any[2] | null = getFilterValue(field);
+        if (filterValue !== null) {
+            filterValue[1] = value;
+        }
+        else {
+            filterValue = [null, value];
+        }
+        setFilterValue(field, filterValue, FilterMatchMode.BETWEEN);
+    }
+
+    const getFilterValue1 = (field: string) : any | null => {
+        return getFilterValue1or2(field, 0);
+    }
+
+    const getFilterValue2 = (field: string) : any | null => {
+        return getFilterValue1or2(field, 1);
+    }
+
+    const getFilterValue1or2 = (field: string, index: 0 | 1) : any | null => {
+        let filterValue: any[2] | null = getFilterValue(field);
+        return filterValue !== null ? filterValue[index] : null;
+    }
+
+    const getBetweenFilter = (columnBetweenFilter: XBetweenFilterProp | "noBetween", tableBetweenFilter: XBetweenFilterProp): XBetweenFilterProp => {
+        let betweenFilter: XBetweenFilterProp = undefined;
+        // columnBetweenFilter has higher prio than tableBetweenFilter
+        if (columnBetweenFilter !== undefined) {
+            if (columnBetweenFilter === "row" || columnBetweenFilter === "column") {
+                betweenFilter = columnBetweenFilter;
+            }
+            // for "noBetween" stays betweenFilter = undefined (simple filter used)
+        }
+        else {
+            betweenFilter = tableBetweenFilter; // betweenFilter from XLazyDataTable property
+        }
+        return betweenFilter;
     }
 
     const bodyTemplate = (columnProps: XLazyColumnProps, rowData: any, xField: XField): any => {
@@ -629,14 +676,64 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             }
 
             // *********** filterElement ***********
+            let betweenFilter: XBetweenFilterProp = undefined;
             let filterElement;
-            if (xField.type === "boolean") {
-                const checkboxValue: boolean | null = getCheckboxFilterValue(childColumn.props.field);
-                filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => onCheckboxFilterChange(childColumn.props.field, e.value)}/>;
+            if (childColumn.props.filterElement !== undefined) {
+                filterElement = (options: ColumnFilterElementTemplateOptions): React.ReactNode => {
+                                    // compilator sa stazoval ze childColumn.props.filterElement muze byt undefined, preto som pridal "!"
+                                    return childColumn.props.filterElement!(setFilterItem, options);
+                                };
             }
-            else if (childColumn.props.dropdownInFilter) {
-                const dropdownValue = getDropdownFilterValue(childColumn.props.field);
-                filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field} value={dropdownValue} onValueChange={onDropdownFilterChange}/>
+            else {
+                if (xField.type === "boolean") {
+                    const checkboxValue: boolean | null = getFilterValue(childColumn.props.field);
+                    filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => setFilterValue(childColumn.props.field, e.value, FilterMatchMode.EQUALS)}/>;
+                }
+                else if (childColumn.props.dropdownInFilter) {
+                    const dropdownValue = getDropdownFilterValue(childColumn.props.field);
+                    filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field} value={dropdownValue} onValueChange={onDropdownFilterChange}/>
+                }
+                else if (xField.type === "date" || xField.type === "datetime") {
+                    betweenFilter = getBetweenFilter(childColumn.props.betweenFilter, props.betweenFilter);
+                    if (betweenFilter !== undefined) {
+                        // display: 'flex' umiestni XCalendar elementy vedla seba
+                        filterElement =
+                            <div style={betweenFilter === "row" ? {display: 'flex'} : undefined}>
+                                <XCalendar value={getFilterValue1(childColumn.props.field)} onChange={(value: Date | null) => setFilterValue1(childColumn.props.field, value)} datetime={xField.type === "datetime"}/>
+                                <XCalendar value={getFilterValue2(childColumn.props.field)} onChange={(value: Date | null) => setFilterValue2(childColumn.props.field, value)} datetime={xField.type === "datetime"}/>
+                            </div>;
+                    }
+                    else {
+                        const dateValue: Date | null = getFilterValue(childColumn.props.field);
+                        filterElement = <XCalendar value={dateValue} onChange={(value: Date | null) => setFilterValue(childColumn.props.field, value)} datetime={xField.type === "datetime"}/>
+                    }
+                }
+                else if (xField.type === "decimal" || xField.type === "number") {
+                    const params = XUtilsMetadata.getParamsForInputNumber(xField);
+                    betweenFilter = getBetweenFilter(childColumn.props.betweenFilter, props.betweenFilter);
+                    if (betweenFilter !== undefined) {
+                        // display: 'flex' umiestni input elementy pod seba (betweenFilter = "column") resp. vedla seba (betweenFilter = "row")
+                        filterElement =
+                            <div style={{display: 'flex', flexDirection: betweenFilter}}>
+                                <XInputDecimalBase value={getFilterValue1(childColumn.props.field)} onChange={(value: number | null) => setFilterValue1(childColumn.props.field, value)} {...params}/>
+                                <XInputDecimalBase value={getFilterValue2(childColumn.props.field)} onChange={(value: number | null) => setFilterValue2(childColumn.props.field, value)} {...params}/>
+                            </div>;
+                    }
+                    else {
+                        const numberValue: number | null = getFilterValue(childColumn.props.field);
+                        filterElement = <XInputDecimalBase value={numberValue} onChange={(value: number | null) => setFilterValue(childColumn.props.field, value)} {...params}/>
+                    }
+                }
+            }
+
+            // ************** dataType **************
+            // depending on the dataType of the column, suitable match modes are displayed in filter
+            let dataType: "text" | "numeric" | "date" | undefined = undefined;
+            if (xField.type === "decimal" || xField.type === "number") {
+                dataType = "numeric";
+            }
+            else if (xField.type === "date" || xField.type === "datetime") {
+                dataType = "date";
             }
 
             // *********** showFilterMenu ***********
@@ -647,7 +744,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             else {
                 showFilterMenu = true; // default
                 if (props.filterDisplay === "row") {
-                    if (xField.type === "boolean" || childColumn.props.dropdownInFilter) {
+                    if (xField.type === "boolean" || childColumn.props.dropdownInFilter || betweenFilter !== undefined) {
                         showFilterMenu = false;
                     }
                 }
@@ -658,9 +755,12 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             let showClearButton: boolean = props.filterDisplay === "menu";
 
             // *********** body ***********
-            // TODO - mozno by bolo dobre vytvarat body pre kazdy field, nech je to vsetko konzistentne
             let body;
-            if (xField.type === "decimal" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
+            if (childColumn.props.body !== undefined) {
+                body = childColumn.props.body;
+            }
+            // TODO - mozno by bolo dobre vytvarat body pre kazdy typ fieldu, nech je to vsetko konzistentne
+            else if (xField.type === "decimal" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
                 body = (rowData: any) => {return bodyTemplate(childColumn.props, rowData, xField);};
             }
 
@@ -670,7 +770,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 // TODO - if filter not used at all, then buttons flags should be false
                 const filterMenuInFilterRow: boolean = props.filterDisplay === "row" && showFilterMenu;
                 const filterButtonInHeader: boolean = props.filterDisplay === "menu";
-                width = XUtilsMetadata.computeColumnWidth(xField, filterMenuInFilterRow, undefined, headerLabel, true, filterButtonInHeader);
+                width = XUtilsMetadata.computeColumnWidth(xField, betweenFilter, filterMenuInFilterRow, undefined, headerLabel, true, filterButtonInHeader);
             }
             let headerStyle: React.CSSProperties = {};
             if (width !== undefined) {
@@ -693,7 +793,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             }
 
             return <Column field={childColumn.props.field} header={header} filter={true} sortable={true}
-                           filterElement={filterElement} showFilterMenu={showFilterMenu} showClearButton={showClearButton}
+                           filterElement={filterElement} dataType={dataType} showFilterMenu={showFilterMenu} showClearButton={showClearButton}
                            body={body} headerStyle={headerStyle} align={align}/>;
         }
     );
@@ -739,13 +839,25 @@ XLazyDataTable.defaultProps = {
     shrinkWidth: true
 };
 
+// property filterElement is of type function, this functions returns custom filter input (e.g. AutoComplete, type React.ReactNode),
+// setFilterItem is function that the custom filter input calls upon onChange - the function setFilterItem sets the selected filter value into "filters"
+// and from "filters" goes the value to lazy service
+// remark: this complicated way is used only to get filter value form custom filter input to "filters" in XLazyDataTable
+// remark2: filter value transfer "custom filter input" -> "filters" is (temporary?) only one way, if some third party changes filter value in "filters",
+// the change will be not visible in custom filter input!
+export type XSetFilterItem = (field: string, filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData) => void;
+export type XFilterElementProp = (setFilterItem: XSetFilterItem, options: ColumnFilterElementTemplateOptions) => React.ReactNode;
+
 export interface XLazyColumnProps {
     field: string;
     header?: any;
     align?: "left" | "center" | "right";
     dropdownInFilter?: boolean;
     showFilterMenu?: boolean;
+    betweenFilter?: XBetweenFilterProp | "noBetween"; // creates 2 inputs from to, only for type date/datetime/decimal/number implemented, "row"/"column" - position of inputs from to
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
+    filterElement?: XFilterElementProp;
+    body?: React.ReactNode | ((data: any, options: ColumnBodyOptions) => React.ReactNode); // the same type as type of property Column.body
 }
 
 // TODO - XLazyColumn neni idealny nazov, lepsi je XColumn (ale zatial nechame XLazyColumn)

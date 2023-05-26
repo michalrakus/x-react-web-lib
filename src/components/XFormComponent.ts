@@ -160,7 +160,9 @@ export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extend
         return undefined;
     }
 
-    // deprecated - nie je to pekne riesenie - do komponentu treba posielat error message (string) a nie props (asi ako v XAutoComplete)
+    /**
+     * @deprecated - nie je to pekne riesenie - do komponentu treba posielat error message (string) a nie props (asi ako v XAutoComplete)
+     */
     getClassNameTooltip(): {} {
         const error = this.getError();
         return error ? {

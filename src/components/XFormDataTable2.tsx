@@ -601,7 +601,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                     const filterMenuInFilterRow: boolean = thisLocal.props.filterDisplay === "row" && showFilterMenu;
                     const sortableButtonInHeader: boolean = thisLocal.props.sortable;
                     const filterButtonInHeader: boolean = thisLocal.props.filterDisplay === "menu";
-                    width = XUtilsMetadata.computeColumnWidth(xField, filterMenuInFilterRow, childColumnProps.type, header, sortableButtonInHeader, filterButtonInHeader);
+                    width = XUtilsMetadata.computeColumnWidth(xField, undefined, filterMenuInFilterRow, childColumnProps.type, header, sortableButtonInHeader, filterButtonInHeader);
                 }
                 let headerStyle: React.CSSProperties = {};
                 if (width !== undefined) {
