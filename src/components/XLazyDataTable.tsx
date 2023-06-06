@@ -13,9 +13,9 @@ import {SearchTableParams, XFieldFilter} from "./SearchTableParams";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XEntity, XField} from "../serverApi/XEntityMetadata";
-import {dateAsUI, dateFormatCalendar, datetimeAsUI, numberAsUI} from "./XUtilsConversions";
+import {dateAsUI, dateFormatCalendar, datetimeAsUI, numberAsUI, numberFromModel} from "./XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
-import {FindParam, ResultType, XCustomFilter} from "../serverApi/FindParam";
+import {FindParam, ResultType, XAggregateItem, XAggregateType, XCustomFilter} from "../serverApi/FindParam";
 import {XButtonIconSmall} from "./XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
@@ -61,6 +61,8 @@ export interface XLazyDataTableProps {
     initSortField?: string;
     searchTableParams?: SearchTableParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
+    // ak chceme zavolat reload zaznamov, treba vytiahnut "const [dataLoaded, setDataLoaded] = useState<boolean>(false);" do browse komponentu a zavolat setDataLoaded(false);
+    dataLoadedState?: [boolean, React.Dispatch<React.SetStateAction<boolean>>]; // TODO - specialny typ vytvor, napr. XuseState<boolean>
     editMode?: boolean;
     editModeHandlers?: XEditModeHandlers;
     displayed?: boolean;
@@ -71,6 +73,21 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     // must be here, is used in createInitFilters()
     const xEntity: XEntity = XUtilsMetadata.getXEntity(props.entity);
+
+    const createAggregateItems = (): XAggregateItem[] => {
+
+        let aggregateItems: XAggregateItem[] = [];
+
+        let columns = props.children;
+        for (let column of columns) {
+            const xLazyColumn = column as {props: XLazyColumnProps}; // nevedel som to krajsie...
+            if (xLazyColumn.props.aggregateType) {
+                aggregateItems.push({field: xLazyColumn.props.field, aggregateType: xLazyColumn.props.aggregateType});
+            }
+        }
+
+        return aggregateItems;
+    }
 
     const createInitFilters = () : DataTableFilterMeta => {
 
@@ -126,8 +143,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     // premenne platne pre cely component (obdoba member premennych v class-e)
     const dataTableEl = useRef<any>(null);
     let customFilter: XCustomFilter | undefined = props.customFilter;
+    let aggregateItems: XAggregateItem[] = createAggregateItems();
 
-    const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0});
+    const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0, aggregateValues: []});
     const [loading, setLoading] = useState(false);
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(props.paginator ? props.rows : undefined);
@@ -143,7 +161,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.initSortField ? [{field: props.initSortField, order: 1}] : []);
     const [selectedRow, setSelectedRow] = useState<any>(null);
-    const [dataLoaded, setDataLoaded] = useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
+    const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
     const [exportRowsDialogOpened, setExportRowsDialogOpened] = useState<boolean>(false);
     const [exportRowsDialogRowCount, setExportRowsDialogRowCount] = useState<number>(); // param pre dialog
     const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<DataTableFilterMeta>(filtersInit); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
@@ -184,7 +202,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onPage");
 
         setFirst(event.first);
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: event.first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: event.first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
     }
 
     const onFilter = (event: any) => {
@@ -202,7 +220,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onSort - event.multiSortMeta = " + JSON.stringify(event.multiSortMeta));
 
         setMultiSortMeta(event.multiSortMeta);
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields()});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
     }
 
     const onClickFilter = () => {
@@ -213,7 +231,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     };
 
     const loadData = () => {
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
     }
 
     const loadDataBase = async (findParam: FindParam) => {
@@ -229,8 +247,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const findByFilter = async (findParam: FindParam) : Promise<FindResult> => {
 
         // vysledok je typu FindResult
-        const {rowList, totalRecords} : {rowList: any[], totalRecords: string} = await XUtils.fetchOne('lazyDataTableFindRows', findParam);
-        return {rowList: rowList, totalRecords: parseInt(totalRecords)};
+        const findResult: FindResult = await XUtils.fetchOne('lazyDataTableFindRows', findParam);
+        findResult.totalRecords = parseInt(findResult.totalRecords as any as string);
+        return findResult;
     }
 
     const getFields = () => {
@@ -344,7 +363,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
         // exportujeme zaznamy zodpovedajuce filtru
         // najprv zistime pocet zaznamov
-        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, first: first, rows: rows, filters: filtersAfterFiltering, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()};
+        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, first: first, rows: rows, filters: filtersAfterFiltering, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems};
         //setLoading(true); - iba co preblikuje, netreba nam
         const findResult = await findByFilter(findParam);
         //setLoading(false);
@@ -626,20 +645,22 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         throw "XLazyDataTable: for props.editMode = true/false, props.editModeHandlers must be defined.";
     }
 
-    let paginatorLeft = undefined;
-    let paginatorRight = undefined;
+    // pouzivame paginatorLeft aj paginatorRight (aj prazdny) pouzivame, aby bol default paginator v strede (bez paginatorLeft je default paginator presunuty dolava a naopak)
+    // sirku div-ov este nastavujeme v css na 10rem
+    let paginatorLeft = <div>Total records: {value.totalRecords}</div>;
+    let paginatorRight = <div/>;
     if (props.editMode === true) {
-        paginatorLeft = <div/>; // paginatorLeft pouzivame, aby bol default paginator v strede (bez paginatorLeft je default paginator presunuty dolava)
         paginatorRight = <div>
                             <XButtonIconSmall icon="pi pi-save" onClick={() => props.editModeHandlers?.onSave()} tooltip="Save form"/>
                             <XButtonIconSmall icon="pi pi-times" onClick={() => props.editModeHandlers?.onCancel()} tooltip="Cancel editing"/>
                          </div>;
     }
     else if (props.editMode === false) {
-        paginatorLeft = <div/>;
-        paginatorRight = <XButtonIconSmall icon="pi pi-pencil" onClick={() => props.editModeHandlers?.onStart()} tooltip="Edit form"/>;
+        paginatorRight = <div>
+                            <XButtonIconSmall icon="pi pi-pencil" onClick={() => props.editModeHandlers?.onStart()} tooltip="Edit form"/>
+                         </div>;
     }
-    // else -> editMode is undefined - browse is not editable
+    // else - editMode is undefined - browse is not editable
 
     // export pre search button-y zatial vypneme
     const exportRows: boolean = (props.searchTableParams === undefined);
@@ -792,7 +813,23 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 }
             }
 
-            return <Column field={childColumn.props.field} header={header} filter={true} sortable={true}
+            // *********** footer ***********
+            let footer: any = undefined;
+            if (childColumn.props.aggregateType && value.aggregateValues) {
+                let aggregateValue: any = value.aggregateValues[childColumn.props.field];
+                if (aggregateValue !== undefined && aggregateValue !== null) {
+                    if (xField.type === "decimal" || xField.type === "number") {
+                        // v json subore su stringy (cislo v ""), konvertujeme aby sme zmenili 123.45 na 123,45
+                        aggregateValue = numberAsUI(numberFromModel(aggregateValue), xField.scale);
+                    }
+                }
+                else {
+                    aggregateValue = ""; // nemame este nacitane data
+                }
+                footer = aggregateValue;
+            }
+
+            return <Column field={childColumn.props.field} header={header} footer={footer} filter={true} sortable={true}
                            filterElement={filterElement} dataType={dataType} showFilterMenu={showFilterMenu} showClearButton={showClearButton}
                            body={body} headerStyle={headerStyle} align={align}/>;
         }
@@ -804,7 +841,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 <XButton label="Filter" onClick={onClickFilter} />
             </div>
             <div className="flex justify-content-center">
-                <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator} rows={rows} totalRecords={value.totalRecords}
+                <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator}
+                           rows={rows} totalRecords={value.totalRecords}
                            lazy={true} first={first} onPage={onPage} loading={loading}
                            filterDisplay={props.filterDisplay} filters={filters} onFilter={onFilter}
                            sortMode="multiple" removableSort={true} multiSortMeta={multiSortMeta} onSort={onSort}
@@ -856,6 +894,7 @@ export interface XLazyColumnProps {
     showFilterMenu?: boolean;
     betweenFilter?: XBetweenFilterProp | "noBetween"; // creates 2 inputs from to, only for type date/datetime/decimal/number implemented, "row"/"column" - position of inputs from to
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
+    aggregateType?: XAggregateType;
     filterElement?: XFilterElementProp;
     body?: React.ReactNode | ((data: any, options: ColumnBodyOptions) => React.ReactNode); // the same type as type of property Column.body
 }

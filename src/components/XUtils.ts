@@ -175,8 +175,8 @@ export class XUtils {
     }
 
     // pomocna metodka pouzivajuca lazyDataTable service
-    static async fetchRows(entity: string, customFilter: XCustomFilter | undefined, sortField?: string): Promise<any[]> {
-        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilter: customFilter, multiSortMeta: sortField ? [{field: sortField, order: 1}] : undefined};
+    static async fetchRows(entity: string, customFilter?: XCustomFilter | undefined, sortField?: string, fields?: string[]): Promise<any[]> {
+        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilter: customFilter, multiSortMeta: sortField ? [{field: sortField, order: 1}] : undefined, fields: fields};
         const {rowList}: {rowList: any[];} = await XUtils.fetchOne('lazyDataTableFindRows', findParam);
         return rowList;
     }
