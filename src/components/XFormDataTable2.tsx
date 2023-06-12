@@ -59,15 +59,17 @@ export interface XFormDataTableProps {
     rows?: number;
     filterDisplay: "menu" | "row" | "none";
     sortable: boolean;
+    sortField?: string;
     scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
     scrollWidth?: string; // default 100%, hodnota "none" vypne horizontalne scrollovanie
     scrollHeight?: string; // default '200vh', hodnota "none" vypne vertikalne scrollovanie (ale lepsie je nechat '200vh')
     shrinkWidth: boolean; // default true - ak je true, nerozsiruje stlpce na viac ako je ich explicitna sirka (nevznikaju "siroke" tabulky na celu dlzku parent elementu)
     label?: string;
     readOnly?: boolean;
+    showAddRemoveButtons?: boolean;
     onClickAddRow?: () => void;
     onClickRemoveRow?: (row: any) => void;
-    removeButtonInRow: boolean; // default false, ak je true, na konic kazdeho row-u sa zobrazi button X na remove (user nemusi selectovat row aby vykonal remove)
+    removeButtonInRow: boolean; // default false, ak je true, na koniec kazdeho row-u sa zobrazi button X na remove (user nemusi selectovat row aby vykonal remove)
     addRowLabel: string;
     addRowIcon?: IconType<ButtonProps>;
     removeRowLabel: string;
@@ -86,6 +88,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         scrollHeight: '200vh', // ak by sme dali 'none' (do DataTable by islo undefined), tak nam nezarovnava header a body (v body chyba disablovany vertikalny scrollbar),
                                 // tym ze pouzivame 200vh (max-height pre body), tak realne scrollovanie sa zapne az pri velmi vela riadkoch
         shrinkWidth: true,
+        showAddRemoveButtons: true,
         removeButtonInRow: false,
         addRowLabel: 'Add row',
         removeRowLabel: 'Remove row'
@@ -631,7 +634,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                                body={(rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, readOnly, rowData, xEntity);}}/>;
             }
         );
-        if (this.props.removeButtonInRow) {
+        if (this.props.showAddRemoveButtons && this.props.removeButtonInRow) {
             // je dolezite nastavit sirku header-a, lebo inac ma stlpec sirku 0 a nevidno ho
             columnElemList.push(<Column key="removeButton" headerStyle={{width: '2rem'}} body={(rowData: any) => <XButtonIconNarrow icon="pi pi-times" onClick={() => this.removeRow(rowData)} disabled={readOnly} addMargin={false}/>}/>);
         }
@@ -646,17 +649,20 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                     <DataTable ref={(el) => this.dt = el} value={valueList} dataKey={this.dataKey} paginator={paginator} rows={rows}
                                totalRecords={valueList.length}
                                filterDisplay={filterDisplay} filters={this.state.filters} onFilter={this.onFilter}
-                               sortMode="multiple" removableSort={true}
+                               sortMode="multiple" removableSort={true} multiSortMeta={this.props.sortField !== undefined ? [{field: this.props.sortField, order: 1}] : undefined}
                                selectionMode="single" selection={this.state.selectedRow} onSelectionChange={this.onSelectionChange}
                                className="p-datatable-sm x-form-datatable" resizableColumns columnResizeMode="expand" tableStyle={tableStyle}
                                scrollable={this.props.scrollable} scrollHeight={scrollHeight} style={style}>
                         {columnElemList}
                     </DataTable>
                 </div>
-                <div className="flex justify-content-center">
-                    <XButton icon={this.props.addRowIcon} label={this.props.addRowLabel} onClick={this.onClickAddRow} disabled={readOnly}/>
-                    {this.props.removeButtonInRow ? undefined : <XButton icon={this.props.removeRowIcon} label={this.props.removeRowLabel} onClick={this.onClickRemoveRowBySelection} disabled={readOnly}/>}
-                </div>
+                {this.props.showAddRemoveButtons ?
+                    <div className="flex justify-content-center">
+                        <XButton icon={this.props.addRowIcon} label={this.props.addRowLabel} onClick={this.onClickAddRow} disabled={readOnly}/>
+                        {this.props.removeButtonInRow ? undefined : <XButton icon={this.props.removeRowIcon} label={this.props.removeRowLabel} onClick={this.onClickRemoveRowBySelection} disabled={readOnly}/>}
+                    </div>
+                    : undefined
+                }
             </div>
         );
     }

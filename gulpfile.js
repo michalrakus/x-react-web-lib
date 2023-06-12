@@ -18,6 +18,7 @@ function generateApi(cb) {
         "./lib/components/XAutoCompleteBase",
         "./lib/components/XBrowse",
         "./lib/components/XButton",
+        "./lib/components/XButtonIconMedium",
         "./lib/components/XButtonIconNarrow",
         "./lib/components/XButtonIconSmall",
         "./lib/components/XCalendar",

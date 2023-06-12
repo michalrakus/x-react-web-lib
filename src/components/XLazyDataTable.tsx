@@ -57,8 +57,9 @@ export interface XLazyDataTableProps {
     removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean;
     onRemoveRow?: XOnSaveOrCancelProp;
     appButtons?: any;
+    filters?: DataTableFilterMeta; // pouzivatelsky filter
     customFilter?: XCustomFilter; // (programatorsky) filter ktory sa aplikuje na zobrazovane data (uzivatel ho nedokaze zmenit)
-    initSortField?: string;
+    sortField?: string;
     searchTableParams?: SearchTableParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
     // ak chceme zavolat reload zaznamov, treba vytiahnut "const [dataLoaded, setDataLoaded] = useState<boolean>(false);" do browse komponentu a zavolat setDataLoaded(false);
@@ -150,6 +151,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(props.paginator ? props.rows : undefined);
     let filtersInit: DataTableFilterMeta = createInitFilters();
+    if (props.filters) {
+        filtersInit = {...filtersInit, ...props.filters}; // items from props.filters will replace existing items in filtersInit
+    }
     if (props.searchTableParams !== undefined) {
         const displayFieldFilter: XFieldFilter | undefined = props.searchTableParams.displayFieldFilter;
         if (displayFieldFilter !== undefined) {
@@ -159,7 +163,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         customFilter = XUtils.filterAnd(customFilter, props.searchTableParams.customFilter);
     }
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
-    const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.initSortField ? [{field: props.initSortField, order: 1}] : []);
+    const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.sortField ? [{field: props.sortField, order: 1}] : []);
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
     const [exportRowsDialogOpened, setExportRowsDialogOpened] = useState<boolean>(false);
@@ -228,6 +232,12 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onClickFilter");
 
         loadData();
+    };
+
+    const onClickClearFilter = () => {
+        // najjednoduchsi sposob - pomeni aj pripadne nastavene matchMode hodnoty
+        let filtersInit: DataTableFilterMeta = createInitFilters();
+        setFilters(filtersInit);
     };
 
     const loadData = () => {
@@ -443,6 +453,11 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         // neskusal som, ci treba aj toto klonovat ale pravdepodobne hej
         const filtersCloned: DataTableFilterMeta = {...filters};
         setFilters(filtersCloned);
+    }
+
+    // vseobecna specialna metodka pouzvana pri custom filtri (XLazyColumn.filterElement)
+    const getFilterItem = (field: string): DataTableFilterMetaData | DataTableOperatorFilterMetaData => {
+        return filters[field];
     }
 
     // vseobecna metodka - nastavi hodnotu do filtra
@@ -701,8 +716,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             let filterElement;
             if (childColumn.props.filterElement !== undefined) {
                 filterElement = (options: ColumnFilterElementTemplateOptions): React.ReactNode => {
-                                    // compilator sa stazoval ze childColumn.props.filterElement muze byt undefined, preto som pridal "!"
-                                    return childColumn.props.filterElement!(setFilterItem, options);
+                                    // compilator sa stazoval ze childColumn.props.filterElement moze byt undefined, preto som pridal "!"
+                                    return childColumn.props.filterElement!({getFilterItem: getFilterItem, setFilterItem: setFilterItem, options: options});
                                 };
             }
             else {
@@ -839,6 +854,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         <div>
             <div className="flex justify-content-center">
                 <XButton label="Filter" onClick={onClickFilter} />
+                <XButton label="Clear filter" onClick={onClickClearFilter} />
             </div>
             <div className="flex justify-content-center">
                 <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator}
@@ -883,8 +899,10 @@ XLazyDataTable.defaultProps = {
 // remark: this complicated way is used only to get filter value form custom filter input to "filters" in XLazyDataTable
 // remark2: filter value transfer "custom filter input" -> "filters" is (temporary?) only one way, if some third party changes filter value in "filters",
 // the change will be not visible in custom filter input!
+export type XGetFilterItem = (field: string) => DataTableFilterMetaData | DataTableOperatorFilterMetaData;
 export type XSetFilterItem = (field: string, filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData) => void;
-export type XFilterElementProp = (setFilterItem: XSetFilterItem, options: ColumnFilterElementTemplateOptions) => React.ReactNode;
+export type XFilterElementParams = {getFilterItem: XGetFilterItem; setFilterItem: XSetFilterItem; options: ColumnFilterElementTemplateOptions;};
+export type XFilterElementProp = (params: XFilterElementParams) => React.ReactNode;
 
 export interface XLazyColumnProps {
     field: string;

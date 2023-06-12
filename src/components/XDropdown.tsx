@@ -8,6 +8,7 @@ import {XDropdownForEntity} from "./XDropdownForEntity";
 export interface XDropdownProps extends XFormComponentProps<XObject> {
     assocField: string;
     displayField: string;
+    sortField?: string;
     filter?: XFilterProp;
 }
 
@@ -45,7 +46,7 @@ export class XDropdown extends XFormComponent<XObject, XDropdownProps> {
         return (
             <div className="field grid">
                 <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
-                <XDropdownForEntity id={this.props.assocField} entity={this.xAssoc.entityName} displayField={this.props.displayField}
+                <XDropdownForEntity id={this.props.assocField} entity={this.xAssoc.entityName} displayField={this.props.displayField} sortField={this.props.sortField}
                                     value={this.getValue()} onChange={(value: any | null) => this.onValueChangeBase(value, this.props.onChange)}
                                     readOnly={this.isReadOnly()} isNotNull={this.isNotNull()} error={this.getError()} filter={this.getFilterBase(this.props.filter)}/>
             </div>

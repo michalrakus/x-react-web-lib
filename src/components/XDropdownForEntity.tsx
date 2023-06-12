@@ -7,6 +7,7 @@ export interface XDropdownForEntityProps {
     id?: string;
     entity: string;
     displayField: string;
+    sortField?: string;
     value: any | null;
     onChange: (value: any | null) => void;
     readOnly?: boolean;
@@ -43,7 +44,7 @@ export class XDropdownForEntity extends Component<XDropdownForEntityProps> {
     }
 
     async loadOptions() {
-        let options: any[] = await XUtils.fetchRows(this.props.entity, this.props.filter, this.props.displayField);
+        let options: any[] = await XUtils.fetchRows(this.props.entity, this.props.filter, this.props.sortField ?? this.props.displayField);
         if (this.props.isNotNull === undefined || !this.props.isNotNull) {
             // pridame prazdnu polozku
             options.splice(0, 0, {}); // null polozka
