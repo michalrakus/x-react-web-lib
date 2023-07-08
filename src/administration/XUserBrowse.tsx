@@ -9,7 +9,7 @@ export const XUserBrowse = (props: {}) => {
     const onAddRow = () => {
 
         // openForm pridavame automaticky v XFormNavigator3 pri renderovani komponentu
-        (props as any).openForm(<XUserForm object={{enabled: true}}/>);
+        (props as any).openForm(<XUserForm object={{enabled: true, version: 0}}/>);
     }
 
     const onEdit = (selectedRow: XUser) => {

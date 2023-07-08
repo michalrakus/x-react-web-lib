@@ -387,8 +387,14 @@ export class XUtils {
     static showErrorMessage(message: string, e: unknown) {
         let msg = message + XUtilsCommon.newLine;
         if (e instanceof XResponseError) {
-            msg += e.message + XUtilsCommon.newLine;
-            msg += JSON.stringify(e.xResponseErrorBody, null, 4);
+            // better error message for optimistic locking
+            if (e.xResponseErrorBody.exceptionName === 'OptimisticLockVersionMismatchError') {
+                msg += "The optimistic lock failed, someone else has changed the row during the editation. Sorry, you have to cancel the editation and start the editation again.";
+            }
+            else {
+                msg += e.message + XUtilsCommon.newLine;
+                msg += JSON.stringify(e.xResponseErrorBody, null, 4);
+            }
         }
         else if (e instanceof Error) {
             msg += e.message;

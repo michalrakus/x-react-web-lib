@@ -1,4 +1,4 @@
-import {Form, FormProps, XFormBase} from "../components/XFormBase";
+import {Form, FormProps} from "../components/XFormBase";
 import {XInputText} from "../components/XInputText";
 import React from "react";
 import {XUser} from "../serverApi/XUser";
@@ -8,9 +8,11 @@ import {XUtils} from "../components/XUtils";
 import {XFormFooter} from "../components/XFormFooter";
 import {XCheckbox} from "../components/XCheckbox";
 import {XEnvVar, XReactAppAuth} from "../components/XEnvVars";
+import {XFormBaseModif} from "../components/XFormBaseModif";
+import {XInputDate} from "../components/XInputDate";
 
 @Form("XUser")
-export class XUserForm extends XFormBase {
+export class XUserForm extends XFormBaseModif {
 
     constructor(props: FormProps) {
         super(props);
@@ -72,6 +74,8 @@ export class XUserForm extends XFormBase {
             }
         }
 
+        this.preSave(this.state.object);
+
         // zapise this.state.object do DB - samostatny servis koli hashovaniu password-u
         try {
             await XUtils.post('userSaveRow', {entity: this.getEntity(), object: this.state.object});
@@ -108,6 +112,8 @@ export class XUserForm extends XFormBase {
                         <XInputText form={this} field="name" label="Name" size={30} labelStyle={{width:'14rem'}}/>
                         <XCheckbox form={this} field="enabled" label="Enabled" labelStyle={{width:'14rem'}} readOnly={this.state.usernameEnabledReadOnly}/>
                         {passwordElems}
+                        <XInputDate form={this} field="modifDate" label="Modified at" readOnly={true} labelStyle={{width:'14rem'}}/>
+                        <XInputText form={this} field="modifXUser.name" label="Modified by" size={20} labelStyle={{width:'14rem'}}/>
                     </div>
                 </div>
                 <XFormFooter form={this}/>
