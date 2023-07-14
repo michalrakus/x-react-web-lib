@@ -19,8 +19,8 @@ import {FindParam, ResultType, XAggregateItem, XAggregateType, XCustomFilter} fr
 import {XButtonIconSmall} from "./XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
-import {CsvParam, ExportParam, ExportType} from "../serverApi/ExportImportParam";
-import {XExportRowsDialog} from "./XExportRowsDialog";
+import {CsvParam, LazyDataTableQueryParam, ExportType} from "../serverApi/ExportImportParam";
+import {XExportParams, XExportRowsDialog} from "./XExportRowsDialog";
 import {FilterMatchMode, FilterOperator} from "primereact/api";
 import {XOnSaveOrCancelProp} from "./XFormBase";
 import {Calendar, CalendarChangeEvent} from "primereact/calendar";
@@ -382,40 +382,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         setExportRowsDialogOpened(true);
     }
 
-    const exportRowsDialogOnHide = async (ok: boolean, exportType: ExportType | undefined, csvParam: CsvParam | undefined) => {
-
-        if (!ok || exportType === undefined) {
-            setExportRowsDialogOpened(false);
-            return;
-        }
-
-        setExportRowsDialogOpened(false);
-
-        // samotny export
-        const path = 'lazyDataTableExport';
-        if (csvParam && csvParam.useHeaderLine) {
-            csvParam.headers = getHeaders();
-        }
-        const exportParam: ExportParam = {exportType: exportType, filters: filtersAfterFiltering, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), csvParam: csvParam};
-        let response;
-        try {
-            response = await XUtils.fetchBasicJson(path, exportParam);
-        }
-        catch (e) {
-            XUtils.showErrorMessage("Export failed.", e);
-            return;
-        }
-        const fileExt: string = exportType;
-        const fileName = `${props.entity}.${fileExt}`;
-        // let respJson = await response.json(); - konvertuje do json objektu
-        let respBlob = await response.blob();
-
-        // download blob-u (download by mal fungovat asynchronne a "stream-ovo" v spolupraci so servrom)
-        let url = window.URL.createObjectURL(respBlob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
+    const createExportParams = (): XExportParams => {
+        const queryParam: LazyDataTableQueryParam = {filters: filtersAfterFiltering, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()};
+        return {
+            path: "x-lazy-data-table-export",
+            queryParam: queryParam,
+            headers: getHeaders(),
+            fileName: `${props.entity}`
+        };
     }
 
     const onClickChoose = () => {
@@ -877,7 +851,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {exportRows ? <XButton label="Export rows" onClick={onClickExport} /> : null}
                 {props.appButtons}
                 {props.searchTableParams !== undefined ? <XButton label="Choose" onClick={onClickChoose}/> : null}
-                {exportRows ? <XExportRowsDialog dialogOpened={exportRowsDialogOpened} rowCount={exportRowsDialogRowCount} onHideDialog={exportRowsDialogOnHide}/> : null}
+                {exportRows ? <XExportRowsDialog dialogOpened={exportRowsDialogOpened} hideDialog={() => setExportRowsDialogOpened(false)}
+                                                 rowCount={exportRowsDialogRowCount} exportParams={createExportParams}/> : null}
             </div>
         </div>
     );

@@ -2,7 +2,7 @@ import {XToken} from "./XToken";
 import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
-import {CsvDecimalFormat, CsvSeparator, ExportType} from "../serverApi/ExportImportParam";
+import {CsvDecimalFormat, CsvEncoding, CsvSeparator, ExportType} from "../serverApi/ExportImportParam";
 import {XResponseError} from "./XResponseError";
 import React from "react";
 import {XEnvVar} from "./XEnvVars";
@@ -35,6 +35,8 @@ export class XUtils {
     static csvSeparatorOptions = [CsvSeparator.Semicolon, CsvSeparator.Comma];
 
     static decimalFormatOptions = [CsvDecimalFormat.Comma, CsvDecimalFormat.Dot];
+
+    static csvEncodingOptions = [CsvEncoding.Utf8, CsvEncoding.Win1250];
 
     static remSize: number | null = null;
 

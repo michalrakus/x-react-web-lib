@@ -13,6 +13,11 @@ function generateApi(cb) {
     const fs = require('fs');
 
     const apiFileList = [
+        "./lib/administration/XUserBrowse",
+        "./lib/administration/XUserForm",
+        "./lib/administration/XBrowseMetaBrowse",
+        "./lib/administration/XBrowseMetaForm",
+
         "./lib/components/useXToken",
         "./lib/components/XAutoComplete",
         "./lib/components/XAutoCompleteBase",
@@ -28,6 +33,7 @@ function generateApi(cb) {
         "./lib/components/XDropdownForEntity",
         "./lib/components/XEnvVars",
         "./lib/components/XErrors",
+        "./lib/components/XExportRowsDialog",
         "./lib/components/XFieldChangeEvent",
         "./lib/components/XFormBase",
         "./lib/components/XFormBaseModif",
@@ -52,13 +58,9 @@ function generateApi(cb) {
         "./lib/components/XUtilsConversions",
         "./lib/components/XUtilsMetadata",
 
+        "./lib/serverApi/ExportImportParam",
         "./lib/serverApi/FindParam",
-        "./lib/serverApi/XUtilsCommon",
-
-        "./lib/administration/XUserBrowse",
-        "./lib/administration/XUserForm",
-        "./lib/administration/XBrowseMetaBrowse",
-        "./lib/administration/XBrowseMetaForm"
+        "./lib/serverApi/XUtilsCommon"
     ];
 
     for (const apiFile of apiFileList) {
