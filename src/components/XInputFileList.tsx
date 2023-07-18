@@ -8,6 +8,7 @@ import {XUtils} from "./XUtils";
 import {XObject} from "./XObject";
 import {XButton} from "./XButton";
 import {XButtonIconNarrow} from "./XButtonIconNarrow";
+import {numberAsUI} from "./XUtilsConversions";
 
 interface XFile {
     id: number;
@@ -24,6 +25,7 @@ export interface XInputFileListProps {
     readOnly?: boolean;
     saveDest: "fileSystem" | "database";
     subdir?: string; // subdirectory, where to save uploaded file (for the case saveDest === "fileSystem")
+    maxFileSize?: number; // maximum file size allowed in bytes
 }
 
 export class XInputFileList extends Component<XInputFileListProps> {
@@ -67,6 +69,11 @@ export class XInputFileList extends Component<XInputFileListProps> {
         const endpoint: string = this.props.saveDest === 'fileSystem' ? 'x-upload-file-into-file-system' : 'x-upload-file-into-db';
 
         for (const file of event.files) {
+            // skontrolujeme velkost - robime to tuto, lebo ked nastavime maxFileSize na komponente FileUpload, tak prilis velky subor sem do handlera ani neposle
+            if (this.props.maxFileSize !== undefined && file.size > this.props.maxFileSize) {
+                alert(`Upload of file "${file.name}" was canceled: file size ${XInputFileList.sizeInMB(file.size)} is more than maximum allowed size ${XInputFileList.sizeInMB(this.props.maxFileSize)}.`);
+                continue; // ideme na dalsi subor
+            }
             // uploadneme subor na server, insertne sa tam zaznam XFile a tento insertnuty zaznam pride sem a zapiseme ho do zoznamu form.object.<assocField>
             let xFile: XFile;
             try {
@@ -85,6 +92,11 @@ export class XInputFileList extends Component<XInputFileListProps> {
 
         // vymaze zaznamy v event.files (hidden input type="file"), sposobi ze tlacitko "+Pridat" otvori dialog na vyber suborov
         this.fileUploadRef.current.clear();
+    }
+
+    static sizeInMB(size: number): string {
+        const sizeInMB = size / (10 ** 6);
+        return numberAsUI(sizeInMB, 2) + ' MB'; // zobrazime 2 desatinky
     }
 
     async onDownloadFile(xFile: XFile) {

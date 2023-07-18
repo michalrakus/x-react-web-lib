@@ -68,7 +68,7 @@ export abstract class XFormBase extends Component<FormProps> {
     }
 
     async componentDidMount() {
-        console.log("volany XFormBase.componentDidMount()");
+        //console.log("volany XFormBase.componentDidMount()");
         // kontrola (musi byt tu, v konstruktore este property nie je nastavena)
         if (this.entity === undefined) {
             throw "XFormBase: Property entity is not defined - use decorator @Form.";
@@ -95,8 +95,8 @@ export abstract class XFormBase extends Component<FormProps> {
             operationType = OperationType.Insert;
         }
         this.preInitForm(object, operationType);
-        console.log("volany XFormBase.componentDidMount() - ideme setnut object");
-        this.setState({object: object}, () => console.log("volany XFormBase.componentDidMount() - callback setState"));
+        //console.log("volany XFormBase.componentDidMount() - ideme setnut object");
+        this.setState({object: object}/*, () => console.log("volany XFormBase.componentDidMount() - callback setState")*/);
     }
 
     getEntity(): string {

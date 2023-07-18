@@ -277,8 +277,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
     }
 
     onSelectionChange(event: any): void {
-        console.log("zavolany onSelectionChange");
-        console.log(event.value);
+        //console.log("zavolany onSelectionChange");
+        //console.log(event.value);
 
         this.setState({selectedRow: event.value});
     }
