@@ -31,6 +31,7 @@ import {XButtonIconNarrow} from "./XButtonIconNarrow";
 import {IconType} from "primereact/utils";
 import {ButtonProps} from "primereact/button";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {xLocaleOption} from "./XLocale";
 
 // typ pre technicky field row.__x_rowTechData (row je item zoznamu editovaneho v XFormDataTable2)
 export interface XRowTechData {
@@ -69,10 +70,10 @@ export interface XFormDataTableProps {
     showAddRemoveButtons?: boolean;
     onClickAddRow?: () => void;
     onClickRemoveRow?: (row: any) => void;
-    removeButtonInRow: boolean; // default false, ak je true, na koniec kazdeho row-u sa zobrazi button X na remove (user nemusi selectovat row aby vykonal remove)
-    addRowLabel: string;
+    removeButtonInRow: boolean; // default true, ak je true, na koniec kazdeho row-u sa zobrazi button X na remove (user nemusi selectovat row aby vykonal remove)
+    addRowLabel?: string;
     addRowIcon?: IconType<ButtonProps>;
-    removeRowLabel: string;
+    removeRowLabel?: string;
     removeRowIcon?: IconType<ButtonProps>;
     width?: string;
     children: ReactChild[];
@@ -89,9 +90,9 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                                 // tym ze pouzivame 200vh (max-height pre body), tak realne scrollovanie sa zapne az pri velmi vela riadkoch
         shrinkWidth: true,
         showAddRemoveButtons: true,
-        removeButtonInRow: false,
-        addRowLabel: 'Add row',
-        removeRowLabel: 'Remove row'
+        removeButtonInRow: true,
+        addRowIcon: "pi pi-plus",
+        removeRowIcon: "pi pi-times"
     };
 
     props: XFormDataTableProps;
@@ -634,9 +635,18 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                                body={(rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, readOnly, rowData, xEntity);}}/>;
             }
         );
+
         if (this.props.showAddRemoveButtons && this.props.removeButtonInRow) {
             // je dolezite nastavit sirku header-a, lebo inac ma stlpec sirku 0 a nevidno ho
             columnElemList.push(<Column key="removeButton" headerStyle={{width: '2rem'}} body={(rowData: any) => <XButtonIconNarrow icon="pi pi-times" onClick={() => this.removeRow(rowData)} disabled={readOnly} addMargin={false}/>}/>);
+        }
+
+        let addRowLabel: string | undefined = undefined;
+        let removeRowLabel: string | undefined = undefined;
+        if (this.props.showAddRemoveButtons) {
+            // calling xLocaleOption does not work in standard default values initialisation place (public static defaultProps)
+            addRowLabel = this.props.addRowLabel ?? xLocaleOption('addRow');
+            removeRowLabel = this.props.removeRowLabel ?? xLocaleOption('removeRow');
         }
 
         return (
@@ -658,8 +668,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 </div>
                 {this.props.showAddRemoveButtons ?
                     <div className="flex justify-content-center">
-                        <XButton icon={this.props.addRowIcon} label={this.props.addRowLabel} onClick={this.onClickAddRow} disabled={readOnly}/>
-                        {this.props.removeButtonInRow ? undefined : <XButton icon={this.props.removeRowIcon} label={this.props.removeRowLabel} onClick={this.onClickRemoveRowBySelection} disabled={readOnly}/>}
+                        <XButton icon={this.props.addRowIcon} label={addRowLabel} onClick={this.onClickAddRow} disabled={readOnly}/>
+                        {this.props.removeButtonInRow ? undefined : <XButton icon={this.props.removeRowIcon} label={removeRowLabel} onClick={this.onClickRemoveRowBySelection} disabled={readOnly}/>}
                     </div>
                     : undefined
                 }

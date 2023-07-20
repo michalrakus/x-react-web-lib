@@ -26,6 +26,7 @@ import {XOnSaveOrCancelProp} from "./XFormBase";
 import {Calendar, CalendarChangeEvent} from "primereact/calendar";
 import {XCalendar} from "./XCalendar";
 import {XInputDecimalBase} from "./XInputDecimalBase";
+import {xLocaleOption} from "./XLocale";
 
 export type XBetweenFilterProp = "row" | "column" | undefined;
 
@@ -325,7 +326,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             }
         }
         else {
-            alert("Please select the row.");
+            alert(xLocaleOption('pleaseSelectRow'));
         }
     }
 
@@ -339,7 +340,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                     reread = await props.removeRow(selectedRow);
                 }
                 catch (e) {
-                    XUtils.showErrorMessage("Remove row failed.", e);
+                    XUtils.showErrorMessage(xLocaleOption('removeRowFailed'), e);
                 }
                 if (reread) {
                     loadData();
@@ -349,13 +350,13 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 }
             }
             else {
-                if (window.confirm('Are you sure to remove the selected row?')) {
+                if (window.confirm(xLocaleOption('removeRowConfirm'))) {
                     try {
                         // poznamka: vdaka await bude loadData() bezat az po dobehnuti requestu removeRow
                         await XUtils.removeRow(props.entity, selectedRow);
                     }
                     catch (e) {
-                        XUtils.showErrorMessage("Remove row failed.", e);
+                        XUtils.showErrorMessage(xLocaleOption('removeRowFailed'), e);
                     }
                     loadData();
                     if (props.onRemoveRow) {
@@ -365,7 +366,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             }
         }
         else {
-            alert("Please select the row.");
+            alert(xLocaleOption('pleaseSelectRow'));
         }
     }
 
@@ -636,7 +637,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     // pouzivame paginatorLeft aj paginatorRight (aj prazdny) pouzivame, aby bol default paginator v strede (bez paginatorLeft je default paginator presunuty dolava a naopak)
     // sirku div-ov este nastavujeme v css na 10rem
-    let paginatorLeft = <div>Total records: {value.totalRecords}</div>;
+    let paginatorLeft = <div>{xLocaleOption('totalRecords')}: {value.totalRecords}</div>;
     let paginatorRight = <div/>;
     if (props.editMode === true) {
         paginatorRight = <div>
@@ -827,8 +828,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     return (
         <div>
             <div className="flex justify-content-center">
-                <XButton label="Filter" onClick={onClickFilter} />
-                <XButton label="Clear filter" onClick={onClickClearFilter} />
+                <XButton key="filter" label={xLocaleOption('filter')} onClick={onClickFilter} />
+                <XButton key="clearFilter" label={xLocaleOption('clearFilter')} onClick={onClickClearFilter} />
             </div>
             <div className="flex justify-content-center">
                 <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator}
@@ -845,13 +846,13 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 </DataTable>
             </div>
             <div className="flex justify-content-center">
-                {props.onAddRow !== undefined ? <XButton label="Add row" onClick={onClickAddRow}/> : null}
-                {props.onEdit !== undefined ? <XButton label="Edit" onClick={onClickEdit}/> : null}
-                {props.removeRow !== undefined && props.removeRow !== false ? <XButton label="Remove row" onClick={onClickRemoveRow}/> : null}
-                {exportRows ? <XButton label="Export rows" onClick={onClickExport} /> : null}
+                {props.onAddRow !== undefined ? <XButton key="addRow" icon="pi pi-plus" label={xLocaleOption('addRow')} onClick={onClickAddRow}/> : null}
+                {props.onEdit !== undefined ? <XButton key="editRow" icon="pi pi-pencil" label={xLocaleOption('editRow')} onClick={onClickEdit}/> : null}
+                {props.removeRow !== undefined && props.removeRow !== false ? <XButton key="removeRow" icon="pi pi-times" label={xLocaleOption('removeRow')} onClick={onClickRemoveRow}/> : null}
+                {exportRows ? <XButton key="exportRows" icon="pi pi-file-export" label={xLocaleOption('exportRows')} onClick={onClickExport} /> : null}
                 {props.appButtons}
-                {props.searchTableParams !== undefined ? <XButton label="Choose" onClick={onClickChoose}/> : null}
-                {exportRows ? <XExportRowsDialog dialogOpened={exportRowsDialogOpened} hideDialog={() => setExportRowsDialogOpened(false)}
+                {props.searchTableParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
+                {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogOpened={exportRowsDialogOpened} hideDialog={() => setExportRowsDialogOpened(false)}
                                                  rowCount={exportRowsDialogRowCount} exportParams={createExportParams}/> : null}
             </div>
         </div>

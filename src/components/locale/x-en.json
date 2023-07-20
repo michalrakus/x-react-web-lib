@@ -1,0 +1,26 @@
+{
+  "en": {
+    "filter": "Filter",
+    "clearFilter": "Clear filter",
+    "addRow": "Add",
+    "editRow": "Edit",
+    "removeRow": "Remove",
+    "exportRows": "Export",
+    "chooseRow": "Choose",
+    "totalRecords": "Total records",
+    "pleaseSelectRow": "Please select the row.",
+    "removeRowConfirm": "Are you sure to remove the selected row?",
+    "removeRowFailed": "Remove row failed.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "expRowCount": "Row count",
+    "expExportType": "Export type",
+    "expCreateHeaderLine": "Create header line",
+    "expCsvSeparator": "Csv separator",
+    "expDecimalFormat": "Decimal format",
+    "expEncoding": "Encoding",
+    "fileUploadSizeToBig": "Upload of file \"{fileName}\" was canceled: file size {fileSize} is more than maximum allowed size {maxFileSize}.",
+    "fileUploadFailed": "Upload of file \"{fileName}\" failed.",
+    "fileDownloadFailed": "File download failed."
+  }
+}

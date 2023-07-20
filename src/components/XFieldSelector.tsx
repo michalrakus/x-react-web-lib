@@ -3,7 +3,7 @@ import {TreeTable} from "primereact/treetable";
 import {Column} from "primereact/column";
 import {XAssoc, XEntity} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
-import TreeNode from "primereact/treenode";
+import {TreeNode} from "primereact/treenode";
 
 export const XFieldSelector = (props: {entity: string; assocSelectable: boolean; selectionField?: string; onSelectionChange: (selectedField: string) => void;}) => {
 

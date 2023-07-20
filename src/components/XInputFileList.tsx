@@ -9,6 +9,7 @@ import {XObject} from "./XObject";
 import {XButton} from "./XButton";
 import {XButtonIconNarrow} from "./XButtonIconNarrow";
 import {numberAsUI} from "./XUtilsConversions";
+import {xLocaleOption} from "./XLocale";
 
 interface XFile {
     id: number;
@@ -31,7 +32,6 @@ export interface XInputFileListProps {
 export class XInputFileList extends Component<XInputFileListProps> {
 
     public static defaultProps = {
-        chooseLabel: "Add",
         saveDest: "fileSystem"
     };
 
@@ -71,7 +71,7 @@ export class XInputFileList extends Component<XInputFileListProps> {
         for (const file of event.files) {
             // skontrolujeme velkost - robime to tuto, lebo ked nastavime maxFileSize na komponente FileUpload, tak prilis velky subor sem do handlera ani neposle
             if (this.props.maxFileSize !== undefined && file.size > this.props.maxFileSize) {
-                alert(`Upload of file "${file.name}" was canceled: file size ${XInputFileList.sizeInMB(file.size)} is more than maximum allowed size ${XInputFileList.sizeInMB(this.props.maxFileSize)}.`);
+                alert(xLocaleOption('fileUploadSizeToBig', {fileName: file.name, fileSize: XInputFileList.sizeInMB(file.size), maxFileSize: XInputFileList.sizeInMB(this.props.maxFileSize)}))
                 continue; // ideme na dalsi subor
             }
             // uploadneme subor na server, insertne sa tam zaznam XFile a tento insertnuty zaznam pride sem a zapiseme ho do zoznamu form.object.<assocField>
@@ -80,7 +80,7 @@ export class XInputFileList extends Component<XInputFileListProps> {
                 xFile = await XUtils.fetchFile(endpoint,{filename: file.name, subdir: this.props.subdir}, file);
             }
             catch (e) {
-                XUtils.showErrorMessage(`Upload of file "${file.name}" failed.`, e);
+                XUtils.showErrorMessage(xLocaleOption('fileUploadFailed', {fileName: file.name}), e);
                 this.fileUploadRef.current.clear(); // vyprazdnime hidden input, nech moze user znova zadat subory
                 return; // prerusime upload tohto a dalsich suborov
             }
@@ -105,7 +105,7 @@ export class XInputFileList extends Component<XInputFileListProps> {
             response = await XUtils.fetchBasicJson('x-download-file', {xFileId: xFile.id});
         }
         catch (e) {
-            XUtils.showErrorMessage("Download failed.", e);
+            XUtils.showErrorMessage(xLocaleOption('fileDownloadFailed'), e);
             return;
         }
         const fileName = xFile.name;
@@ -152,7 +152,7 @@ export class XInputFileList extends Component<XInputFileListProps> {
                 <label>{label}</label>
                 {elemList}
                 <FileUpload ref={this.fileUploadRef} mode="basic" multiple auto customUpload uploadHandler={this.uploadHandler}
-                            chooseLabel={this.props.chooseLabel} className="m-1" disabled={readOnly}/>
+                            chooseLabel={this.props.chooseLabel ?? xLocaleOption('addRow')} className="m-1" disabled={readOnly}/>
             </div>
         );
     }

@@ -13,6 +13,7 @@ import {Checkbox} from "primereact/checkbox";
 import {XButton} from "./XButton";
 import {XUtils} from "./XUtils";
 import {numberAsUI} from "./XUtilsConversions";
+import {xLocaleOption} from "./XLocale";
 
 // parametre potrebne na zavolanie servisu pre export
 export interface XExportParams {
@@ -92,19 +93,19 @@ export const XExportRowsDialog = (props: {dialogOpened: boolean; hideDialog: () 
         if (exportType === ExportType.Csv) {
             elem = <span>
             <div className="field grid">
-                <label className="col-fixed" style={{width:'9.3rem'}}>Create header line</label>
+                <label className="col-fixed" style={{width:'10rem'}}>{xLocaleOption('expCreateHeaderLine')}</label>
                 <Checkbox checked={createHeaderLine} onChange={(e: any) => setCreateHeaderLine(e.checked)}/>
             </div>
             <div className="field grid">
-                <label className="col-fixed" style={{width:'9.3rem'}}>Csv separator</label>
+                <label className="col-fixed" style={{width:'10rem'}}>{xLocaleOption('expCsvSeparator')}</label>
                 <Dropdown value={csvSeparator} options={XUtils.csvSeparatorOptions} onChange={(e: any) => setCsvSeparator(e.value)}/>
             </div>
             <div className="field grid">
-                <label className="col-fixed" style={{width:'9.3rem'}}>Decimal format</label>
+                <label className="col-fixed" style={{width:'10rem'}}>{xLocaleOption('expDecimalFormat')}</label>
                 <Dropdown value={decimalFormat} options={XUtils.decimalFormatOptions} onChange={(e: any) => setDecimalFormat(e.value)}/>
             </div>
             <div className="field grid">
-                <label className="col-fixed" style={{width:'9.3rem'}}>Encoding</label>
+                <label className="col-fixed" style={{width:'10rem'}}>{xLocaleOption('expEncoding')}</label>
                 <Dropdown value={csvEncoding} options={XUtils.csvEncodingOptions} onChange={(e: any) => setCsvEncoding(e.value)}/>
             </div>
         </span>;
@@ -116,18 +117,18 @@ export const XExportRowsDialog = (props: {dialogOpened: boolean; hideDialog: () 
         <Dialog visible={props.dialogOpened} onShow={onShow} onHide={() => props.hideDialog()}>
             {props.rowCount ?
                 <div className="field grid">
-                    <label className="col-fixed" style={{width:'9.3rem'}}>Row count</label>
+                    <label className="col-fixed" style={{width:'10rem'}}>{xLocaleOption('expRowCount')}</label>
                     <InputText value={numberAsUI(props.rowCount ?? null, 0)} readOnly={true}/>
                 </div>
                 : null
             }
             <div className="field grid">
-                <label className="col-fixed" style={{width:'9.3rem'}}>Export type</label>
+                <label className="col-fixed" style={{width:'10rem'}}>{xLocaleOption('expExportType')}</label>
                 <Dropdown value={exportType} options={props.exportTypeOptions ?? XUtils.exportTypeOptions} onChange={(e: any) => setExportType(e.value)}/>
             </div>
             {elem}
             <div className="flex justify-content-center">
-                <XButton label="Export" onClick={onExport}/>
+                <XButton label={xLocaleOption('exportRows')} onClick={onExport}/>
             </div>
         </Dialog>
     );
