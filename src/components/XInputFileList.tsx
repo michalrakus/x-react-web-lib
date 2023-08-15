@@ -10,6 +10,7 @@ import {XButton} from "./XButton";
 import {XButtonIconNarrow} from "./XButtonIconNarrow";
 import {numberAsUI} from "./XUtilsConversions";
 import {xLocaleOption} from "./XLocale";
+import {XFileJsonField} from "../serverApi/XFileJsonField";
 
 interface XFile {
     id: number;
@@ -75,9 +76,15 @@ export class XInputFileList extends Component<XInputFileListProps> {
                 continue; // ideme na dalsi subor
             }
             // uploadneme subor na server, insertne sa tam zaznam XFile a tento insertnuty zaznam pride sem a zapiseme ho do zoznamu form.object.<assocField>
+            const jsonFieldValue: XFileJsonField = {
+                filename: file.name,
+                subdir: this.props.subdir,
+                modifDate: new Date(),
+                modifXUser: XUtils.getXToken()?.xUser?.idXUser
+            }
             let xFile: XFile;
             try {
-                xFile = await XUtils.fetchFile(endpoint,{filename: file.name, subdir: this.props.subdir}, file);
+                xFile = await XUtils.fetchFile(endpoint, jsonFieldValue, file);
             }
             catch (e) {
                 XUtils.showErrorMessage(xLocaleOption('fileUploadFailed', {fileName: file.name}), e);

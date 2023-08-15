@@ -399,7 +399,7 @@ export class XUtils {
             }
         }
         else if (e instanceof Error) {
-            msg += e.message;
+            msg += `${e.name}: ${e.message}`;
         }
         else if (typeof e === 'string' || typeof e === 'number') {
             // chyba typu: throw 'nieco'
