@@ -80,7 +80,7 @@ export class XInputFileList extends Component<XInputFileListProps> {
                 filename: file.name,
                 subdir: this.props.subdir,
                 modifDate: new Date(),
-                modifXUser: XUtils.getXToken()?.xUser?.idXUser
+                modifXUser: XUtils.getXToken()?.xUser?.id
             }
             let xFile: XFile;
             try {

@@ -9,13 +9,13 @@ export const XUserBrowse = (props: {}) => {
     const onAddRow = () => {
 
         // openForm pridavame automaticky v XFormNavigator3 pri renderovani komponentu
-        (props as any).openForm(<XUserForm object={{enabled: true, version: 0}}/>);
+        (props as any).openForm(<XUserForm object={{enabled: true, admin: false, version: 0}}/>);
     }
 
     const onEdit = (selectedRow: XUser) => {
 
         // openForm pridavame automaticky v XFormNavigator3 pri renderovani komponentu
-        (props as any).openForm(<XUserForm id={selectedRow.idXUser}/>);
+        (props as any).openForm(<XUserForm id={selectedRow.id}/>);
     }
 
     const onRemoveRow = async (selectedRow: XUser): Promise<boolean> => {
@@ -39,10 +39,11 @@ export const XUserBrowse = (props: {}) => {
 
     return (
         <XLazyDataTable entity="XUser" rows={10} onAddRow={onAddRow} onEdit={onEdit} removeRow={onRemoveRow} displayed={(props as any).displayed}>
-            <XLazyColumn field="idXUser" header="ID"/>
+            <XLazyColumn field="id" header="ID"/>
             <XLazyColumn field="username" header="Username" width="17rem"/>
             <XLazyColumn field="name" header="Name" width="17rem"/>
             <XLazyColumn field="enabled" header="Enabled"/>
+            <XLazyColumn field="admin" header="Admin"/>
         </XLazyDataTable>
     );
 }

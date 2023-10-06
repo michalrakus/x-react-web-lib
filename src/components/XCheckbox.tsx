@@ -27,7 +27,7 @@ export class XCheckbox extends XInput<boolean, XInputProps<boolean>> {
         }
 
         // zmenime hodnotu v modeli (odtial sa hodnota cita)
-        this.onValueChangeBase(newValue);
+        this.onValueChangeBase(newValue, this.props.onChange);
     }
 
     render() {
