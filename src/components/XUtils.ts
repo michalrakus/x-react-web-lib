@@ -7,7 +7,7 @@ import {XResponseError} from "./XResponseError";
 import React from "react";
 import {XEnvVar} from "./XEnvVars";
 import {XError, XErrorMap} from "./XErrors";
-import {FindParam, ResultType, XCustomFilter} from "../serverApi/FindParam";
+import {FindParam, ResultType, XCustomFilter, XCustomFilterItem} from "../serverApi/FindParam";
 
 export enum OperationType {
     None,
@@ -178,7 +178,7 @@ export class XUtils {
 
     // pomocna metodka pouzivajuca lazyDataTable service
     static async fetchRows(entity: string, customFilter?: XCustomFilter | undefined, sortField?: string, fields?: string[]): Promise<any[]> {
-        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilter: customFilter, multiSortMeta: sortField ? [{field: sortField, order: 1}] : undefined, fields: fields};
+        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilterItems: XUtils.createCustomFilterItems(customFilter), multiSortMeta: sortField ? [{field: sortField, order: 1}] : undefined, fields: fields};
         const {rowList}: {rowList: any[];} = await XUtils.fetchOne('lazyDataTableFindRows', findParam);
         return rowList;
     }
@@ -474,19 +474,31 @@ export class XUtils {
         return value;
     }
 
+    // pomocna metodka - konvertuje XCustomFilter -> XCustomFilterItem[]
+    static createCustomFilterItems(customFilter: XCustomFilter | undefined): XCustomFilterItem[] | undefined {
+        let customFilterItems: XCustomFilterItem[] | undefined = undefined;
+        if (customFilter) {
+            if (Array.isArray(customFilter)) {
+                customFilterItems = customFilter;
+            } else {
+                customFilterItems = [customFilter];
+            }
+        }
+        return customFilterItems;
+    }
+
     // pomocna metodka
-    static filterAnd(filter1: XCustomFilter | undefined, filter2: XCustomFilter | undefined): XCustomFilter | undefined {
-        if (filter1 && filter2) {
-            return {filter: `(${filter1.filter}) AND (${filter2.filter})`, values: {...filter1.values, ...filter2.values}};
+    static filterAnd(...filters: (XCustomFilter | undefined)[]): XCustomFilterItem[] | undefined {
+        let customFilterItemsResult: XCustomFilterItem[] | undefined = undefined;
+        if (filters.length > 0) {
+            customFilterItemsResult = [];
+            for (const filter of filters) {
+                const customFilterItems: XCustomFilterItem[] | undefined = XUtils.createCustomFilterItems(filter);
+                if (customFilterItems) {
+                    customFilterItemsResult.push(...customFilterItems);
+                }
+            }
         }
-        else if (filter1 && filter2 === undefined) {
-            return filter1;
-        }
-        else if (filter1 === undefined && filter2) {
-            return filter2;
-        }
-        else {
-            return undefined;
-        }
+        return customFilterItemsResult;
     }
 }

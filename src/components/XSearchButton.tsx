@@ -110,7 +110,7 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
                     //     displayField: props.displayField,
                     //     filter: e.target.value
                     // });
-                    const displayFieldFilter: XCustomFilter = {filter: `[${props.displayField}] LIKE :xDisplayFieldValue`, values: {"xDisplayFieldValue": `${e.target.value}%`}};
+                    const displayFieldFilter: XCustomFilter = {where: `[${props.displayField}] LIKE :xDisplayFieldValue`, params: {"xDisplayFieldValue": `${e.target.value}%`}};
                     const customFilter: XCustomFilter | undefined = this.getFilterBase(this.props.filter);
                     const rows: any[] = await XUtils.fetchRows(this.xAssoc.entityName, XUtils.filterAnd(displayFieldFilter, customFilter));
                     if (rows.length === 0) {

@@ -2,6 +2,7 @@ import React, {Component} from "react";
 import {Dropdown, DropdownChangeEvent} from "primereact/dropdown";
 import {XUtils} from "./XUtils";
 import {XCustomFilter} from "../serverApi/FindParam";
+import {XUtilsMetadata} from "./XUtilsMetadata";
 
 export interface XDropdownForEntityProps {
     id?: string;
@@ -25,12 +26,16 @@ export interface XDropdownForEntityProps {
 // otazka je ci nepouzivat vsade len XAutoComplete a upustit od XDropdown
 export class XDropdownForEntity extends Component<XDropdownForEntityProps> {
 
+    protected idField: string;
+
     state: {
         options: any[];
     };
 
     constructor(props: XDropdownForEntityProps) {
         super(props);
+
+        this.idField = XUtilsMetadata.getXEntity(this.props.entity).idField;
 
         this.state = {
             options: []
@@ -67,7 +72,7 @@ export class XDropdownForEntity extends Component<XDropdownForEntityProps> {
         // TODO - mozno by nebolo od veci pouzivat InputText ak readOnly === true (chybala by len sipka (rozbalovac)) a dalo by sa copy-paste-ovat
         // propertiesy na Dropdown-e: readOnly vyseduje, disabled znemoznuje vyber polozky
         return (
-            <Dropdown id={this.props.id} options={this.state.options} optionLabel={this.props.displayField}
+            <Dropdown id={this.props.id} options={this.state.options} optionLabel={this.props.displayField} dataKey={this.idField}
                       value={this.props.value} onChange={this.onChange}
                       readOnly={this.props.readOnly} disabled={this.props.readOnly} {...XUtils.createErrorProps(this.props.error)}/>
         );

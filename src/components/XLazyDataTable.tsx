@@ -15,7 +15,14 @@ import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XEntity, XField} from "../serverApi/XEntityMetadata";
 import {dateAsUI, dateFormatCalendar, datetimeAsUI, numberAsUI, numberFromModel} from "./XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
-import {FindParam, ResultType, XAggregateItem, XAggregateType, XCustomFilter} from "../serverApi/FindParam";
+import {
+    FindParam,
+    ResultType,
+    XAggregateItem,
+    XAggregateType,
+    XCustomFilter,
+    XCustomFilterItem
+} from "../serverApi/FindParam";
 import {XButtonIconSmall} from "./XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
@@ -144,7 +151,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     // premenne platne pre cely component (obdoba member premennych v class-e)
     const dataTableEl = useRef<any>(null);
-    let customFilter: XCustomFilter | undefined = props.customFilter;
+    let customFilterItems: XCustomFilterItem[] | undefined = XUtils.createCustomFilterItems(props.customFilter);
     let aggregateItems: XAggregateItem[] = createAggregateItems();
 
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0, aggregateValues: []});
@@ -160,8 +167,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         if (displayFieldFilter !== undefined) {
             filtersInit[displayFieldFilter.field] = createFilterItem(props.filterDisplay, displayFieldFilter.constraint);
         }
-        // ak mame props.searchTableParams.customFilter, pridame ho
-        customFilter = XUtils.filterAnd(customFilter, props.searchTableParams.customFilter);
+        // ak mame props.searchTableParams.customFilterItems, pridame ho
+        customFilterItems = XUtils.filterAnd(customFilterItems, props.searchTableParams.customFilter);
     }
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.sortField ? [{field: props.sortField, order: 1}] : []);
@@ -207,7 +214,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onPage");
 
         setFirst(event.first);
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: event.first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: event.first, rows: rows, filters: filters, customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
     }
 
     const onFilter = (event: any) => {
@@ -225,7 +232,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onSort - event.multiSortMeta = " + JSON.stringify(event.multiSortMeta));
 
         setMultiSortMeta(event.multiSortMeta);
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilterItems: customFilterItems, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
     }
 
     const onClickFilter = () => {
@@ -242,7 +249,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     };
 
     const loadData = () => {
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
     }
 
     const loadDataBase = async (findParam: FindParam) => {
@@ -374,7 +381,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
         // exportujeme zaznamy zodpovedajuce filtru
         // najprv zistime pocet zaznamov
-        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, first: first, rows: rows, filters: filtersAfterFiltering, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems};
+        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, first: first, rows: rows, filters: filtersAfterFiltering, customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems};
         //setLoading(true); - iba co preblikuje, netreba nam
         const findResult = await findByFilter(findParam);
         //setLoading(false);
@@ -384,7 +391,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     }
 
     const createExportParams = (): XExportParams => {
-        const queryParam: LazyDataTableQueryParam = {filters: filtersAfterFiltering, customFilter: customFilter, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()};
+        const queryParam: LazyDataTableQueryParam = {filters: filtersAfterFiltering, customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()};
         return {
             path: "x-lazy-data-table-export",
             queryParam: queryParam,

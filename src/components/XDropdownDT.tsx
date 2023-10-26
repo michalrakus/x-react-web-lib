@@ -3,8 +3,22 @@ import React, {useEffect} from "react";
 import {XUtils} from "./XUtils";
 import {Dropdown} from "primereact/dropdown";
 import {XDropdownOptionsMap} from "./XFormDataTable2";
+import {XUtilsMetadata} from "./XUtilsMetadata";
+import {XAssoc} from "../serverApi/XEntityMetadata";
+import {XCustomFilter} from "../serverApi/FindParam";
 
-export const XDropdownDT = (props: {form: XFormBase; entity: string; assocField: string; displayField: string; dropdownOptionsMap: XDropdownOptionsMap; onDropdownOptionsMapChange: (dropdownOptionsMap: XDropdownOptionsMap) => void; rowData: any; readOnly?: boolean}) => {
+export const XDropdownDT = (props: {
+        form: XFormBase;
+        entity: string;
+        assocField: string;
+        displayField: string;
+        sortField?: string;
+        filter?: XCustomFilter;
+        dropdownOptionsMap: XDropdownOptionsMap;
+        onDropdownOptionsMapChange: (dropdownOptionsMap: XDropdownOptionsMap) => void;
+        rowData: any;
+        readOnly?: boolean;
+    }) => {
 
     // poznamka: nacitanie/ulozenie options je vytiahnute do parent komponentu XFormDataTable koli tomu aby sme nenacitavali options pre kazdy riadok tabulky
 
@@ -28,7 +42,11 @@ export const XDropdownDT = (props: {form: XFormBase; entity: string; assocField:
             // ak by tu tento riadok nebol, tak by sa options nacitavali tolkokrat, kolko je riadkov v tabulke
             props.dropdownOptionsMap[props.assocField] = [];
 
-            options = await XUtils.fetchMany('findRowsForAssoc', {entity: props.entity, assocField: props.assocField});
+            const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.entity), props.assocField);
+
+            //options = await XUtils.fetchMany('findRowsForAssoc', {entity: props.entity, assocField: props.assocField});
+            options = await XUtils.fetchRows(xAssoc.entityName, props.filter, props.sortField ?? props.displayField);
+
             options.splice(0, 0, {}); // null polozka (nepridavat pre not null atributy)
             props.dropdownOptionsMap[props.assocField] = options;
             //console.log("XDropdownDT - findOptions - citali sme options pre field = " + props.assocField);

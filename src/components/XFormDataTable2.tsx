@@ -384,7 +384,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else if (columnProps.type === "dropdown") {
             const columnPropsDropdown = (columnProps as XFormDropdownColumnProps);
-            body = <XDropdownDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsDropdown.assocField} displayField={columnPropsDropdown.displayField} dropdownOptionsMap={this.state.dropdownOptionsMap} onDropdownOptionsMapChange={this.onDropdownOptionsMapChange} rowData={rowData}/>;
+            body = <XDropdownDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsDropdown.assocField} displayField={columnPropsDropdown.displayField} sortField={columnPropsDropdown.sortField} filter={columnPropsDropdown.filter} dropdownOptionsMap={this.state.dropdownOptionsMap} onDropdownOptionsMapChange={this.onDropdownOptionsMapChange} rowData={rowData}/>;
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
@@ -701,6 +701,8 @@ export interface XFormInputSimpleColumnProps extends XFormColumnProps {
 export interface XFormDropdownColumnProps extends XFormColumnProps {
     assocField: string;
     displayField: string;
+    sortField?: string;
+    filter?: XCustomFilter;
 }
 
 export interface XFormAutoCompleteColumnProps extends XFormColumnProps {
