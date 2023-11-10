@@ -22,6 +22,10 @@ export const XDropdownDT = (props: {
 
     // poznamka: nacitanie/ulozenie options je vytiahnute do parent komponentu XFormDataTable koli tomu aby sme nenacitavali options pre kazdy riadok tabulky
 
+    // "members"
+    const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.entity), props.assocField);
+    const idField: string = XUtilsMetadata.getXEntity(xAssoc.entityName).idField;
+
     // parameter [] zabezpeci ze sa metoda zavola len po prvom renderingu (a nie po kazdej zmene stavu (zavolani setNieco()))
     useEffect(() => {
         //console.log("XDropdownDT - zavolany useEffect *******************")
@@ -87,7 +91,7 @@ export const XDropdownDT = (props: {
     const options = props.dropdownOptionsMap[props.assocField] !== undefined ? props.dropdownOptionsMap[props.assocField] : []; // mozno mozme do options prasknut rovno undefined...
     // appendTo={document.body} appenduje overlay panel na element body - eliminuje problem s overflow (pozri poznamku v XDropdownDTFilter)
     return (
-        <Dropdown appendTo={document.body} id={props.assocField} optionLabel={props.displayField} value={assocObject} options={options}
+        <Dropdown appendTo={document.body} id={props.assocField} optionLabel={props.displayField} value={assocObject} options={options} dataKey={idField}
                   onChange={(e: any) => onValueChange(props.assocField, props.rowData, e.target.value)}/>
     );
 }

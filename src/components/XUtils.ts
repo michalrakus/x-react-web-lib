@@ -327,6 +327,7 @@ export class XUtils {
         await XUtils.post('removeRow', {entity: entity, id: id});
     }
 
+    // TODO - prehodit do XUtilsCommon
     static arrayMoveElement(array: any[], position: number, offset: number) {
         const element = array[position];
         array.splice(position, 1);
@@ -342,7 +343,7 @@ export class XUtils {
         }
     }
 
-    // helper function
+    // TODO - prehodit do XUtilsCommon
     static arraySort(array: any[], fieldOrStringFunction: string | ((item: any) => string)): any[] {
 
         let stringFunction: ((item: any) => string);

@@ -47,7 +47,7 @@ export class XInputDate extends XInput<Date, XInputDateProps> {
             <div className="field grid">
                 <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <XCalendar id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()}
-                           datetime={this.xField.type === 'datetime'}/>
+                           datetime={this.xField.type === 'datetime'} onBlur={this.onBlur}/>
             </div>
         );
     }

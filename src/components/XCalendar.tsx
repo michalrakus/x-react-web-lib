@@ -3,7 +3,14 @@ import {Calendar, CalendarChangeEvent} from "primereact/calendar";
 import {dateFormatCalendar} from "./XUtilsConversions";
 
 // wrapper for Calendar component, maybe better name would be XInputDateBase
-export const XCalendar = (props: {id?: string; value: Date | null; onChange: (value: Date | null) => void; readOnly?: boolean; datetime?: boolean;}) => {
+export const XCalendar = (props: {
+    id?: string;
+    value: Date | null;
+    onChange: (value: Date | null) => void;
+    onBlur?: (event: React.FocusEvent<HTMLInputElement, Element>) => void;
+    readOnly?: boolean;
+    datetime?: boolean;
+}) => {
 
     const onChange = (e: CalendarChangeEvent) => {
         // z Calendar prichadza e.value - typ Date alebo null
@@ -21,6 +28,7 @@ export const XCalendar = (props: {id?: string; value: Date | null; onChange: (va
 
     return (
         <Calendar id={props.id} value={props.value} onChange={onChange} disabled={props.readOnly} showIcon={true} showOnFocus={false}
-                  dateFormat={dateFormatCalendar()} showTime={datetime} showSeconds={datetime} inputClassName={datetime ? 'x-input-datetime' : 'x-input-date'}/>
+                  dateFormat={dateFormatCalendar()} showTime={datetime} showSeconds={datetime} inputClassName={datetime ? 'x-input-datetime' : 'x-input-date'}
+                  onBlur={props.onBlur}/>
     );
 }
