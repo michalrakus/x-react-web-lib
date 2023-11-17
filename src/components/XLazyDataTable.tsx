@@ -13,7 +13,7 @@ import {SearchTableParams, XFieldFilter} from "./SearchTableParams";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XEntity, XField} from "../serverApi/XEntityMetadata";
-import {dateAsUI, dateFormatCalendar, datetimeAsUI, numberAsUI, numberFromModel} from "./XUtilsConversions";
+import {dateAsUI, dateFormatCalendar, datetimeAsUI, numberAsUI, numberFromModel, stringAsUI} from "./XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
 import {
     FindParam,
@@ -518,45 +518,61 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return betweenFilter;
     }
 
-    const bodyTemplate = (columnProps: XLazyColumnProps, rowData: any, xField: XField): any => {
-        const rowDataValue = XUtilsCommon.getValueByPath(rowData, columnProps.field);
-        let bodyValue: any = '';
+    const valueAsUI = (value: any, xField: XField): React.ReactNode => {
+        let valueResult: React.ReactNode = '';
         if (xField.type === "decimal") {
             // tuto zatial hack, mal by vzdy prist number
             let numberValue: number | null = null;
-            if (typeof rowDataValue === 'string') {
-                numberValue = parseFloat(rowDataValue);
+            if (typeof value === 'string') {
+                numberValue = parseFloat(value);
             }
-            else if (typeof rowDataValue === 'number') {
-                numberValue = rowDataValue;
+            else if (typeof value === 'number') {
+                numberValue = value;
             }
-            bodyValue = numberAsUI(numberValue, xField.scale);
+            valueResult = numberAsUI(numberValue, xField.scale);
         }
         else if (xField.type === "date") {
             // tuto zatial hack, mal by prist Date
             let dateValue: Date | null = null;
-            if (typeof rowDataValue === 'string') {
-                dateValue = new Date(rowDataValue);
+            if (typeof value === 'string') {
+                dateValue = new Date(value);
             }
-            else if (typeof rowDataValue === 'object' && rowDataValue instanceof Date) {
-                dateValue = rowDataValue;
+            else if (typeof value === 'object' && value instanceof Date) {
+                dateValue = value;
             }
-            bodyValue = dateAsUI(dateValue);
+            valueResult = dateAsUI(dateValue);
         }
         else if (xField.type === "datetime") {
             // tuto zatial hack, mal by prist Date
             let dateValue: Date | null = null;
-            if (typeof rowDataValue === 'string') {
-                dateValue = new Date(rowDataValue);
+            if (typeof value === 'string') {
+                dateValue = new Date(value);
             }
-            else if (typeof rowDataValue === 'object' && rowDataValue instanceof Date) {
-                dateValue = rowDataValue;
+            else if (typeof value === 'object' && value instanceof Date) {
+                dateValue = value;
             }
-            bodyValue = datetimeAsUI(dateValue);
+            valueResult = datetimeAsUI(dateValue);
         }
         else if (xField.type === "boolean") {
             // TODO - efektivnejsie by bolo renderovat len prislusne ikonky
-            bodyValue = <TriStateCheckbox value={rowDataValue} disabled={true}/>
+            valueResult = <TriStateCheckbox value={value} disabled={true}/>
+        }
+        else {
+            // string a ine typy
+            valueResult = value;
+        }
+        return valueResult;
+    }
+
+    const bodyTemplate = (columnProps: XLazyColumnProps, rowData: any, xField: XField): React.ReactNode => {
+        let bodyValue: React.ReactNode;
+        const rowDataValue: any | any[] = XUtilsCommon.getValueOrValueListByPath(rowData, columnProps.field);
+        if (Array.isArray(rowDataValue)) {
+            const elemList: React.ReactNode[] = rowDataValue.map((value: any, index: number) => <div key={index}>{valueAsUI(value, xField)}</div>);
+            bodyValue = <div>{elemList}</div>;
+        }
+        else {
+            bodyValue = valueAsUI(rowDataValue, xField);
         }
         return bodyValue;
     }
@@ -777,8 +793,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             if (childColumn.props.body !== undefined) {
                 body = childColumn.props.body;
             }
-            // TODO - mozno by bolo dobre vytvarat body pre kazdy typ fieldu, nech je to vsetko konzistentne
-            else if (xField.type === "decimal" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
+            else {
                 body = (rowData: any) => {return bodyTemplate(childColumn.props, rowData, xField);};
             }
 

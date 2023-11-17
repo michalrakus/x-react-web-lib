@@ -56,7 +56,7 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
     }
 
     componentDidMount() {
-        console.log("volany XAutoComplete.componentDidMount()");
+        //console.log("volany XAutoComplete.componentDidMount()");
         this.readAndSetSuggestions();
     }
 
