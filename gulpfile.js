@@ -46,6 +46,8 @@ function generateApi(cb) {
         "./lib/components/XInputDecimal",
         "./lib/components/XInputDecimalBase",
         "./lib/components/XInputFileList",
+        "./lib/components/XInputInterval",
+        "./lib/components/XInputIntervalBase",
         "./lib/components/XInputText",
         "./lib/components/XInputTextarea",
         "./lib/components/XLazyDataTable",

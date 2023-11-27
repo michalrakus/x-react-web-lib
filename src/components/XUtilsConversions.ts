@@ -1,4 +1,5 @@
 import {dateFormat} from "../serverApi/XUtilsCommon";
+import {IPostgresInterval} from "./XUtils";
 
 export function stringFromUI(stringValue: string): string | null {
     let value: string | null;
@@ -119,4 +120,55 @@ export function dateFormatCalendar(): string {
 
 export function datetimeFormatUI(): string {
     return "dd.mm.yyyy HH:MM:ss";
+}
+
+export function intervalFromUI(valueString: string): IPostgresInterval | null | undefined {
+    // convert e.target.value (e.g. 10:29) into IPostgresInterval (e.g. {hours: 10, minutes: 29})
+    // if stringValue is invalid, returns undefined
+    let valueInterval: IPostgresInterval | null | undefined = undefined;
+    if (valueString === '') {
+        valueInterval = null;
+    }
+    else {
+        const posColon = valueString.indexOf(':');
+        if (posColon === -1) {
+            let minutes: number = parseInt(valueString);
+            if (!isNaN(minutes)) {
+                const hours = Math.floor(minutes / 60);
+                minutes = minutes - (hours * 60);
+                valueInterval = {hours: hours, minutes: minutes};
+            }
+        }
+        else {
+            let hours: number = parseInt(valueString.substring(0, posColon));
+            let minutes: number = parseInt(valueString.substring(posColon + 1));
+            if (!isNaN(hours) && !isNaN(minutes)) {
+                if (minutes >= 60) {
+                    const hoursFromMinutes = Math.floor(minutes / 60);
+                    hours += hoursFromMinutes;
+                    minutes = minutes - (hoursFromMinutes * 60);
+                }
+                valueInterval = {hours: hours, minutes: minutes};
+            }
+        }
+    }
+    return valueInterval;
+}
+
+export function intervalAsUI(valueInterval: IPostgresInterval | null): string {
+    // conversion e.g. {hours: 10, minutes: 29} => '10:29'
+    let valueString: string;
+    if (valueInterval !== null) {
+        let hours: number = valueInterval.hours ?? 0;
+        const minutes: number = valueInterval.minutes ?? 0;
+        //const seconds: number = value.seconds ?? 0;
+        if (valueInterval.days) {
+            hours += valueInterval.days * 24;
+        }
+        valueString = `${hours.toString()}:${minutes.toString().padStart(2, '0')}`;
+    }
+    else {
+        valueString = ''; // null
+    }
+    return valueString;
 }

@@ -32,6 +32,7 @@ import {IconType} from "primereact/utils";
 import {ButtonProps} from "primereact/button";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {xLocaleOption} from "./XLocale";
+import {XInputIntervalDT} from "./XInputIntervalDT";
 
 // typ pre technicky field row.__x_rowTechData (row je item zoznamu editovaneho v XFormDataTable2)
 export interface XRowTechData {
@@ -374,6 +375,9 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             else if (xField.type === "date" || xField.type === "datetime") {
                 body = <XInputDateDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly}/>;
             }
+            else if (xField.type === "interval") {
+                body = <XInputIntervalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly}/>;
+            }
             else if (xField.type === "boolean") {
                 body = <XCheckboxDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly}/>;
             }
@@ -452,16 +456,16 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
     }
 
-    getErrorMessages(): string {
-        let msg: string = "";
-        const object: XObject = this.props.form.getXObject();
-        const rowList: any[] = object[this.props.assocField];
-        for (const row of rowList) {
-            const xRowTechData: XRowTechData = XFormBase.getXRowTechData(row);
-            msg += XUtils.getErrorMessages(xRowTechData.errorMap);
-        }
-        return msg;
-    }
+    // getErrorMessages(): string {
+    //     let msg: string = "";
+    //     const object: XObject = this.props.form.getXObject();
+    //     const rowList: any[] = object[this.props.assocField];
+    //     for (const row of rowList) {
+    //         const xRowTechData: XRowTechData = XFormBase.getXRowTechData(row);
+    //         msg += XUtils.getErrorMessages(xRowTechData.errorMap);
+    //     }
+    //     return msg;
+    // }
 
     // TODO - velmi podobna funkcia ako XFormComponent.isReadOnly() - zjednotit ak sa da
     isReadOnly(): boolean {

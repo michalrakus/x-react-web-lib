@@ -16,6 +16,18 @@ export enum OperationType {
     Remove
 }
 
+// copy of IPostgresInterval at the backend
+// (this type is used only at the frontend)
+export interface IPostgresInterval {
+    years?: number;
+    months?: number;
+    days?: number;
+    hours?: number;
+    minutes?: number;
+    seconds?: number;
+    milliseconds?: number;
+}
+
 export class XUtils {
 
     static dropdownEmptyOptionValue: string = " ";

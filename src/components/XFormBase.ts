@@ -38,6 +38,8 @@ export abstract class XFormBase extends Component<FormProps> {
 
     xFormComponentList: Array<XFormComponent<any, any>>; // zoznam jednoduchych komponentov na formulari (vcetne XDropdown, XSearchButton, ...)
     xFormDataTableList: Array<XFormDataTable2>; // zoznam detailovych tabuliek (obsahuju zoznam dalsich komponentov)
+    assocToValidateList: Array<string>; // zoznam oneToMany asociacii, pre ktore sa zavola spracovanie vysledku validacie ktory je ulozny v xRowTechData (pouzivane pre specialnu custom validaciu)
+    assocToSortList: Array<{assoc: string; sortField: string;}>; // zoznam oneToMany asociacii, ktore po nacitani z DB zosortujeme podla daneho fieldu (zvycajne id)
 
     constructor(props: FormProps) {
         super(props);
@@ -63,6 +65,8 @@ export abstract class XFormBase extends Component<FormProps> {
         };
         this.xFormComponentList = [];
         this.xFormDataTableList = [];
+        this.assocToValidateList = [];
+        this.assocToSortList = [];
         this.onClickSave = this.onClickSave.bind(this);
         this.onClickCancel = this.onClickCancel.bind(this);
     }
@@ -80,6 +84,15 @@ export abstract class XFormBase extends Component<FormProps> {
             //console.log(this.fields);
             object = await XUtils.fetchById(this.entity, Array.from(this.fields), this.props.id);
             operationType = OperationType.Update;
+
+            // sortovanie, aby sme nemuseli sortovat v DB (neviem co je efektivnejsie)
+            for (const assocToSort of this.assocToSortList) {
+                const assocRowList: any[] = object[assocToSort.assoc];
+                if (assocRowList) {
+                    object[assocToSort.assoc] = XUtils.arraySort(assocRowList, assocToSort.sortField);
+                }
+            }
+
             //console.log('XFormBase.componentDidMount nacital objekt:');
             //console.log(object);
             // const price = (object as any).price;
@@ -235,7 +248,6 @@ export abstract class XFormBase extends Component<FormProps> {
         this.setState({object: object});
     }
 
-    // tato metoda (aj vsetky ostatne metody precujuce s row-mi) by mali byt skor na XFormDataTable2 (ta pozna "assocField" (OneToMany asociaciu))
     static getXRowTechData(row: any): XRowTechData {
         // ak este nemame rowTechData, tak ho vytvorime
         if (row.__x_rowTechData === undefined) {
@@ -272,6 +284,14 @@ export abstract class XFormBase extends Component<FormProps> {
 
     addXFormDataTable(xFormDataTable: XFormDataTable2) {
         this.xFormDataTableList.push(xFormDataTable);
+    }
+
+    addAssocToValidate(oneToManyAssoc: string) {
+        this.assocToValidateList.push(oneToManyAssoc);
+    }
+
+    addAssocToSort(oneToManyAssoc: string, sortField: string) {
+        this.assocToSortList.push({assoc: oneToManyAssoc, sortField: sortField});
     }
 
     formReadOnlyBase(field: string): boolean {
@@ -343,7 +363,14 @@ export abstract class XFormBase extends Component<FormProps> {
 
         // este spracujeme editovatelne tabulky
         for (const xFormDataTable of this.xFormDataTableList) {
-            msg += xFormDataTable.getErrorMessages();
+            //msg += xFormDataTable.getErrorMessages();
+            msg += this.getErrorMessagesForAssoc(xFormDataTable.props.assocField);
+        }
+
+        // este spracujeme oneToMany asociacie, ktore boli explicitne uvedene, ze ich treba validovat
+        // (validaciu treba nakodit vo formulari, zavolat z metody validate() a ukoncit zavolanim XFormBase.saveErrorsIntoXRowTechData)
+        for (const assocToValidate of this.assocToValidateList) {
+            msg += this.getErrorMessagesForAssoc(assocToValidate);
         }
 
         let ok: boolean = true;
@@ -388,6 +415,32 @@ export abstract class XFormBase extends Component<FormProps> {
             xFormDataTable.validate();
         }
         return xErrorMap;
+    }
+
+    getErrorMessagesForAssoc(oneToManyAssoc: string): string {
+        let msg: string = "";
+        const object: XObject = this.getXObject();
+        const rowList: any[] = object[oneToManyAssoc];
+        if (!Array.isArray(rowList)) {
+            throw `Array for the assoc ${oneToManyAssoc} not found in the form object`;
+        }
+        for (const row of rowList) {
+            const xRowTechData: XRowTechData = XFormBase.getXRowTechData(row);
+            msg += XUtils.getErrorMessages(xRowTechData.errorMap);
+        }
+        return msg;
+    }
+
+    // can be called from AppForm in case of custom validation on oneToMany assoc
+    static saveErrorsIntoXRowTechData(row: any, xErrors: XErrors) {
+        const xErrorMap: XErrorMap = {};
+        for (const [field, error] of Object.entries(xErrors)) {
+            if (error) {
+                xErrorMap[field] = {form: error};
+            }
+        }
+        const xRowTechData: XRowTechData = XFormBase.getXRowTechData(row);
+        xRowTechData.errorMap = xErrorMap;
     }
 
     // this method can be overriden in subclass if needed
