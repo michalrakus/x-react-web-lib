@@ -14,6 +14,7 @@ export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     searchTable?: any; // do buducna
     assocForm?: any; // na insert/update
     filter?: XFilterProp;
+    suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
     size?: number;
     inputStyle?: React.CSSProperties;
 }
@@ -61,12 +62,14 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
     }
 
     async readAndSetSuggestions() {
-        let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), typeof this.props.displayField === 'string' ? this.props.displayField : undefined);
-        // ak mame funkciu, zosortujeme tu
-        if (typeof this.props.displayField === 'function') {
-            suggestions = XUtils.arraySort(suggestions, this.props.displayField);
+        if (this.props.suggestions === undefined) {
+            let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), typeof this.props.displayField === 'string' ? this.props.displayField : undefined);
+            // ak mame funkciu, zosortujeme tu
+            if (typeof this.props.displayField === 'function') {
+                suggestions = XUtils.arraySort(suggestions, this.props.displayField);
+            }
+            this.setState({suggestions: suggestions});
         }
-        this.setState({suggestions: suggestions});
     }
 
     getField(): string {
@@ -122,7 +125,7 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
         return (
             <div className="field grid">
                 <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
-                <XAutoCompleteBase value={this.getValue()} suggestions={this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
+                <XAutoCompleteBase value={this.getValue()} suggestions={this.props.suggestions ?? this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
                                    field={this.props.displayField} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
                                    error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}/>
             </div>

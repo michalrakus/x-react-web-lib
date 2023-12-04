@@ -13,6 +13,11 @@ export interface XAutoCompleteDTProps extends XFormComponentDTProps {
     searchTable?: any; // do buducna
     assocForm?: any; // na insert/update
     filter?: XTableFieldFilterProp;
+    suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu
+                        // poznamka: treba zabezpecit volanie setState, ak overridneme suggestions
+                        // poznamka2: ak sa zmeni asociovany objekt cez "assocForm",
+                        // tak treba nejako zabezpecit aby sa zmenili data aj v tychto overridnutych suggestions
+                        // (pozri onChangeAutoCompleteBase a volanie readAndSetSuggestions())
 }
 
 export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
@@ -43,12 +48,14 @@ export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
     }
 
     async readAndSetSuggestions() {
-        let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), typeof this.props.displayField === 'string' ? this.props.displayField : undefined);
-        // ak mame funkciu, zosortujeme tu
-        if (typeof this.props.displayField === 'function') {
-            suggestions = XUtils.arraySort(suggestions, this.props.displayField);
+        if (this.props.suggestions === undefined) {
+            let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), typeof this.props.displayField === 'string' ? this.props.displayField : undefined);
+            // ak mame funkciu, zosortujeme tu
+            if (typeof this.props.displayField === 'function') {
+                suggestions = XUtils.arraySort(suggestions, this.props.displayField);
+            }
+            this.setState({suggestions: suggestions});
         }
-        this.setState({suggestions: suggestions});
     }
 
     getField(): string {
@@ -100,7 +107,7 @@ export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
 
         // div className="col" nam zabezpeci aby XAutoCompleteBase nezaberal celu dlzku grid-u (ma nastaveny width=100% vdaka "formgroup-inline")
         return (
-            <XAutoCompleteBase value={this.getValue()} suggestions={this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
+            <XAutoCompleteBase value={this.getValue()} suggestions={this.props.suggestions ?? this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
                                field={this.props.displayField} valueForm={this.props.assocForm} idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
                                error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}/>
         );

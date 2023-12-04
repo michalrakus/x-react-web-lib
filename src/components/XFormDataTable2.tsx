@@ -394,7 +394,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
             // tableReadOnly has higher prio then property readOnly
             const readOnly: boolean = tableReadOnly || (columnPropsAutoComplete.readOnly ?? false);
-            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchTable={columnPropsAutoComplete.searchTable} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} rowData={rowData} readOnly={readOnly}/>;
+            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchTable={columnPropsAutoComplete.searchTable} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
@@ -715,6 +715,7 @@ export interface XFormAutoCompleteColumnProps extends XFormColumnProps {
     searchTable?: any; // do buducna
     assocForm?: any; // na insert/update
     filter?: XTableFieldFilterProp;
+    suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
 }
 
 export interface XFormSearchButtonColumnProps extends XFormColumnProps {

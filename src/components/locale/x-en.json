@@ -21,6 +21,9 @@
     "expEncoding": "Encoding",
     "fileUploadSizeToBig": "Upload of file \"{fileName}\" was canceled: file size {fileSize} is more than maximum allowed size {maxFileSize}.",
     "fileUploadFailed": "Upload of file \"{fileName}\" failed.",
-    "fileDownloadFailed": "File download failed."
+    "fileDownloadFailed": "File download failed.",
+    "fieldSetSaveEditConfirm": "Are you sure to save the form?",
+    "fieldSetCancelEditConfirm": "Are you sure to cancel editing? All changes will be lost.",
+    "fieldSetRemoveFieldConfirm": "Are you sure to remove the field?"
   }
 }

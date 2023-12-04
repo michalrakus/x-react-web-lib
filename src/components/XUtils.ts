@@ -382,6 +382,27 @@ export class XUtils {
         });
     }
 
+    // TODO - prehodit do XUtilsCommon
+    /**
+     * returns intersection of 2 row lists
+     * remark: null/undefined items in both array1 and array2 are ignored
+     *
+     * @param array1
+     * @param array2
+     * @param idField
+     */
+    static arrayIntersect<T>(array1: T[], array2: T[], idField: string): T[] {
+
+        const array2IdSet = new Set<any>();
+        for (const item of array2) {
+            if (item) {
+                array2IdSet.add((item as any)[idField]);
+            }
+        }
+
+        return array1.filter((item: T) => item && array2IdSet.has((item as any)[idField]));
+    }
+
     // helper
     static isReadOnly(path: string, readOnlyInit?: boolean): boolean {
         // ak mame path dlzky 2 a viac, field je vzdy readOnly
