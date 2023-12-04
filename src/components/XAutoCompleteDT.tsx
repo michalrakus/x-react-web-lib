@@ -9,7 +9,7 @@ import {XTableFieldFilterProp} from "./XFormDataTable2";
 
 export interface XAutoCompleteDTProps extends XFormComponentDTProps {
     assocField: string;
-    displayField: string | ((suggestion: any) => string);
+    displayField: string;
     searchTable?: any; // do buducna
     assocForm?: any; // na insert/update
     filter?: XTableFieldFilterProp;
@@ -49,11 +49,7 @@ export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
 
     async readAndSetSuggestions() {
         if (this.props.suggestions === undefined) {
-            let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), typeof this.props.displayField === 'string' ? this.props.displayField : undefined);
-            // ak mame funkciu, zosortujeme tu
-            if (typeof this.props.displayField === 'function') {
-                suggestions = XUtils.arraySort(suggestions, this.props.displayField);
-            }
+            let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), this.props.displayField);
             this.setState({suggestions: suggestions});
         }
     }

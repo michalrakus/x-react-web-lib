@@ -9,7 +9,7 @@ export interface XAutoCompleteBaseProps {
     value: any;
     suggestions: any[];
     onChange: (object: any, objectChange: OperationType) => void; // odovzda vybraty objekt, ak bol vybraty objekt zmeneny cez dialog (aj v DB), tak vrati objectChange !== OperationType.None
-    field: string | ((suggestion: any) => string); // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions), pripadne funkcia ktora vrati zobrazovanu hodnotu
+    field: string; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
     valueForm?: any; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
     maxLength?: number;
@@ -57,25 +57,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         this.onBlur = this.onBlur.bind(this);
         this.formDialogOnSaveOrCancel = this.formDialogOnSaveOrCancel.bind(this);
         this.formDialogOnHide = this.formDialogOnHide.bind(this);
-        this.itemTemplate = this.itemTemplate.bind(this);
     }
 
     componentDidMount() {
         if (this.props.setFocusOnCreate) {
             this.setFocusToInput();
         }
-    }
-
-    getDisplayValue(suggestion: any): string {
-        let displayValue: string;
-        if (typeof this.props.field === 'string') {
-            displayValue = suggestion[this.props.field];
-        }
-        else {
-            // this.props.field is function returning string
-            displayValue = this.props.field(suggestion);
-        }
-        return displayValue;
     }
 
     completeMethod(event: {query: string;}) {
@@ -86,7 +73,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         else {
             const queryNormalized = XUtils.normalizeString(event.query);
             filteredSuggestions = this.props.suggestions.filter((suggestion) => {
-                const fieldValue: string = this.getDisplayValue(suggestion);
+                const fieldValue: string = suggestion[this.props.field];
                 // specialna null polozka (prazdny objekt) - test dame az za test fieldValue na undefined - koli performance
                 if (fieldValue === undefined && Object.keys(suggestion).length === 0) {
                     return false;
@@ -223,26 +210,16 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
     // vracia objekt (ak inputChanged === false) alebo string (ak inputChanged === true)
     computeInputValue(): any {
-        let inputValue = null;
+        let inputValue;
         if (!this.state.inputChanged) {
             // poznamka: ak object === null tak treba do inputu zapisovat prazdny retazec, ak by sme pouzili null, neprejavila by sa zmena v modeli na null
             const object = this.props.value;
-            if (typeof this.props.field === 'string') {
-                inputValue = (object !== null) ? object : ""; // TODO - je "" ok?
-            }
-            else {
-                inputValue = (object !== null) ? this.props.field(object) : "";
-            }
+            inputValue = (object !== null) ? object : ""; // TODO - je "" ok?
         }
         else {
             inputValue = this.state.inputValueState;
         }
         return inputValue;
-    }
-
-    itemTemplate(suggestion: any, index: number): React.ReactNode {
-        // @ts-ignore
-        return this.props.field(suggestion);
     }
 
     render() {
@@ -262,7 +239,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                         this.formDialogObjectId = undefined;
                         this.formDialogInitObjectForInsert = {};
                         // ak mame nevalidnu hodnotu, tak ju predplnime (snaha o user friendly)
-                        if (this.state.inputChanged && typeof this.props.field === 'string') {
+                        if (this.state.inputChanged) {
                             this.formDialogInitObjectForInsert[this.props.field] = this.state.inputValueState;
                         }
                         this.setState({formDialogOpened: true});
@@ -324,15 +301,6 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         // vypocitame inputValue
         const inputValue = this.computeInputValue();
 
-        // poznamka: asi by sa dalo pouzivat vzdy len itemTemplate (nepouzivat field)
-        let fieldOrItemTemplate: {field?: string; itemTemplate?: React.ReactNode | ((suggestion: any, index: number) => React.ReactNode)};
-        if (typeof this.props.field === 'string') {
-            fieldOrItemTemplate = {field: this.props.field};
-        }
-        else {
-            fieldOrItemTemplate = {itemTemplate: this.itemTemplate};
-        }
-
         let error: string | undefined;
         if (this.state.notValid) {
             // ak je v nevalidnom stave, tak ma tato chybova hlaska prednost pred ostatnymi (ak nahodou su)
@@ -348,7 +316,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         // formgroup-inline lepi SplitButton na autocomplete a zarovna jeho vysku
         return (
             <div className="x-auto-complete-base">
-                <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} {...fieldOrItemTemplate}
+                <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} field={this.props.field}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} maxLength={this.props.maxLength}
                               ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createErrorProps(error)}/>
                 {dropdownButton}

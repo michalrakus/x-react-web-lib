@@ -384,6 +384,19 @@ export class XUtils {
 
     // TODO - prehodit do XUtilsCommon
     /**
+     * returns true, if param item is member of the array
+     * remark: null/undefined items in array are ignored, item = null/undefined is ignored
+     *
+     * @param array
+     * @param item
+     * @param idField
+     */
+    static arrayIncludes<T>(array: T[], item: T, idField: string): boolean {
+        return item && array.some((arrayItem: T) => arrayItem && (arrayItem as any)[idField] === (item as any)[idField]);
+    }
+
+    // TODO - prehodit do XUtilsCommon
+    /**
      * returns intersection of 2 row lists
      * remark: null/undefined items in both array1 and array2 are ignored
      *

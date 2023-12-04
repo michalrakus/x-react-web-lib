@@ -155,7 +155,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
-            return columnPropsAutoComplete.assocField + '.' + this.getDisplayFieldOrId(columnPropsAutoComplete);
+            return columnPropsAutoComplete.assocField + '.' + columnPropsAutoComplete.displayField;
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
@@ -163,20 +163,6 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else {
             throw "Unknown prop type = " + columnProps.type;
-        }
-    }
-
-    getDisplayFieldOrId(columnPropsAutoComplete: XFormAutoCompleteColumnProps): string {
-        // toto je hack - ak ratame displayField cez funkciu, tak nam potom v kode chyba (hociaky) atribut asociovaneho objektu
-        // aby sme nemuseli robit nejake velke prerabky a zmeny, tak podsunieme id-ckovy atribut
-        if (typeof columnPropsAutoComplete.displayField === 'string') {
-            return columnPropsAutoComplete.displayField; // vsetko ok
-        }
-        else {
-            // v displayField mame funkciu, zistime id-ckovy atribut
-            // TODO - problem - sortovanie/filtrovanie bude fungovat podla tohto id atributu
-            const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(this.getEntity()), columnPropsAutoComplete.assocField);
-            return XUtilsMetadata.getXEntity(xAssoc.entityName).idField;
         }
     }
 
@@ -711,7 +697,7 @@ export interface XFormDropdownColumnProps extends XFormColumnProps {
 
 export interface XFormAutoCompleteColumnProps extends XFormColumnProps {
     assocField: string;
-    displayField: string | ((suggestion: any) => string);
+    displayField: string;
     searchTable?: any; // do buducna
     assocForm?: any; // na insert/update
     filter?: XTableFieldFilterProp;

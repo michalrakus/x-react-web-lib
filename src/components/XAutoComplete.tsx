@@ -6,11 +6,10 @@ import {OperationType, XUtils} from "./XUtils";
 import {XAutoCompleteBase} from "./XAutoCompleteBase";
 import {XError} from "./XErrors";
 import {XObject} from "./XObject";
-import {XFormAutoCompleteColumnProps} from "./XFormDataTable2";
 
 export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     assocField: string;
-    displayField: string | ((suggestion: any) => string);
+    displayField: string;
     searchTable?: any; // do buducna
     assocForm?: any; // na insert/update
     filter?: XFilterProp;
@@ -41,19 +40,7 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
         this.onChangeAutoCompleteBase = this.onChangeAutoCompleteBase.bind(this);
         this.onErrorChangeAutoCompleteBase = this.onErrorChangeAutoCompleteBase.bind(this);
 
-        props.form.addField(props.assocField + '.' + this.getDisplayFieldOrId());
-    }
-
-    getDisplayFieldOrId(): string {
-        // toto je hack - ak ratame displayField cez funkciu, tak nam potom chyba (hociaky) atribut asociovaneho objektu
-        // podobne ako na XFormDataTable2, podsunieme id-ckovy atribut
-        if (typeof this.props.displayField === 'string') {
-            return this.props.displayField; // vsetko ok
-        }
-        else {
-            // v displayField mame funkciu, zistime id-ckovy atribut
-            return XUtilsMetadata.getXEntity(this.xAssoc.entityName).idField;
-        }
+        props.form.addField(props.assocField + '.' + props.displayField);
     }
 
     componentDidMount() {
@@ -63,11 +50,7 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
 
     async readAndSetSuggestions() {
         if (this.props.suggestions === undefined) {
-            let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), typeof this.props.displayField === 'string' ? this.props.displayField : undefined);
-            // ak mame funkciu, zosortujeme tu
-            if (typeof this.props.displayField === 'function') {
-                suggestions = XUtils.arraySort(suggestions, this.props.displayField);
-            }
+            let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), this.props.displayField);
             this.setState({suggestions: suggestions});
         }
     }
