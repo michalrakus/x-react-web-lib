@@ -8,20 +8,20 @@ import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtils} from "./XUtils";
 import {XEditModeHandlers, XLazyColumn, XLazyDataTable} from "./XLazyDataTable";
 
-export interface XBrowseProps {
+export interface XEditBrowseProps {
     entity: string;
     browseId?: string;
 }
 
-// TODO - pouzit extends XBrowseBase, ako je tomu pri CarForm?
-export class XBrowse extends Component<XBrowseProps> {
+// TODO - pouzit extends XEditBrowseBase, ako je tomu pri CarForm?
+export class XEditBrowse extends Component<XEditBrowseProps> {
 
     state: {xBrowseMeta: XBrowseMeta; editMode: boolean; editColumnDialogOpened: boolean;};
     indexForAddColumn?: number;
     addColumn: boolean;
     xEditColumnDialogValues?: XEditColumnDialogValues;
 
-    constructor(props: XBrowseProps) {
+    constructor(props: XEditBrowseProps) {
         super(props);
         console.log("************* XBrowse const entity = " + this.props.entity);
 

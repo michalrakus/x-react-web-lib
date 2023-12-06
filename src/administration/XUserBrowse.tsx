@@ -1,21 +1,21 @@
-import {XLazyColumn, XLazyDataTable} from "../components/XLazyDataTable";
+import {XBrowseProps, XLazyColumn, XLazyDataTable} from "../components/XLazyDataTable";
 import React from "react";
 import {XUser} from "../serverApi/XUser";
 import {XUserForm} from "./XUserForm";
 import {XUtils} from "../components/XUtils";
 
-export const XUserBrowse = (props: {}) => {
+export const XUserBrowse = (props: XBrowseProps) => {
 
     const onAddRow = () => {
 
         // openForm pridavame automaticky v XFormNavigator3 pri renderovani komponentu
-        (props as any).openForm(<XUserForm object={{enabled: true, admin: false, version: 0}}/>);
+        props.openForm!(<XUserForm/>);
     }
 
     const onEdit = (selectedRow: XUser) => {
 
         // openForm pridavame automaticky v XFormNavigator3 pri renderovani komponentu
-        (props as any).openForm(<XUserForm id={selectedRow.id}/>);
+        props.openForm!(<XUserForm id={selectedRow.id}/>);
     }
 
     const onRemoveRow = async (selectedRow: XUser): Promise<boolean> => {
@@ -38,7 +38,7 @@ export const XUserBrowse = (props: {}) => {
     }
 
     return (
-        <XLazyDataTable entity="XUser" rows={10} onAddRow={onAddRow} onEdit={onEdit} removeRow={onRemoveRow} displayed={(props as any).displayed}>
+        <XLazyDataTable entity="XUser" rows={10} onAddRow={onAddRow} onEdit={onEdit} removeRow={onRemoveRow} displayed={props.displayed}>
             <XLazyColumn field="id" header="ID"/>
             <XLazyColumn field="username" header="Username" width="17rem"/>
             <XLazyColumn field="name" header="Name" width="17rem"/>

@@ -380,11 +380,11 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
             // tableReadOnly has higher prio then property readOnly
             const readOnly: boolean = tableReadOnly || (columnPropsAutoComplete.readOnly ?? false);
-            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchTable={columnPropsAutoComplete.searchTable} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
+            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchBrowse={columnPropsAutoComplete.searchBrowse} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
-            body = <XSearchButtonDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsSearchButton.assocField} displayField={columnPropsSearchButton.displayField} searchTable={columnPropsSearchButton.searchTable} rowData={rowData} readOnly={columnPropsSearchButton.readOnly}/>;
+            body = <XSearchButtonDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsSearchButton.assocField} displayField={columnPropsSearchButton.displayField} searchBrowse={columnPropsSearchButton.searchBrowse} rowData={rowData} readOnly={columnPropsSearchButton.readOnly}/>;
         }
         else {
             throw "Unknown prop type = " + columnProps.type;
@@ -698,8 +698,8 @@ export interface XFormDropdownColumnProps extends XFormColumnProps {
 export interface XFormAutoCompleteColumnProps extends XFormColumnProps {
     assocField: string;
     displayField: string;
-    searchTable?: any; // do buducna
-    assocForm?: any; // na insert/update
+    searchBrowse?: JSX.Element;
+    assocForm?: JSX.Element; // na insert/update
     filter?: XTableFieldFilterProp;
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
 }
@@ -707,7 +707,7 @@ export interface XFormAutoCompleteColumnProps extends XFormColumnProps {
 export interface XFormSearchButtonColumnProps extends XFormColumnProps {
     assocField: string;
     displayField: string;
-    searchTable: any;
+    searchBrowse: JSX.Element;
 }
 
 export const XFormColumn = (props: XFormInputSimpleColumnProps) => {

@@ -10,9 +10,9 @@ export type XOnSaveOrCancelProp = (object: XObject | null, objectChange: Operati
 // poznamka - v assoc button-e (XSearchButton, XToOneAssocButton, XFormSearchButtonColumn) je mozne zadat nazov formulara cez property assocForm={<BrandForm/>}
 // pri tomto zapise sa nezadava property id (id sa doplni automaticky pri otvoreni assoc formularu cez klonovanie elementu)
 // preto umoznujeme aby id mohlo byt undefined
-export interface FormProps {
+export interface XFormProps {
     id?: number;
-    object?: XObject; // pri inserte (id je undefined) mozme cez tuto property poslat do formulara objekt s uz nastavenymi niektorymi hodnotami
+    initValues?: object; // pri inserte (id je undefined) mozme cez tuto property poslat do formulara default hodnoty ktore sa nastavia do objektu vytvoreneho v metode this.createNewObject(): XObject
     onSaveOrCancel?: XOnSaveOrCancelProp; // pouziva sa pri zobrazeni formulara v dialogu (napr. v XAutoCompleteBase) - pri onSave odovzdava updatnuty/insertnuty objekt, pri onCancel odovzdava null
 }
 
@@ -29,7 +29,7 @@ export function Form(entity: string) {
     }
 }
 
-export abstract class XFormBase extends Component<FormProps> {
+export abstract class XFormBase extends Component<XFormProps> {
 
     entity?: string; // typ objektu, napr. Car, pouziva sa pri citani objektu z DB
     fields: Set<string>; // zoznam zobrazovanych fieldov (vcetne asoc. objektov) - potrebujeme koli nacitavaniu root objektu
@@ -41,23 +41,23 @@ export abstract class XFormBase extends Component<FormProps> {
     assocToValidateList: Array<string>; // zoznam oneToMany asociacii, pre ktore sa zavola spracovanie vysledku validacie ktory je ulozny v xRowTechData (pouzivane pre specialnu custom validaciu)
     assocToSortList: Array<{assoc: string; sortField: string;}>; // zoznam oneToMany asociacii, ktore po nacitani z DB zosortujeme podla daneho fieldu (zvycajne id)
 
-    constructor(props: FormProps) {
+    constructor(props: XFormProps) {
         super(props);
         // check
-        if (props.id !== undefined && props.object !== undefined) {
-            throw "Form cannot have both props id and object defined. Only one of them can be defined.";
+        if (props.id !== undefined && props.initValues !== undefined) {
+            throw "Form cannot have both props id and initValues defined. Only one of them can be defined.";
         }
         //this.entity = props.entity; - nastavuje sa cez decorator @Form
         let object = null;
-        if (props.id === undefined) {
-            // add row operation
-            if (props.object !== undefined) {
-                object = props.object;
-            }
-            else {
-                object = {}; // empty new object
-            }
-        }
+        // if (props.id === undefined) {
+        //     // add row operation
+        //     if (props.object !== undefined) {
+        //         object = props.object;
+        //     }
+        //     else {
+        //         object = {}; // empty new object
+        //     }
+        // }
         this.fields = new Set<string>();
         this.state = {
             object: object,
@@ -104,7 +104,11 @@ export abstract class XFormBase extends Component<FormProps> {
         }
         else {
             // add new row
-            object = this.state.object;
+            object = this.createNewObject();
+            // pridame pripadne "init values", ktore pridu cez prop object (pouziva sa napr. pri insertovani cez XAutoComplete na predplnenie hodnoty)
+            if (this.props.initValues !== undefined) {
+                object = {...object, ...this.props.initValues}; // values from this.props.object will override values from object (if key is the same)
+            }
             operationType = OperationType.Insert;
         }
         this.preInitForm(object, operationType);
@@ -448,6 +452,11 @@ export abstract class XFormBase extends Component<FormProps> {
     // if returns true for the param "field", then the field is read only, otherwise the property readOnly of the XInput* is processed
     formReadOnly(object: XObject, field: string): boolean {
         return false;
+    }
+
+    // this method can be overriden in subclass if needed (to set some default values for insert)
+    createNewObject(): XObject {
+        return {};
     }
 
     // this method can be overriden in subclass if needed (to modify/save object after read from DB and before set into the form)

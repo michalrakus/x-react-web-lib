@@ -10,8 +10,8 @@ import {XObject} from "./XObject";
 export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     assocField: string;
     displayField: string;
-    searchTable?: any; // do buducna
-    assocForm?: any; // na insert/update
+    searchBrowse?: JSX.Element;
+    assocForm?: JSX.Element; // na insert/update
     filter?: XFilterProp;
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
     size?: number;
@@ -109,8 +109,9 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
             <div className="field grid">
                 <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <XAutoCompleteBase value={this.getValue()} suggestions={this.props.suggestions ?? this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
-                                   field={this.props.displayField} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
-                                   error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}/>
+                                   field={this.props.displayField} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
+                                   error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}
+                                   customFilterFunction={() => this.getFilterBase(this.props.filter)}/>
             </div>
         );
     }

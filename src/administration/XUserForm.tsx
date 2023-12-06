@@ -1,20 +1,21 @@
-import {Form, FormProps} from "../components/XFormBase";
+import {Form, XFormProps} from "../components/XFormBase";
 import {XInputText} from "../components/XInputText";
 import React from "react";
 import {XUser} from "../serverApi/XUser";
 import {XInputDecimal} from "../components/XInputDecimal";
 import {Password} from "primereact/password";
-import {XUtils} from "../components/XUtils";
+import {OperationType, XUtils} from "../components/XUtils";
 import {XFormFooter} from "../components/XFormFooter";
 import {XCheckbox} from "../components/XCheckbox";
 import {XEnvVar, XReactAppAuth} from "../components/XEnvVars";
 import {XFormBaseModif} from "../components/XFormBaseModif";
 import {XInputDate} from "../components/XInputDate";
+import {XObject} from "../components/XObject";
 
 @Form("XUser")
 export class XUserForm extends XFormBaseModif {
 
-    constructor(props: FormProps) {
+    constructor(props: XFormProps) {
         super(props);
 
         this.state.usernameEnabledReadOnly = false;
@@ -24,11 +25,14 @@ export class XUserForm extends XFormBaseModif {
         this.onClickSave = this.onClickSave.bind(this);
     }
 
-    async componentDidMount() {
-        await super.componentDidMount();
+    createNewObject(): XObject {
+        return {enabled: true, admin: false, version: 0};
+    }
 
+    preInitForm(object: XObject, operationType: OperationType.Insert | OperationType.Update) {
+        // aktualny user si nemoze zmenit username, enabled a admin status
         const username = this.getXObject().username;
-        if (username === XUtils.getUsername() || (XUtils.demo() && (username === 'jozko' || username === 'xman'))) {
+        if (operationType === OperationType.Update && (username === XUtils.getUsername() || (XUtils.demo() && (username === 'xman')))) {
             this.setState({usernameEnabledReadOnly: true});
         }
     }

@@ -4,19 +4,25 @@ import {SplitButton} from "primereact/splitbutton";
 import {Dialog} from "primereact/dialog";
 import {OperationType, XUtils} from "./XUtils";
 import {Button} from "primereact/button";
+import {MenuItem} from "primereact/menuitem";
+import {XSearchBrowseParams} from "./XSearchBrowseParams";
+import {XCustomFilter} from "../serverApi/FindParam";
+import { XFormProps } from "./XFormBase";
 
 export interface XAutoCompleteBaseProps {
     value: any;
     suggestions: any[];
     onChange: (object: any, objectChange: OperationType) => void; // odovzda vybraty objekt, ak bol vybraty objekt zmeneny cez dialog (aj v DB), tak vrati objectChange !== OperationType.None
     field: string; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
-    valueForm?: any; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
+    searchBrowse?: JSX.Element; // ak je zadany, moze uzivatel vyhladavat objekt podobne ako pri XSearchButton (obchadza tym suggestions)
+    valueForm?: JSX.Element; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
     maxLength?: number;
     readOnly?: boolean;
     error?: string; // chybova hlaska, ak chceme field oznacit za nevalidny (pozor! netreba sem davat error z onErrorCahnge, ten si riesi XAutoCompleteBase sam)
     onErrorChange: (error: string | undefined) => void; // "vystup" pre validacnu chybu ktoru "ohlasi" AutoComplete; chyba by mala byt ohlasena vzdy ked this.state.inputChanged = true (a nemame focus na inpute)
     setFocusOnCreate?: boolean; // ak je true, nastavi focus do inputu po vytvoreni komponentu
+    customFilterFunction?: () => XCustomFilter | undefined; // pouziva sa pri searchBrowse a planuje sa pouzivat pri lazy citani suggestions (vyhodnocuje sa pri otvoreni searchBrowse, t.j. co najneskor)
 }
 
 export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
@@ -32,11 +38,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                             // zmena je hlasena cez onErrorChange parentovi, parent by mal zabezpecit, ze ak mame nejaky nevalidny autocomplete, formular sa neda sejvnut na stacenie Save
         filteredSuggestions: any[] | undefined;
         formDialogOpened: boolean;
+        searchDialogOpened: boolean;
     };
 
     // parametre pre form dialog (vzdy aspon jeden musi byt undefined)
     formDialogObjectId: number | undefined;
-    formDialogInitObjectForInsert: any | undefined;
+    formDialogInitValuesForInsert: any | undefined;
 
     constructor(props: XAutoCompleteBaseProps) {
         super(props);
@@ -48,7 +55,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             inputValueState: undefined,
             notValid: false,
             filteredSuggestions: undefined,
-            formDialogOpened: false
+            formDialogOpened: false,
+            searchDialogOpened: false
         };
 
         this.completeMethod = this.completeMethod.bind(this);
@@ -57,6 +65,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         this.onBlur = this.onBlur.bind(this);
         this.formDialogOnSaveOrCancel = this.formDialogOnSaveOrCancel.bind(this);
         this.formDialogOnHide = this.formDialogOnHide.bind(this);
+        this.searchDialogOnChoose = this.searchDialogOnChoose.bind(this);
+        this.searchDialogOnHide = this.searchDialogOnHide.bind(this);
     }
 
     componentDidMount() {
@@ -162,8 +172,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                 this.formDialogObjectId = undefined;
                 // TODO - pridat ako novu prop metodu ktora bude vracat bude mat parameter this.state.inputValueState a vrati object
                 // ak bude tato metoda undefined, tak zostane tato povodna funkcionalita
-                this.formDialogInitObjectForInsert = {};
-                this.formDialogInitObjectForInsert[this.props.field] = this.state.inputValueState;
+                this.formDialogInitValuesForInsert = {};
+                this.formDialogInitValuesForInsert[this.props.field] = this.state.inputValueState;
                 this.setState({formDialogOpened: true});
             }
             else {
@@ -208,6 +218,98 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         }
     }
 
+    searchDialogOnChoose(chosenRow: any) {
+        this.setState({searchDialogOpened: false});
+        // zapiseme vybraty row do objektu
+        this.setObjectValue(chosenRow, OperationType.None);
+    }
+
+    searchDialogOnHide() {
+        this.setState({searchDialogOpened: false});
+        // ak mame v inpute neplatnu hodnotu, vratime kurzor na input
+        if (this.state.inputChanged) {
+            this.setFocusToInput();
+        }
+    }
+
+    createInsertUpdateItems(splitButtonItems: MenuItem[]) {
+
+        splitButtonItems.push(
+            {
+                icon: 'pi pi-plus',
+                command: (e: any) => {
+                    // otvorime dialog na insert
+                    this.formDialogObjectId = undefined;
+                    this.formDialogInitValuesForInsert = {};
+                    // ak mame nevalidnu hodnotu, tak ju predplnime (snaha o user friendly)
+                    if (this.state.inputChanged) {
+                        this.formDialogInitValuesForInsert[this.props.field] = this.state.inputValueState;
+                    }
+                    this.setState({formDialogOpened: true});
+                }
+            });
+
+        splitButtonItems.push(
+            {
+                icon: 'pi pi-pencil',
+                command: (e: any) => {
+                    if (this.state.inputChanged) {
+                        alert(`Value "${this.state.inputValueState}" was not found among valid values, please enter some valid value.`);
+                        this.setFocusToInput();
+                    } else {
+                        if (this.props.value === null) {
+                            alert('Please select some row.');
+                        } else {
+                            // otvorime dialog na update
+                            if (this.props.idField === undefined) {
+                                throw "XAutoCompleteBase: property valueForm is defined but property idField is also needed for form editation.";
+                            }
+                            this.formDialogObjectId = this.props.value[this.props.idField];
+                            this.formDialogInitValuesForInsert = undefined;
+                            this.setState({formDialogOpened: true});
+                        }
+                    }
+                }
+            });
+        // remove nebudeme podporovat, je technicky problematicky - nemozme vymazat zaznam z DB koli FK constraintu
+        // {
+        //     icon: 'pi pi-times',
+        //     command: (e: any) => {
+        //         console.log('remove');
+        //     }
+        // },
+    }
+
+    createSearchItem(splitButtonItems: MenuItem[]) {
+
+        splitButtonItems.push(
+            {
+                icon: 'pi pi-search',
+                command: (e: any) => {
+                        this.setState({searchDialogOpened: true});
+                }
+            });
+    }
+
+    createDropdownItem(splitButtonItems: MenuItem[]) {
+
+        splitButtonItems.push(
+            {
+                icon: 'pi pi-chevron-down',
+                command: (e: any) => {
+                    // zobrazi cely suggestions list, zide sa ak chceme vidiet vsetky moznosti
+                    // neprakticke ak mame vela poloziek v suggestions list
+
+                    // krasne zobrazi cely objekt!
+                    // this.autoCompleteRef.current je element <AutoComplete .../>, ktory vytvarame v render metode
+                    //console.log(this.autoCompleteRef.current);
+
+                    // otvori dropdown (search je metoda popisana v API, volanie sme skopcili zo zdrojakov primereact)
+                    this.autoCompleteRef.current.search(e, '', 'dropdown');
+                }
+            });
+    }
+
     // vracia objekt (ak inputChanged === false) alebo string (ak inputChanged === true)
     computeInputValue(): any {
         let inputValue;
@@ -222,75 +324,34 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         return inputValue;
     }
 
+    // takto cez metodku, mozno sa metodka vola len ked sa otvori dialog a usetrime nieco...
+    createSearchBrowseParams(): XSearchBrowseParams {
+        return {
+            onChoose: this.searchDialogOnChoose,
+            displayFieldFilter: (this.state.inputChanged ? {field: this.props.field, constraint: {value: this.state.inputValueState, matchMode: "startsWith"}} : undefined),
+            customFilterFunction: this.props.customFilterFunction
+        };
+    }
+
     render() {
 
         const readOnly: boolean = this.props.readOnly ?? false;
 
         let dropdownButton: JSX.Element;
-        if (this.props.valueForm) {
-            // mame CRUD operacie, potrebujeme SplitButton
-            const splitButtonItems = [];
+        if ((this.props.searchBrowse && !readOnly) || this.props.valueForm) {
+            // mame searchBrowse alebo CRUD operacie, potrebujeme SplitButton
+            const splitButtonItems: MenuItem[] = [];
 
-            splitButtonItems.push(
-                {
-                    icon: 'pi pi-plus',
-                    command: (e: any) => {
-                        // otvorime dialog na insert
-                        this.formDialogObjectId = undefined;
-                        this.formDialogInitObjectForInsert = {};
-                        // ak mame nevalidnu hodnotu, tak ju predplnime (snaha o user friendly)
-                        if (this.state.inputChanged) {
-                            this.formDialogInitObjectForInsert[this.props.field] = this.state.inputValueState;
-                        }
-                        this.setState({formDialogOpened: true});
-                    }
-                });
+            if (this.props.valueForm) {
+                this.createInsertUpdateItems(splitButtonItems);
+            }
 
-            splitButtonItems.push(
-                {
-                    icon: 'pi pi-pencil',
-                    command: (e: any) => {
-                        if (this.state.inputChanged) {
-                            alert(`Value "${this.state.inputValueState}" was not found among valid values, please enter some valid value.`);
-                            this.setFocusToInput();
-                        } else {
-                            if (this.props.value === null) {
-                                alert('Please select some row.');
-                            } else {
-                                // otvorime dialog na update
-                                if (this.props.idField === undefined) {
-                                    throw "XAutoCompleteBase: property valueForm is defined but property idField is also needed for form editation.";
-                                }
-                                this.formDialogObjectId = this.props.value[this.props.idField];
-                                this.formDialogInitObjectForInsert = undefined;
-                                this.setState({formDialogOpened: true});
-                            }
-                        }
-                    }
-                });
-            // remove nebudeme podporovat, je technicky problematicky - nemozme vymazat zaznam z DB koli FK constraintu
-            // {
-            //     icon: 'pi pi-times',
-            //     command: (e: any) => {
-            //         console.log('remove');
-            //     }
-            // },
+            if (this.props.searchBrowse && !readOnly) {
+                this.createSearchItem(splitButtonItems);
+            }
 
-            splitButtonItems.push(
-                {
-                    icon: 'pi pi-chevron-down',
-                    command: (e: any) => {
-                        // zobrazi cely suggestions list, zide sa ak chceme vidiet vsetky moznosti
-                        // neprakticke ak mame vela poloziek v suggestions list
+            this.createDropdownItem(splitButtonItems);
 
-                        // krasne zobrazi cely objekt!
-                        // this.autoCompleteRef.current je element <AutoComplete .../>, ktory vytvarame v render metode
-                        //console.log(this.autoCompleteRef.current);
-
-                        // otvori dropdown (search je metoda popisana v API, volanie sme skopcili zo zdrojakov primereact)
-                        this.autoCompleteRef.current.search(e, '', 'dropdown');
-                    }
-                });
             dropdownButton = <SplitButton model={splitButtonItems} className={'x-splitbutton-only-dropdown' + XUtils.mobileCssSuffix()} menuClassName={'x-splitbutton-only-dropdown-menu' + XUtils.mobileCssSuffix()} disabled={readOnly}/>;
         }
         else {
@@ -311,7 +372,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         }
 
         // Dialog pre konkretny form:
-        // <DobrovolnikForm id={this.formDialogObjectId} object={this.formDialogInitObjectForInsert} onSaveOrCancel={this.formDialogOnSaveOrCancel}/>
+        // <DobrovolnikForm id={this.formDialogObjectId} object={this.formDialogInitValuesForInsert} onSaveOrCancel={this.formDialogOnSaveOrCancel}/>
 
         // formgroup-inline lepi SplitButton na autocomplete a zarovna jeho vysku
         return (
@@ -324,8 +385,14 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     <Dialog visible={this.state.formDialogOpened} onHide={this.formDialogOnHide} header={this.formDialogObjectId ? 'Modification' : 'New record'}>
                         {/* klonovanim elementu pridame atributy id, object, onSaveOrCancel */}
                         {React.cloneElement(this.props.valueForm, {
-                            id: this.formDialogObjectId, object: this.formDialogInitObjectForInsert, onSaveOrCancel: this.formDialogOnSaveOrCancel
-                        }, this.props.valueForm.children)}
+                            id: this.formDialogObjectId, initValues: this.formDialogInitValuesForInsert, onSaveOrCancel: this.formDialogOnSaveOrCancel
+                        } satisfies XFormProps/*, this.props.valueForm.children*/)}
+                    </Dialog>
+                    : undefined}
+                {this.props.searchBrowse != undefined && !readOnly ?
+                    <Dialog visible={this.state.searchDialogOpened} onHide={this.searchDialogOnHide}>
+                        {/* klonovanim elementu pridame atribut searchBrowseParams */}
+                        {React.cloneElement(this.props.searchBrowse, {searchBrowseParams: this.createSearchBrowseParams()}/*, props.searchBrowse.children*/)}
                     </Dialog>
                     : undefined}
             </div>

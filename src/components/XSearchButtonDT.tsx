@@ -5,8 +5,9 @@ import {InputText} from "primereact/inputtext";
 import {Button} from "primereact/button";
 import {Dialog} from "primereact/dialog";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {XSearchBrowseParams} from "./XSearchBrowseParams";
 
-export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocField: string; displayField: string, searchTable: any; assocForm?: any; rowData: any; readOnly?: boolean}) => {
+export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocField: string; displayField: string, searchBrowse: JSX.Element; assocForm?: JSX.Element; rowData: any; readOnly?: boolean}) => {
 
     const inputTextRef = useRef<any>(null);
 
@@ -84,7 +85,7 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
                     // OTAZKA - ziskavat id priamo z root objektu? potom ho vsak treba do root objektu pridat
                     const id = (assocObject !== null && assocObject !== undefined) ? assocObject[xEntityAssoc.idField] : null;
                     // klonovanim elementu pridame atribut id
-                    const assocForm = React.cloneElement(props.assocForm, {id: id}, props.assocForm.children);
+                    const assocForm = React.cloneElement(props.assocForm, {id: id}/*, props.assocForm.children*/);
                     (props.form.props as any).openForm(assocForm);
                 }
             }
@@ -107,9 +108,6 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
         }
     }
 
-    // {React.createElement(props.searchTable, {searchTableParams: {onChoose: onChoose, displayField: props.displayField, filter: (inputChanged ? inputValueState : undefined)}, ...props.searchTableProps}, null)}
-    // <BrandSearchTable searchTableParams={{onChoose: onChoose, displayField: props.displayField, filter: (inputChanged ? inputValueState : undefined)}} qqq="fiha"/>
-
     // vypocitame inputValue
     const inputValue = computeInputValue();
 
@@ -117,11 +115,18 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
         <div>
             <div className="x-search-button-base">
                 <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur} readOnly={readOnly} ref={inputTextRef}/>
-                <Button label="..." onClick={onClickSearch} />
+                <Button icon="pi pi-search" onClick={onClickSearch} />
             </div>
             <Dialog visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>
-                {/* klonovanim elementu pridame atribut searchTableParams */}
-                {React.cloneElement(props.searchTable, {searchTableParams: {onChoose: onChoose, displayField: props.displayField, filter: (inputChanged ? inputValueState : undefined)}}, props.searchTable.children)}
+                {/* klonovanim elementu pridame atribut searchBrowseParams */}
+                {React.cloneElement(props.searchBrowse,
+                    {
+                            searchBrowseParams : {
+                                onChoose: onChoose,
+                                displayFieldFilter: (inputChanged ? {field: props.displayField, constraint: {value: inputValueState, matchMode: "startsWith"}} : undefined),
+                                customFilterFunction: () => undefined // TODO - dorobit
+                            } satisfies XSearchBrowseParams
+                        }/*, props.searchBrowse.children*/)}
             </Dialog>
         </div>
     );

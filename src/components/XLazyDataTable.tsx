@@ -9,7 +9,7 @@ import {
 import {Column, ColumnBodyOptions, ColumnFilterElementTemplateOptions} from 'primereact/column';
 import {XButton} from "./XButton";
 import {OperationType, XUtils} from "./XUtils";
-import {SearchTableParams, XFieldFilter} from "./SearchTableParams";
+import {XSearchBrowseParams, XFieldFilter} from "./XSearchBrowseParams";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XEntity, XField} from "../serverApi/XEntityMetadata";
@@ -48,6 +48,22 @@ export interface XEditModeHandlers {
     onMoveColumnRight: (field: string) => void;
 }
 
+// specialne propertiesy ktore su k dispozicii v komponentach <entity>Browse
+// displayed a openForm pridava XFormNavigator3
+// searchBrowseParams pridava XSearchButton
+// propertiesy displayed a searchBrowseParams sa (manualne) prenasaju do XLazyDataTable (cisto technicke zalezitosti)
+// property openForm sa pouziva na otvorenie dalsieho "podformulara", velmi casto <entity>Form (odtial sa potom zavolanim openForm(null) vraciame naspet do <entity>Browse)
+// ak chceme pouzit ten isty <entity>Browse ako klasicky Browse aj ako SearchBrowse, treba pouzit typ (props: XBrowseProps & XSearchBrowseProps) - zjednotenie propertiesov
+
+export interface XBrowseProps {
+    displayed?: boolean;
+    openForm?: (newFormElement: JSX.Element | null) => void;
+}
+
+export interface XSearchBrowseProps {
+    searchBrowseParams?: XSearchBrowseParams;
+}
+
 export interface XLazyDataTableProps {
     entity: string;
     dataKey?: string;
@@ -68,7 +84,7 @@ export interface XLazyDataTableProps {
     filters?: DataTableFilterMeta; // pouzivatelsky filter
     customFilter?: XCustomFilter; // (programatorsky) filter ktory sa aplikuje na zobrazovane data (uzivatel ho nedokaze zmenit)
     sortField?: string;
-    searchTableParams?: SearchTableParams;
+    searchBrowseParams?: XSearchBrowseParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
     // ak chceme zavolat reload zaznamov, treba vytiahnut "const [dataLoaded, setDataLoaded] = useState<boolean>(false);" do browse komponentu a zavolat setDataLoaded(false);
     dataLoadedState?: [boolean, React.Dispatch<React.SetStateAction<boolean>>]; // TODO - specialny typ vytvor, napr. XuseState<boolean>
@@ -162,13 +178,15 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     if (props.filters) {
         filtersInit = {...filtersInit, ...props.filters}; // items from props.filters will replace existing items in filtersInit
     }
-    if (props.searchTableParams !== undefined) {
-        const displayFieldFilter: XFieldFilter | undefined = props.searchTableParams.displayFieldFilter;
+    if (props.searchBrowseParams !== undefined) {
+        const displayFieldFilter: XFieldFilter | undefined = props.searchBrowseParams.displayFieldFilter;
         if (displayFieldFilter !== undefined) {
             filtersInit[displayFieldFilter.field] = createFilterItem(props.filterDisplay, displayFieldFilter.constraint);
         }
-        // ak mame props.searchTableParams.customFilterItems, pridame ho
-        customFilterItems = XUtils.filterAnd(customFilterItems, props.searchTableParams.customFilter);
+        // ak mame props.searchBrowseParams.customFilterFunction, pridame filter
+        if (props.searchBrowseParams.customFilterFunction) {
+            customFilterItems = XUtils.filterAnd(customFilterItems, props.searchBrowseParams.customFilterFunction());
+        }
     }
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.sortField ? [{field: props.sortField, order: 1}] : []);
@@ -308,11 +326,11 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onRowDoubleClick");
         //console.log(event.data);
 
-        if (props.onEdit !== undefined) {
+        if (props.onEdit !== undefined && props.searchBrowseParams === undefined) {
             props.onEdit(event.data);
         }
-        else if (props.searchTableParams !== undefined) {
-            props.searchTableParams.onChoose(event.data);
+        else if (props.searchBrowseParams !== undefined) {
+            props.searchBrowseParams.onChoose(event.data);
         }
     }
 
@@ -404,8 +422,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onClickChoose");
 
         if (selectedRow !== null) {
-            if (props.searchTableParams !== undefined) {
-                props.searchTableParams.onChoose(selectedRow);
+            if (props.searchBrowseParams !== undefined) {
+                props.searchBrowseParams.onChoose(selectedRow);
             }
         }
         else {
@@ -602,7 +620,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 // }
                 let viewHeight: string;
                 let headerFooterHeight: number;
-                if (props.searchTableParams === undefined) {
+                if (props.searchBrowseParams === undefined) {
                     // sme v standardnom formulari
                     viewHeight = '100vh';
                     // experimentalne zistena vyska header/footer
@@ -676,7 +694,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     // else - editMode is undefined - browse is not editable
 
     // export pre search button-y zatial vypneme
-    const exportRows: boolean = (props.searchTableParams === undefined);
+    const exportRows: boolean = (props.searchBrowseParams === undefined);
 
     // pre lepsiu citatelnost vytvarame stlpce uz tu
     const columnElemList: JSX.Element[] = React.Children.map(
@@ -868,12 +886,12 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 </DataTable>
             </div>
             <div className="flex justify-content-center">
-                {props.onAddRow !== undefined ? <XButton key="addRow" icon="pi pi-plus" label={xLocaleOption('addRow')} onClick={onClickAddRow}/> : null}
-                {props.onEdit !== undefined ? <XButton key="editRow" icon="pi pi-pencil" label={xLocaleOption('editRow')} onClick={onClickEdit}/> : null}
-                {props.removeRow !== undefined && props.removeRow !== false ? <XButton key="removeRow" icon="pi pi-times" label={xLocaleOption('removeRow')} onClick={onClickRemoveRow}/> : null}
+                {props.onAddRow !== undefined && props.searchBrowseParams === undefined ? <XButton key="addRow" icon="pi pi-plus" label={xLocaleOption('addRow')} onClick={onClickAddRow}/> : null}
+                {props.onEdit !== undefined && props.searchBrowseParams === undefined ? <XButton key="editRow" icon="pi pi-pencil" label={xLocaleOption('editRow')} onClick={onClickEdit}/> : null}
+                {props.removeRow !== undefined && props.removeRow !== false && props.searchBrowseParams === undefined ? <XButton key="removeRow" icon="pi pi-times" label={xLocaleOption('removeRow')} onClick={onClickRemoveRow}/> : null}
                 {exportRows ? <XButton key="exportRows" icon="pi pi-file-export" label={xLocaleOption('exportRows')} onClick={onClickExport} /> : null}
                 {props.appButtons}
-                {props.searchTableParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
+                {props.searchBrowseParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
                 {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogOpened={exportRowsDialogOpened} hideDialog={() => setExportRowsDialogOpened(false)}
                                                  rowCount={exportRowsDialogRowCount} exportParams={createExportParams}/> : null}
             </div>

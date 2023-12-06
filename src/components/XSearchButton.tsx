@@ -8,13 +8,13 @@ import {XFilterProp, XFormComponent, XFormComponentProps} from "./XFormComponent
 import {XAssoc} from "../serverApi/XEntityMetadata";
 import {XObject} from "./XObject";
 import {XCustomFilter} from "../serverApi/FindParam";
-import {SearchTableParams} from "./SearchTableParams";
+import {XSearchBrowseParams} from "./XSearchBrowseParams";
 
 export interface XSearchButtonProps extends XFormComponentProps<XObject> {
     assocField: string;
     displayField: string;
-    searchTable: any;
-    assocForm?: any;
+    searchBrowse: JSX.Element;
+    assocForm?: JSX.Element;
     filter?: XFilterProp;
     size?: number;
     inputStyle?: React.CSSProperties;
@@ -136,7 +136,7 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
         }
 
         const onClickSearch = (e: any) => {
-            console.log("zavolany onClickSearch");
+            //console.log("zavolany onClickSearch");
             if (!this.isReadOnly()) {
                 setDialogOpened(true);
                 // POVODNY KOD
@@ -147,14 +147,14 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
                     // OTAZKA - ziskavat id priamo z root objektu? potom ho vsak treba do root objektu pridat
                     const id = (assocObject !== null) ? assocObject[xEntityAssoc.idField] : null;
                     // klonovanim elementu pridame atribut id
-                    const assocForm = React.cloneElement(props.assocForm, {id: id}, props.assocForm.children);
+                    const assocForm = React.cloneElement(props.assocForm, {id: id}/*, props.assocForm.children*/);
                     (props.form.props as any).openForm(assocForm);
                 }
             }
         }
 
         const onChoose = (chosenRow: any) => {
-            console.log("zavolany onChoose");
+            //console.log("zavolany onChoose");
             // zavrieme search dialog
             // POVODNY KOD
             //overlayPanelEl.current.hide();
@@ -171,15 +171,12 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
             }
         }
 
-        // {React.createElement(props.searchTable, {searchTableParams: {onChoose: onChoose, displayField: props.displayField, filter: (inputChanged ? inputValueState : undefined)}, ...props.searchTableProps}, null)}
-        // <BrandSearchTable searchTableParams={{onChoose: onChoose, displayField: props.displayField, filter: (inputChanged ? inputValueState : undefined)}} qqq="fiha"/>
-
         // takto cez metodku, mozno sa metodka vola len ked sa otvori dialog a usetrime nieco...
-        const createSearchTableParams = (): SearchTableParams => {
+        const createSearchBrowseParams = (): XSearchBrowseParams => {
             return {
                 onChoose: onChoose,
                 displayFieldFilter: (inputChanged ? {field: props.displayField, constraint: {value: inputValueState, matchMode: "startsWith"}} : undefined),
-                customFilter: this.getFilterBase(this.props.filter)
+                customFilterFunction: () => this.getFilterBase(this.props.filter)
             };
         }
 
@@ -193,13 +190,11 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
                     <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur}
                                readOnly={this.isReadOnly()} ref={this.inputTextRef} maxLength={xDisplayField.length} size={size} style={props.inputStyle}
                                {...this.getClassNameTooltip()}/>
-                    <Button label="..." onClick={onClickSearch}/>
+                    <Button icon="pi pi-search" onClick={onClickSearch}/>
                 </div>
                 <Dialog visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>
-                    {/* klonovanim elementu pridame atribut searchTableParams */}
-                    {React.cloneElement(props.searchTable, {
-                        searchTableParams: createSearchTableParams()
-                    }, props.searchTable.children)}
+                    {/* klonovanim elementu pridame atribut searchBrowseParams */}
+                    {React.cloneElement(props.searchBrowse, {searchBrowseParams: createSearchBrowseParams()}/*, props.searchBrowse.children*/)}
                 </Dialog>
             </div>
         );

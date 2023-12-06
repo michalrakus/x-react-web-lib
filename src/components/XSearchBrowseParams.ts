@@ -7,8 +7,9 @@ export interface XFieldFilter {
     constraint: DataTableFilterMetaData;
 }
 
-export interface SearchTableParams {
+export interface XSearchBrowseParams {
     onChoose: (chosenRow: any) => void;
     displayFieldFilter?: XFieldFilter; // undefined sposobi ze sa neaplikuje filter - search table zobrazi vsetky mozne hodnoty
-    customFilter?: XCustomFilter;
+    customFilterFunction?: () => XCustomFilter | undefined; // zapiseme sem funkciu, ktora vracia XCustomFilter, aby sa ta funkcia volala co najneskor
+                                        // - v case otvorenia SearchBrowse, dovod je ten ze funkcia moze citat objekt formulara a ten sa moze v case menit
 }

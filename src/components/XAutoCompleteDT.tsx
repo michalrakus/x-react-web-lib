@@ -10,8 +10,8 @@ import {XTableFieldFilterProp} from "./XFormDataTable2";
 export interface XAutoCompleteDTProps extends XFormComponentDTProps {
     assocField: string;
     displayField: string;
-    searchTable?: any; // do buducna
-    assocForm?: any; // na insert/update
+    searchBrowse?: JSX.Element;
+    assocForm?: JSX.Element; // na insert/update
     filter?: XTableFieldFilterProp;
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu
                         // poznamka: treba zabezpecit volanie setState, ak overridneme suggestions
@@ -104,8 +104,10 @@ export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
         // div className="col" nam zabezpeci aby XAutoCompleteBase nezaberal celu dlzku grid-u (ma nastaveny width=100% vdaka "formgroup-inline")
         return (
             <XAutoCompleteBase value={this.getValue()} suggestions={this.props.suggestions ?? this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
-                               field={this.props.displayField} valueForm={this.props.assocForm} idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
-                               error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}/>
+                               field={this.props.displayField} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm}
+                               idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
+                               error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}
+                               customFilterFunction={() => this.getFilterBase(this.props.filter)}/>
         );
     }
 }
