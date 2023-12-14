@@ -5,14 +5,14 @@ import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {OperationType, XUtils} from "./XUtils";
 import {XError} from "./XErrors";
 import {XCustomFilter} from "../serverApi/FindParam";
-import {XTableFieldFilterProp, TableFieldOnChange} from "./XFormDataTable2";
+import {XTableFieldFilterProp, XTableFieldOnChange, XTableFieldReadOnlyProp} from "./XFormDataTable2";
 
 export interface XFormComponentDTProps {
     form: XFormBase;
     entity: string;
     rowData: any;
-    readOnly?: boolean;
-    onChange?: TableFieldOnChange;
+    readOnly?: XTableFieldReadOnlyProp;
+    onChange?: XTableFieldOnChange;
 }
 
 export abstract class XFormComponentDT<P extends XFormComponentDTProps> extends Component<P> {
@@ -47,7 +47,7 @@ export abstract class XFormComponentDT<P extends XFormComponentDTProps> extends 
     }
 
     // writes value into form.state.object
-    onValueChangeBase(value: any, onChange?: TableFieldOnChange, assocObjectChange?: OperationType) {
+    onValueChangeBase(value: any, onChange?: XTableFieldOnChange, assocObjectChange?: OperationType) {
         const error: string | undefined = this.validateOnChange(value);
         this.props.form.onTableFieldChange(this.props.rowData, this.getField(), value, error, onChange, assocObjectChange);
     }
@@ -71,17 +71,16 @@ export abstract class XFormComponentDT<P extends XFormComponentDTProps> extends 
         else if (typeof this.props.readOnly === 'boolean') {
             readOnly = this.props.readOnly;
         }
-        // else if (typeof this.props.readOnly === 'function') {
-        //     // TODO - tazko povedat ci niekedy bude object === null (asi ano vid metodu getFilterBase)
-                // TODO - use also this.props.rowData
-        //     const object: XObject = this.props.form.state.object;
-        //     if (object) {
-        //         readOnly = this.props.readOnly(this.props.form.getXObject());
-        //     }
-        //     else {
-        //         readOnly = true;
-        //     }
-        // }
+        else if (typeof this.props.readOnly === 'function') {
+            // TODO - tazko povedat ci niekedy bude object === null (asi ano vid metodu getFilterBase)
+            const object: XObject = this.props.form.state.object;
+            if (object) {
+                readOnly = this.props.readOnly(this.props.form.getXObject(), this.props.rowData);
+            }
+            else {
+                readOnly = true;
+            }
+        }
         else {
             // readOnly is undefined
             readOnly = false;

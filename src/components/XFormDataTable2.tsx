@@ -26,7 +26,6 @@ import {XCustomFilter} from "../serverApi/FindParam";
 import {XAutoCompleteDT} from "./XAutoCompleteDT";
 import {XFormComponentDT} from "./XFormComponentDT";
 import {XErrorMap} from "./XErrors";
-import {XButtonIconSmall} from "./XButtonIconSmall";
 import {XButtonIconNarrow} from "./XButtonIconNarrow";
 import {IconType} from "primereact/utils";
 import {ButtonProps} from "primereact/button";
@@ -174,25 +173,25 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         if (columnProps.type === "inputSimple") {
             const columnPropsInputSimple = (columnProps as XFormInputSimpleColumnProps);
             isNullable = xField.isNullable;
-            readOnly = XUtils.isReadOnly(columnPropsInputSimple.field, columnProps.readOnly);
+            readOnly = XFormDataTable2.isReadOnlyHeader(columnPropsInputSimple.field, columnProps.readOnly);
         }
         else if (columnProps.type === "dropdown") {
             const columnPropsDropdown = (columnProps as XFormDropdownColumnProps);
             const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(xEntity, columnPropsDropdown.assocField);
             isNullable = xAssoc.isNullable;
-            readOnly = columnProps.readOnly ?? false;
+            readOnly = XFormDataTable2.isReadOnlyHeader(undefined, columnProps.readOnly);
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
             const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(xEntity, columnPropsAutoComplete.assocField);
             isNullable = xAssoc.isNullable;
-            readOnly = columnProps.readOnly ?? false;
+            readOnly = XFormDataTable2.isReadOnlyHeader(undefined, columnProps.readOnly);
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
             const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(xEntity, columnPropsSearchButton.assocField);
             isNullable = xAssoc.isNullable;
-            readOnly = columnProps.readOnly ?? false;
+            readOnly = XFormDataTable2.isReadOnlyHeader(undefined, columnProps.readOnly);
         }
         else {
             throw "Unknown prop type = " + columnProps.type;
@@ -203,6 +202,32 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             header = XUtils.markNotNull(header);
         }
         return header;
+    }
+
+    // helper
+    static isReadOnlyHeader(path: string | undefined , readOnly: XTableFieldReadOnlyProp | undefined): boolean {
+        let isReadOnly: boolean;
+
+        if (path && !XUtilsCommon.isSingleField(path)) {
+            // if the length of field is 2 or more, then readOnly
+            isReadOnly = true;
+        }
+            // formReadOnlyBase is called on the level XFormDataTable2
+            // else if (this.props.form.formReadOnlyBase("xxx")) {
+            //     isReadOnly = true;
+        // }
+        else if (typeof readOnly === 'boolean') {
+            isReadOnly = readOnly;
+        }
+        else if (typeof readOnly === 'function') {
+            isReadOnly = false;
+        }
+        else {
+            // readOnly is undefined
+            isReadOnly = false;
+        }
+
+        return isReadOnly;
     }
 
     getEntity(): string {
@@ -350,10 +375,10 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
     // body={(rowData: any) => bodyTemplate(childColumn.props.field, rowData)}
     bodyTemplate(columnProps: XFormColumnProps, tableReadOnly: boolean, rowData: any, xEntity: XEntity): any {
         let body: any;
+        // tableReadOnly has higher prio then property readOnly
+        const readOnly: XTableFieldReadOnlyProp | undefined = tableReadOnly ? true : columnProps.readOnly;
         if (columnProps.type === "inputSimple") {
             const columnPropsInputSimple = (columnProps as XFormInputSimpleColumnProps);
-            // tableReadOnly has higher prio then property readOnly
-            const readOnly: boolean = tableReadOnly || (columnPropsInputSimple.readOnly ?? false);
             const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, columnPropsInputSimple.field);
             if (xField.type === "decimal" || xField.type === "number") {
                 body = <XInputDecimalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly} onChange={columnPropsInputSimple.onChange}/>;
@@ -374,12 +399,10 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else if (columnProps.type === "dropdown") {
             const columnPropsDropdown = (columnProps as XFormDropdownColumnProps);
-            body = <XDropdownDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsDropdown.assocField} displayField={columnPropsDropdown.displayField} sortField={columnPropsDropdown.sortField} filter={columnPropsDropdown.filter} dropdownOptionsMap={this.state.dropdownOptionsMap} onDropdownOptionsMapChange={this.onDropdownOptionsMapChange} rowData={rowData}/>;
+            body = <XDropdownDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsDropdown.assocField} displayField={columnPropsDropdown.displayField} sortField={columnPropsDropdown.sortField} filter={columnPropsDropdown.filter} dropdownOptionsMap={this.state.dropdownOptionsMap} onDropdownOptionsMapChange={this.onDropdownOptionsMapChange} rowData={rowData} readOnly={readOnly}/>;
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
-            // tableReadOnly has higher prio then property readOnly
-            const readOnly: boolean = tableReadOnly || (columnPropsAutoComplete.readOnly ?? false);
             body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchBrowse={columnPropsAutoComplete.searchBrowse} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
         }
         else if (columnProps.type === "searchButton") {
@@ -668,7 +691,10 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
     }
 }
 
-export type TableFieldOnChange = (e: XTableFieldChangeEvent<any, any>) => void;
+export type XTableFieldOnChange = (e: XTableFieldChangeEvent<any, any>) => void;
+
+export type XTableFieldReadOnlyProp = boolean | ((object: any, tableRow: any) => boolean);
+
 
 // typ property pre vytvorenie filtra na assoc fieldoch (XAutoComplete, XDropdown, ...)
 // pouzivame (zatial) parameter typu any aby sme na formulari vedeli pouzit konkretny typ (alebo XObject)
@@ -677,11 +703,11 @@ export type XTableFieldFilterProp = XCustomFilter | ((object: any, rowData: any)
 export interface XFormColumnProps {
     type: "inputSimple" | "dropdown" | "autoComplete" | "searchButton";
     header?: any;
-    readOnly?: boolean;
+    readOnly?: XTableFieldReadOnlyProp;
     dropdownInFilter?: boolean; // moze byt len na stlpcoch ktore zobrazuju asociavany atribut (dlzka path >= 2)
     showFilterMenu?: boolean;
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
-    onChange?: TableFieldOnChange;
+    onChange?: XTableFieldOnChange;
 }
 
 export interface XFormInputSimpleColumnProps extends XFormColumnProps {

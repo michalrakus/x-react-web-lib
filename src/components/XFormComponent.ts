@@ -9,7 +9,7 @@ import {XCustomFilter} from "../serverApi/FindParam";
 
 // typ metody pre onChange - pouzil som XFieldChangeEvent<any>, pri deklarovani onChange metody na komponente
 // sa da vdaka tomu pouzit (e: XFieldChangeEvent<Dobrovolnik>) a kompilator sa nestazuje. Je to hack, mozno existuje krajsie riesenie
-export type FieldOnChange = (e: XFieldChangeEvent<any>) => void;
+export type XFieldOnChange = (e: XFieldChangeEvent<any>) => void;
 
 export type XReadOnlyProp = boolean | ((object: any) => boolean);
 
@@ -24,7 +24,7 @@ export interface XFormComponentProps<T> {
     readOnly?: XReadOnlyProp;
     labelStyle?: React.CSSProperties;
     inline?: boolean;
-    onChange?: FieldOnChange;
+    onChange?: XFieldOnChange;
 }
 
 export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extends Component<P> {
@@ -59,7 +59,7 @@ export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extend
     }
 
     // writes value into form.state.object
-    onValueChangeBase(value: any, onChange?: FieldOnChange, assocObjectChange?: OperationType) {
+    onValueChangeBase(value: any, onChange?: XFieldOnChange, assocObjectChange?: OperationType) {
         const error: string | undefined = this.validateOnChange(value);
         this.props.form.onFieldChange(this.getField(), value, error, onChange, assocObjectChange);
     }

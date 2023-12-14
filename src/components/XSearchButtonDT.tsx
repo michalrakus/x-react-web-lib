@@ -6,8 +6,9 @@ import {Button} from "primereact/button";
 import {Dialog} from "primereact/dialog";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XSearchBrowseParams} from "./XSearchBrowseParams";
+import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
 
-export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocField: string; displayField: string, searchBrowse: JSX.Element; assocForm?: JSX.Element; rowData: any; readOnly?: boolean}) => {
+export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocField: string; displayField: string, searchBrowse: JSX.Element; assocForm?: JSX.Element; rowData: any; readOnly?: XTableFieldReadOnlyProp}) => {
 
     const inputTextRef = useRef<any>(null);
 
@@ -31,8 +32,6 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
         }
         return inputValue;
     }
-
-    const readOnly = props.readOnly !== undefined ? props.readOnly : false;
 
     const onInputValueChange = (e: any) => {
         setInputChanged(true);
@@ -110,6 +109,8 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
 
     // vypocitame inputValue
     const inputValue = computeInputValue();
+
+    const readOnly: boolean = XUtils.isReadOnlyTableField(undefined, props.readOnly, props.form.state.object, props.rowData);
 
     return (
         <div>

@@ -2,7 +2,7 @@ import {XFormBase} from "./XFormBase";
 import React, {useEffect} from "react";
 import {XUtils} from "./XUtils";
 import {Dropdown} from "primereact/dropdown";
-import {XDropdownOptionsMap} from "./XFormDataTable2";
+import {XDropdownOptionsMap, XTableFieldReadOnlyProp} from "./XFormDataTable2";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XAssoc} from "../serverApi/XEntityMetadata";
 import {XCustomFilter} from "../serverApi/FindParam";
@@ -17,7 +17,7 @@ export const XDropdownDT = (props: {
         dropdownOptionsMap: XDropdownOptionsMap;
         onDropdownOptionsMapChange: (dropdownOptionsMap: XDropdownOptionsMap) => void;
         rowData: any;
-        readOnly?: boolean;
+        readOnly?: XTableFieldReadOnlyProp;
     }) => {
 
     // poznamka: nacitanie/ulozenie options je vytiahnute do parent komponentu XFormDataTable koli tomu aby sme nenacitavali options pre kazdy riadok tabulky
@@ -59,8 +59,6 @@ export const XDropdownDT = (props: {
         }
     }
 
-    const readOnly = props.readOnly !== undefined ? props.readOnly : false;
-
     const onValueChange = (assocField: string, rowData: any, newValue: any) => {
 
         // zmenime hodnotu v modeli (odtial sa hodnota cita)
@@ -77,7 +75,6 @@ export const XDropdownDT = (props: {
         props.form.onObjectDataChange();
     }
 
-    // TODO - readOnly implementovat
     // Dropdown setuje do atributu object.assocField asociovany objekt zo zoznamu objektov ktore ziskame podla asociacie
 
     let assocObject = null;
@@ -89,9 +86,12 @@ export const XDropdownDT = (props: {
         }
     }
     const options = props.dropdownOptionsMap[props.assocField] !== undefined ? props.dropdownOptionsMap[props.assocField] : []; // mozno mozme do options prasknut rovno undefined...
+
+    const readOnly: boolean = XUtils.isReadOnlyTableField(undefined, props.readOnly, props.form.state.object, props.rowData);
+
     // appendTo={document.body} appenduje overlay panel na element body - eliminuje problem s overflow (pozri poznamku v XDropdownDTFilter)
     return (
         <Dropdown appendTo={document.body} id={props.assocField} optionLabel={props.displayField} value={assocObject} options={options} dataKey={idField}
-                  onChange={(e: any) => onValueChange(props.assocField, props.rowData, e.target.value)}/>
+                  onChange={(e: any) => onValueChange(props.assocField, props.rowData, e.target.value)} readOnly={readOnly} disabled={readOnly}/>
     );
 }

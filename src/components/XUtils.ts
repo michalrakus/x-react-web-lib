@@ -8,6 +8,9 @@ import React from "react";
 import {XEnvVar} from "./XEnvVars";
 import {XError, XErrorMap} from "./XErrors";
 import {FindParam, ResultType, XCustomFilter, XCustomFilterItem} from "../serverApi/FindParam";
+import {DataTableSortMeta} from "primereact/datatable";
+import {XObject} from "./XObject";
+import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
 
 export enum OperationType {
     None,
@@ -189,8 +192,17 @@ export class XUtils {
     }
 
     // pomocna metodka pouzivajuca lazyDataTable service
-    static async fetchRows(entity: string, customFilter?: XCustomFilter | undefined, sortField?: string, fields?: string[]): Promise<any[]> {
-        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilterItems: XUtils.createCustomFilterItems(customFilter), multiSortMeta: sortField ? [{field: sortField, order: 1}] : undefined, fields: fields};
+    static async fetchRows(entity: string, customFilter?: XCustomFilter | undefined, sortField?: string | DataTableSortMeta[] | undefined, fields?: string[]): Promise<any[]> {
+        let multiSortMeta: DataTableSortMeta[] | undefined = undefined;
+        if (sortField) {
+            if (Array.isArray(sortField)) {
+                multiSortMeta = sortField;
+            }
+            else {
+                multiSortMeta = [{field: sortField, order: 1}];
+            }
+        }
+        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilterItems: XUtils.createCustomFilterItems(customFilter), multiSortMeta: multiSortMeta, fields: fields};
         const {rowList}: {rowList: any[];} = await XUtils.fetchOne('lazyDataTableFindRows', findParam);
         return rowList;
     }
@@ -429,6 +441,39 @@ export class XUtils {
         return readOnly;
     }
 
+    // docasna funkcia, kym sa vsade nebude pouzivat XFormComponentDT a jej isReadOnly()
+    static isReadOnlyTableField(path: string | undefined, readOnly: XTableFieldReadOnlyProp | undefined, object: XObject | null, tableRow: any): boolean {
+
+        let isReadOnly: boolean;
+
+        if (path && !XUtilsCommon.isSingleField(path)) {
+            // if the length of field is 2 or more, then readOnly
+            isReadOnly = true;
+        }
+            // formReadOnlyBase is called on the level XFormDataTable2
+            // else if (this.props.form.formReadOnlyBase("xxx")) {
+            //     isReadOnly = true;
+        // }
+        else if (typeof readOnly === 'boolean') {
+            isReadOnly = readOnly;
+        }
+        else if (typeof readOnly === 'function') {
+            // TODO - tazko povedat ci niekedy bude object === null (asi ano vid metodu getFilterBase)
+            if (object) {
+                isReadOnly = readOnly(object, tableRow);
+            }
+            else {
+                isReadOnly = true;
+            }
+        }
+        else {
+            // readOnly is undefined
+            isReadOnly = false;
+        }
+
+        return isReadOnly;
+    }
+
     static markNotNull(label: string): string {
         return label + ' *';
     }
@@ -547,5 +592,10 @@ export class XUtils {
             }
         }
         return customFilterItemsResult;
+    }
+
+    // pomocna metodka
+    static isTableRowInserted(tableRow: any): boolean {
+        return tableRow.__x_generatedRowId ?? false; // specialny priznak, ze sme vygenerovali id-cko
     }
 }

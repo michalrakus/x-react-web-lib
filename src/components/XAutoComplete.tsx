@@ -6,6 +6,7 @@ import {OperationType, XUtils} from "./XUtils";
 import {XAutoCompleteBase} from "./XAutoCompleteBase";
 import {XError} from "./XErrors";
 import {XObject} from "./XObject";
+import {DataTableSortMeta} from "primereact/datatable";
 
 export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     assocField: string;
@@ -13,6 +14,7 @@ export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     searchBrowse?: JSX.Element;
     assocForm?: JSX.Element; // na insert/update
     filter?: XFilterProp;
+    sortField?: string | DataTableSortMeta[];
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
     size?: number;
     inputStyle?: React.CSSProperties;
@@ -50,7 +52,7 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
 
     async readAndSetSuggestions() {
         if (this.props.suggestions === undefined) {
-            let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), this.props.displayField);
+            let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), this.props.sortField ?? this.props.displayField);
             this.setState({suggestions: suggestions});
         }
     }

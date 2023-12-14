@@ -4,21 +4,13 @@ import {XField} from "../serverApi/XEntityMetadata";
 import {Calendar} from "primereact/calendar";
 import React from "react";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
+import {XUtils} from "./XUtils";
 
-export const XInputDateDT = (props: {form: XFormBase; xField: XField; field: string; rowData: any; readOnly?: boolean}) => {
+export const XInputDateDT = (props: {form: XFormBase; xField: XField; field: string; rowData: any; readOnly?: XTableFieldReadOnlyProp}) => {
 
     const showTime: boolean = (props.xField.type === 'datetime');
     const cssClassName = showTime ? 'x-input-datetime' : 'x-input-date';
-
-    // ak mame path, field je vzdy readOnly
-    let readOnly: boolean;
-    const posDot : number = props.field.indexOf(".");
-    if (posDot !== -1) {
-        readOnly = true;
-    }
-    else {
-        readOnly = props.readOnly !== undefined ? props.readOnly : false;
-    }
 
     const onValueChange = (field: string, rowData: any, newValue: any) => {
         // z Calendar prichadza e.value - typ Date alebo null
@@ -51,6 +43,8 @@ export const XInputDateDT = (props: {form: XFormBase; xField: XField; field: str
         }
         // fieldValue zostalo undefined (konvertujeme null -> undefined) - Calendar pozaduje undefined, nechce null
     }
+
+    const readOnly: boolean = XUtils.isReadOnlyTableField(props.field, props.readOnly, props.form.state.object, props.rowData);
 
     // TODO - nefunguje dobre pridavanie noveho riadku - su tam stare neupdatnute hodnoty - este to asi neopravili https://github.com/primefaces/primereact/issues/1277
     // test mame na TestovaciForm

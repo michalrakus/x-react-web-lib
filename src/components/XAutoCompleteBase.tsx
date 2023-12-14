@@ -382,8 +382,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                               ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createErrorProps(error)}/>
                 {dropdownButton}
                 {this.props.valueForm != undefined && !readOnly ?
-                    <Dialog visible={this.state.formDialogOpened} onHide={this.formDialogOnHide} header={this.formDialogObjectId ? 'Modification' : 'New record'}>
-                        {/* klonovanim elementu pridame atributy id, object, onSaveOrCancel */}
+                    <Dialog visible={this.state.formDialogOpened} onHide={this.formDialogOnHide} header={this.formDialogObjectId ? 'Modification' : 'New row'}>
+                        {/* klonovanim elementu pridame atributy id, initValues, onSaveOrCancel */}
                         {React.cloneElement(this.props.valueForm, {
                             id: this.formDialogObjectId, initValues: this.formDialogInitValuesForInsert, onSaveOrCancel: this.formDialogOnSaveOrCancel
                         } satisfies XFormProps/*, this.props.valueForm.children*/)}

@@ -1,8 +1,8 @@
 import {Component} from "react";
 import {XObject} from "./XObject";
 import {OperationType, XUtils} from "./XUtils";
-import {FieldOnChange, XFormComponent} from "./XFormComponent";
-import {TableFieldOnChange, XFormDataTable2, XRowTechData} from "./XFormDataTable2";
+import {XFieldOnChange, XFormComponent} from "./XFormComponent";
+import {XTableFieldOnChange, XFormDataTable2, XRowTechData} from "./XFormDataTable2";
 import {XErrorMap, XErrors} from "./XErrors";
 
 export type XOnSaveOrCancelProp = (object: XObject | null, objectChange: OperationType) => void;
@@ -138,7 +138,7 @@ export abstract class XFormBase extends Component<XFormProps> {
         return this.props.id === undefined;
     }
 
-    onFieldChange(field: string, value: any, error?: string | undefined, onChange?: FieldOnChange, assocObjectChange?: OperationType) {
+    onFieldChange(field: string, value: any, error?: string | undefined, onChange?: XFieldOnChange, assocObjectChange?: OperationType) {
 
         const object: XObject = this.getXObject();
         object[field] = value;
@@ -155,7 +155,7 @@ export abstract class XFormBase extends Component<XFormProps> {
         this.setState({object: object, errorMap: errorMap});
     }
 
-    onTableFieldChange(rowData: any, field: string, value: any, error?: string | undefined, onChange?: TableFieldOnChange, assocObjectChange?: OperationType) {
+    onTableFieldChange(rowData: any, field: string, value: any, error?: string | undefined, onChange?: XTableFieldOnChange, assocObjectChange?: OperationType) {
 
         const object: XObject = this.getXObject();
         rowData[field] = value;
@@ -176,7 +176,7 @@ export abstract class XFormBase extends Component<XFormProps> {
     /**
      * @deprecated - mal by sa pouzivat onTableFieldChange
      */
-    onObjectDataChange(row?: any, onChange?: TableFieldOnChange) {
+    onObjectDataChange(row?: any, onChange?: XTableFieldOnChange) {
         const object: XObject | null = this.state.object;
 
         // tu zavolame onChange komponentu - object uz ma zapisanu zmenenu hodnotu, onChange nasledne zmeni dalsie hodnoty a nasledne sa zavola setState

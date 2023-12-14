@@ -3,18 +3,10 @@ import React from "react";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XField} from "../serverApi/XEntityMetadata";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
+import {XUtils} from "./XUtils";
 
-export const XCheckboxDT = (props: {form: XFormBase; xField: XField; field: string; rowData: any; readOnly?: boolean}) => {
-
-    // ak mame path, field je vzdy readOnly
-    let readOnly: boolean;
-    const posDot : number = props.field.indexOf(".");
-    if (posDot !== -1) {
-        readOnly = true;
-    }
-    else {
-        readOnly = props.readOnly !== undefined ? props.readOnly : false;
-    }
+export const XCheckboxDT = (props: {form: XFormBase; xField: XField; field: string; rowData: any; readOnly?: XTableFieldReadOnlyProp}) => {
 
     const onValueChange = (field: string, rowData: any, newValue: boolean | null) => {
         // pri klikani na TriStateCheckbox prichadza v newValue cyklicky: true -> false -> null
@@ -42,6 +34,9 @@ export const XCheckboxDT = (props: {form: XFormBase; xField: XField; field: stri
         // konvertovat null hodnotu na "" (vo funkcii stringAsUI) je dolezite aby sa prejavila zmena na null v modeli (a tiez aby korektne pridal novy riadok)
         fieldValue = rowDataValue;
     }
+
+    const readOnly: boolean = XUtils.isReadOnlyTableField(props.field, props.readOnly, props.form.state.object, props.rowData);
+
     return (
         <TriStateCheckbox id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.value)}
                    disabled={readOnly}/>

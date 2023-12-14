@@ -4,20 +4,12 @@ import {InputText} from "primereact/inputtext";
 import {stringAsUI, stringFromUI} from "./XUtilsConversions";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
+import {XUtils} from "./XUtils";
 
-export const XInputTextDT = (props: {form: XFormBase; entity: string; field: string; rowData: any; readOnly?: boolean}) => {
+export const XInputTextDT = (props: {form: XFormBase; entity: string; field: string; rowData: any; readOnly?: XTableFieldReadOnlyProp}) => {
 
     const xField = XUtilsMetadata.getXFieldByPathStr(props.entity, props.field);
-
-    // ak mame path, field je vzdy readOnly
-    let readOnly: boolean;
-    const posDot : number = props.field.indexOf(".");
-    if (posDot !== -1) {
-        readOnly = true;
-    }
-    else {
-        readOnly = props.readOnly !== undefined ? props.readOnly : false;
-    }
 
     const onValueChange = (field: string, rowData: any, newValue: any) => {
 
@@ -38,6 +30,9 @@ export const XInputTextDT = (props: {form: XFormBase; entity: string; field: str
         // konvertovat null hodnotu na "" (vo funkcii stringAsUI) je dolezite aby sa prejavila zmena na null v modeli (a tiez aby korektne pridal novy riadok)
         fieldValue = stringAsUI(rowDataValue);
     }
+
+    const readOnly: boolean = XUtils.isReadOnlyTableField(props.field, props.readOnly, props.form.state.object, props.rowData);
+
     return (
         <InputText id={props.field} value={fieldValue} onChange={(e: any) => onValueChange(props.field, props.rowData, e.target.value)}
                    readOnly={readOnly} maxLength={xField.length} className="x-input-to-resize"/>
