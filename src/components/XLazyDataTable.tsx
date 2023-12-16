@@ -21,7 +21,7 @@ import {
     XAggregateItem,
     XAggregateType,
     XCustomFilter,
-    XCustomFilterItem
+    XCustomFilterItem, XFullTextSearch
 } from "../serverApi/FindParam";
 import {XButtonIconSmall} from "./XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
@@ -34,6 +34,8 @@ import {Calendar, CalendarChangeEvent} from "primereact/calendar";
 import {XCalendar} from "./XCalendar";
 import {XInputDecimalBase} from "./XInputDecimalBase";
 import {xLocaleOption} from "./XLocale";
+import {InputText} from "primereact/inputtext";
+import {XFullTextSearchInput, XFullTextSearchInputValue} from "./XFullTextSearchInput";
 
 export type XBetweenFilterProp = "row" | "column" | undefined;
 
@@ -84,6 +86,7 @@ export interface XLazyDataTableProps {
     filters?: DataTableFilterMeta; // pouzivatelsky filter
     customFilter?: XCustomFilter; // (programatorsky) filter ktory sa aplikuje na zobrazovane data (uzivatel ho nedokaze zmenit)
     sortField?: string;
+    fullTextSearch: boolean | string[]; // false - nemame full-text search, true - mame full-text search na default stlpcoch, string[] - full-text search na danych stlpcoch
     searchBrowseParams?: XSearchBrowseParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
     // ak chceme zavolat reload zaznamov, treba vytiahnut "const [dataLoaded, setDataLoaded] = useState<boolean>(false);" do browse komponentu a zavolat setDataLoaded(false);
@@ -165,6 +168,10 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return filterItem;
     }
 
+    const createInitFullTextSearchInputValue = (): XFullTextSearchInputValue => {
+        return {value: null, matchMode: "contains"};
+    }
+
     // premenne platne pre cely component (obdoba member premennych v class-e)
     const dataTableEl = useRef<any>(null);
     let customFilterItems: XCustomFilterItem[] | undefined = XUtils.createCustomFilterItems(props.customFilter);
@@ -189,6 +196,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
     }
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
+    const [fullTextSearchInputValue, setFullTextSearchInputValue] = useState<XFullTextSearchInputValue | undefined>(props.fullTextSearch ? createInitFullTextSearchInputValue() : undefined);
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.sortField ? [{field: props.sortField, order: 1}] : []);
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
@@ -264,10 +272,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         // najjednoduchsi sposob - pomeni aj pripadne nastavene matchMode hodnoty
         let filtersInit: DataTableFilterMeta = createInitFilters();
         setFilters(filtersInit);
+
+        if (fullTextSearchInputValue) {
+            setFullTextSearchInputValue(createInitFullTextSearchInputValue());
+        }
     };
 
     const loadData = () => {
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, fullTextSearch: createXFullTextSearch(), customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
     }
 
     const loadDataBase = async (findParam: FindParam) => {
@@ -288,7 +300,19 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return findResult;
     }
 
-    const getFields = () => {
+    const createXFullTextSearch = (): XFullTextSearch | undefined => {
+        let xFullTextSearch: XFullTextSearch | undefined = undefined; // default
+        if (fullTextSearchInputValue && fullTextSearchInputValue.value !== null) {
+            xFullTextSearch = {
+                fields: Array.isArray(props.fullTextSearch) ? props.fullTextSearch : undefined,
+                value: fullTextSearchInputValue.value,
+                matchMode: fullTextSearchInputValue.matchMode
+            }
+        }
+        return xFullTextSearch;
+    }
+
+    const getFields = (): string[] => {
 
         // krasne zobrazi cely objekt!
         //console.log(dataTableEl.current);
@@ -865,9 +889,11 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
     );
 
+    // align-items-center centruje vertikalne (posuva smerom doulu do stredu)
     return (
         <div>
-            <div className="flex justify-content-center">
+            <div className="flex justify-content-center align-items-center">
+                {fullTextSearchInputValue ? <XFullTextSearchInput value={fullTextSearchInputValue} onChange={(value: XFullTextSearchInputValue) => setFullTextSearchInputValue(value)}/> : null}
                 <XButton key="filter" label={xLocaleOption('filter')} onClick={onClickFilter} />
                 <XButton key="clearFilter" label={xLocaleOption('clearFilter')} onClick={onClickClearFilter} />
             </div>
@@ -903,6 +929,7 @@ XLazyDataTable.defaultProps = {
     paginator: true,
     rows: 10,
     filterDisplay: "row",
+    fullTextSearch: true,
     scrollable: true,
     scrollWidth: 'viewport', // nastavi sirku tabulky na (100vw - nieco) (ak bude obsah sirsi, zapne horizontalny scrollbar)
     scrollHeight: 'viewport', // nastavi vysku tabulky na (100vh - nieco) (ak bude obsah vecsi, zapne vertikalny scrollbar)
