@@ -2,14 +2,14 @@ import {InputText} from "primereact/inputtext";
 import React from "react";
 import {stringAsUI, stringFromUI} from "./XUtilsConversions";
 
-// typ XFullTextSearchInputValue reprezentuje hodnoty ktore sa daju menit touto komponentou
+// typ XFtsInputValue reprezentuje hodnoty ktore sa daju menit touto komponentou
 // tento typ ciastocne zodpoveda typu XFullTextSearch pouzivanom v api
-export interface XFullTextSearchInputValue {
+export interface XFtsInputValue {
     value: string | null; // null znamena prazdny input, neaplikuje sa full text search podmienka
     matchMode: 'startsWith' | 'contains' | 'endsWith' | 'equals'; // zatial tieto (podmnozina z DataTableFilterMetaData), default bude 'contains'
 }
 
-export const XFullTextSearchInput = (props: {value: XFullTextSearchInputValue; onChange: (value: XFullTextSearchInputValue) => void;}) => {
+export const XFtsInput = (props: {value: XFtsInputValue; onChange: (value: XFtsInputValue) => void;}) => {
 
     const onChange = (e: any) => {
         const value: string | null = stringFromUI(e.target.value);

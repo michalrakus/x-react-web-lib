@@ -13,7 +13,7 @@ import {XSearchBrowseParams, XFieldFilter} from "./XSearchBrowseParams";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XEntity, XField} from "../serverApi/XEntityMetadata";
-import {dateAsUI, dateFormatCalendar, datetimeAsUI, numberAsUI, numberFromModel, stringAsUI} from "./XUtilsConversions";
+import {dateAsUI, datetimeAsUI, numberAsUI, numberFromModel} from "./XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
 import {
     FindParam,
@@ -26,16 +26,14 @@ import {
 import {XButtonIconSmall} from "./XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
-import {CsvParam, LazyDataTableQueryParam, ExportType} from "../serverApi/ExportImportParam";
+import {LazyDataTableQueryParam} from "../serverApi/ExportImportParam";
 import {XExportParams, XExportRowsDialog} from "./XExportRowsDialog";
 import {FilterMatchMode, FilterOperator} from "primereact/api";
 import {XOnSaveOrCancelProp} from "./XFormBase";
-import {Calendar, CalendarChangeEvent} from "primereact/calendar";
 import {XCalendar} from "./XCalendar";
 import {XInputDecimalBase} from "./XInputDecimalBase";
 import {xLocaleOption} from "./XLocale";
-import {InputText} from "primereact/inputtext";
-import {XFullTextSearchInput, XFullTextSearchInputValue} from "./XFullTextSearchInput";
+import {XFtsInput, XFtsInputValue} from "./XFtsInput";
 
 export type XBetweenFilterProp = "row" | "column" | undefined;
 
@@ -168,7 +166,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return filterItem;
     }
 
-    const createInitFullTextSearchInputValue = (): XFullTextSearchInputValue => {
+    const createInitFtsInputValue = (): XFtsInputValue => {
         return {value: null, matchMode: "contains"};
     }
 
@@ -196,13 +194,15 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
     }
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
-    const [fullTextSearchInputValue, setFullTextSearchInputValue] = useState<XFullTextSearchInputValue | undefined>(props.fullTextSearch ? createInitFullTextSearchInputValue() : undefined);
+    const initFtsInputValue: XFtsInputValue | undefined = props.fullTextSearch ? createInitFtsInputValue() : undefined;
+    const [ftsInputValue, setFtsInputValue] = useState<XFtsInputValue | undefined>(initFtsInputValue);
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.sortField ? [{field: props.sortField, order: 1}] : []);
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
     const [exportRowsDialogOpened, setExportRowsDialogOpened] = useState<boolean>(false);
     const [exportRowsDialogRowCount, setExportRowsDialogRowCount] = useState<number>(); // param pre dialog
     const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<DataTableFilterMeta>(filtersInit); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
+    const [ftsInputValueAfterFiltering, setFtsInputValueAfterFiltering] = useState<XFtsInputValue | undefined>(initFtsInputValue); // tak isto ako filtersAfterFiltering
 
     // parameter [] zabezpeci ze sa metoda zavola len po prvom renderingu (a nie po kazdej zmene stavu (zavolani setNieco()))
     useEffect(() => {
@@ -240,7 +240,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onPage");
 
         setFirst(event.first);
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: event.first, rows: rows, filters: filters, customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: event.first, rows: rows, filters: filters, fullTextSearch: createXFullTextSearch(ftsInputValue), customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
     }
 
     const onFilter = (event: any) => {
@@ -258,7 +258,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onSort - event.multiSortMeta = " + JSON.stringify(event.multiSortMeta));
 
         setMultiSortMeta(event.multiSortMeta);
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, customFilterItems: customFilterItems, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, fullTextSearch: createXFullTextSearch(ftsInputValue), customFilterItems: customFilterItems, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
     }
 
     const onClickFilter = () => {
@@ -273,13 +273,13 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         let filtersInit: DataTableFilterMeta = createInitFilters();
         setFilters(filtersInit);
 
-        if (fullTextSearchInputValue) {
-            setFullTextSearchInputValue(createInitFullTextSearchInputValue());
+        if (ftsInputValue) {
+            setFtsInputValue(createInitFtsInputValue());
         }
     };
 
     const loadData = () => {
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, fullTextSearch: createXFullTextSearch(), customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
+        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, fullTextSearch: createXFullTextSearch(ftsInputValue), customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
     }
 
     const loadDataBase = async (findParam: FindParam) => {
@@ -290,6 +290,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         setLoading(false);
         // odlozime si filter hodnoty pre pripadny export - deep cloning vyzera ze netreba
         setFiltersAfterFiltering(filters);
+        setFtsInputValueAfterFiltering(ftsInputValue ? {...ftsInputValue} : undefined);
     }
 
     const findByFilter = async (findParam: FindParam) : Promise<FindResult> => {
@@ -300,13 +301,13 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return findResult;
     }
 
-    const createXFullTextSearch = (): XFullTextSearch | undefined => {
+    const createXFullTextSearch = (ftsInputValue: XFtsInputValue | undefined): XFullTextSearch | undefined => {
         let xFullTextSearch: XFullTextSearch | undefined = undefined; // default
-        if (fullTextSearchInputValue && fullTextSearchInputValue.value !== null) {
+        if (ftsInputValue && ftsInputValue.value !== null) {
             xFullTextSearch = {
                 fields: Array.isArray(props.fullTextSearch) ? props.fullTextSearch : undefined,
-                value: fullTextSearchInputValue.value,
-                matchMode: fullTextSearchInputValue.matchMode
+                value: ftsInputValue.value,
+                matchMode: ftsInputValue.matchMode
             }
         }
         return xFullTextSearch;
@@ -423,7 +424,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
         // exportujeme zaznamy zodpovedajuce filtru
         // najprv zistime pocet zaznamov
-        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, first: first, rows: rows, filters: filtersAfterFiltering, customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems};
+        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, first: first, rows: rows, filters: filtersAfterFiltering, fullTextSearch: createXFullTextSearch(ftsInputValueAfterFiltering), customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems};
         //setLoading(true); - iba co preblikuje, netreba nam
         const findResult = await findByFilter(findParam);
         //setLoading(false);
@@ -433,7 +434,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     }
 
     const createExportParams = (): XExportParams => {
-        const queryParam: LazyDataTableQueryParam = {filters: filtersAfterFiltering, customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()};
+        const queryParam: LazyDataTableQueryParam = {filters: filtersAfterFiltering, fullTextSearch: createXFullTextSearch(ftsInputValueAfterFiltering), customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()};
         return {
             path: "x-lazy-data-table-export",
             queryParam: queryParam,
@@ -893,7 +894,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     return (
         <div>
             <div className="flex justify-content-center align-items-center">
-                {fullTextSearchInputValue ? <XFullTextSearchInput value={fullTextSearchInputValue} onChange={(value: XFullTextSearchInputValue) => setFullTextSearchInputValue(value)}/> : null}
+                {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)}/> : null}
                 <XButton key="filter" label={xLocaleOption('filter')} onClick={onClickFilter} />
                 <XButton key="clearFilter" label={xLocaleOption('clearFilter')} onClick={onClickClearFilter} />
             </div>
