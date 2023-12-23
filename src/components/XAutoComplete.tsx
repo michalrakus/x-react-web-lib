@@ -16,6 +16,7 @@ export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     filter?: XFilterProp;
     sortField?: string | DataTableSortMeta[];
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
+    lazy?: boolean;
     size?: number;
     inputStyle?: React.CSSProperties;
 }
@@ -41,19 +42,22 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
 
         this.onChangeAutoCompleteBase = this.onChangeAutoCompleteBase.bind(this);
         this.onErrorChangeAutoCompleteBase = this.onErrorChangeAutoCompleteBase.bind(this);
+        this.onSearchStart = this.onSearchStart.bind(this);
 
         props.form.addField(props.assocField + '.' + props.displayField);
     }
 
     componentDidMount() {
         //console.log("volany XAutoComplete.componentDidMount()");
-        this.readAndSetSuggestions();
+        if (!this.props.lazy) {
+            this.readAndSetSuggestions();
+        }
     }
 
-    async readAndSetSuggestions() {
+    async readAndSetSuggestions(setStateCallback?: () => void) {
         if (this.props.suggestions === undefined) {
             let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), this.props.sortField ?? this.props.displayField);
-            this.setState({suggestions: suggestions});
+            this.setState({suggestions: suggestions}, setStateCallback);
         }
     }
 
@@ -86,6 +90,10 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
         this.errorInBase = error; // odlozime si error
     }
 
+    onSearchStart(finishSearchStart?: () => void) {
+        this.readAndSetSuggestions(finishSearchStart);
+    }
+
     // overrides method in XFormComponent
     validate(): {field: string; xError: XError} | undefined {
         if (this.errorInBase) {
@@ -113,7 +121,8 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
                 <XAutoCompleteBase value={this.getValue()} suggestions={this.props.suggestions ?? this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
                                    field={this.props.displayField} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
                                    error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}
-                                   customFilterFunction={() => this.getFilterBase(this.props.filter)}/>
+                                   customFilterFunction={() => this.getFilterBase(this.props.filter)}
+                                   onSearchStart={this.props.lazy ? this.onSearchStart : undefined}/>
             </div>
         );
     }

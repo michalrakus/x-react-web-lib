@@ -23,6 +23,7 @@ export interface XAutoCompleteBaseProps {
     onErrorChange: (error: string | undefined) => void; // "vystup" pre validacnu chybu ktoru "ohlasi" AutoComplete; chyba by mala byt ohlasena vzdy ked this.state.inputChanged = true (a nemame focus na inpute)
     setFocusOnCreate?: boolean; // ak je true, nastavi focus do inputu po vytvoreni komponentu
     customFilterFunction?: () => XCustomFilter | undefined; // pouziva sa pri searchBrowse a planuje sa pouzivat pri lazy citani suggestions (vyhodnocuje sa pri otvoreni searchBrowse, t.j. co najneskor)
+    onSearchStart?: (finishSearchStart?: () => void) => void; // pouziva sa ak chceme vykonat nieco tesne pred tym ako zacne user pracovat s autocomplete-om - pouziva sa hlavne na lazy nacitavanie suggestions
 }
 
 export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
@@ -41,6 +42,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         searchDialogOpened: boolean;
     };
 
+    wasSearchStartCalled: boolean; // pomocny priznak - zapisujeme si sem, ci sme uz zavolali onSearchStart v pripade ak user zadava hodnotu typovanim
+
     // parametre pre form dialog (vzdy aspon jeden musi byt undefined)
     formDialogObjectId: number | undefined;
     formDialogInitValuesForInsert: any | undefined;
@@ -58,6 +61,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             formDialogOpened: false,
             searchDialogOpened: false
         };
+
+        this.wasSearchStartCalled = false;
 
         this.completeMethod = this.completeMethod.bind(this);
         this.onChange = this.onChange.bind(this);
@@ -99,6 +104,15 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
     onChange(e: AutoCompleteChangeEvent) {
         if (typeof e.value === 'string') {
+            // ak user zacne typovat znaky, nacitame suggestions, ak sme lazy (onSearchStart !== undefined)
+            if (this.props.onSearchStart) {
+                if (e.value !== '') { // ak user vymaze cely input, este nechceme nacitat suggestions, az ked zapise nejaky znak
+                    if (!this.wasSearchStartCalled) {
+                        this.props.onSearchStart();
+                        this.wasSearchStartCalled = true; // ak user dalej typuje, nechceme znova nacitavat suggestions
+                    }
+                }
+            }
             this.setState({inputChanged: true, inputValueState: e.value});
         }
     }
@@ -155,6 +169,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                 }
             }
         }
+        // odchadzame z inputu, zresetujeme priznak - ak zacne user pracovat s autocomplete-om, nacitaju sa suggestions z DB (ak mame lazy)
+        this.wasSearchStartCalled = false;
     }
 
     createErrorMessage(): string {
@@ -305,9 +321,29 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     //console.log(this.autoCompleteRef.current);
 
                     // otvori dropdown (search je metoda popisana v API, volanie sme skopcili zo zdrojakov primereact)
-                    this.autoCompleteRef.current.search(e, '', 'dropdown');
+                    // if (this.props.onSearchStart) {
+                    //     this.props.onSearchStart(() => this.finishSearchStart(e));
+                    // }
+                    // this.autoCompleteRef.current.search(e, '', 'dropdown');
+                    this.onOpenDropdown(e);
                 }
             });
+    }
+
+    onOpenDropdown(e: any) {
+        if (this.props.onSearchStart) {
+            this.props.onSearchStart(() => this.openDropdown(e));
+        }
+        else {
+            // otvori dropdown (search je metoda popisana v API, volanie sme skopcili zo zdrojakov primereact)
+            //this.autoCompleteRef.current.search(e, '', 'dropdown');
+            this.openDropdown(e);
+        }
+    }
+
+    openDropdown(e: any) {
+        // otvori dropdown (search je metoda popisana v API, volanie sme skopcili zo zdrojakov primereact)
+        this.autoCompleteRef.current.search(e, '', 'dropdown');
     }
 
     // vracia objekt (ak inputChanged === false) alebo string (ak inputChanged === true)
@@ -356,7 +392,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         }
         else {
             // mame len 1 operaciu - dame jednoduchy button
-            dropdownButton = <Button icon="pi pi-chevron-down" onClick={(e: any) => this.autoCompleteRef.current.search(e, '', 'dropdown')} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()} disabled={readOnly}/>;
+            dropdownButton = <Button icon="pi pi-chevron-down" onClick={(e: any) => this.onOpenDropdown(e)} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()} disabled={readOnly}/>;
         }
 
         // vypocitame inputValue
