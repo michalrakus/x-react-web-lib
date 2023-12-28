@@ -24,6 +24,7 @@
     "fileDownloadFailed": "File download failed.",
     "fieldSetSaveEditConfirm": "Are you sure to save the form?",
     "fieldSetCancelEditConfirm": "Are you sure to cancel editing? All changes will be lost.",
-    "fieldSetRemoveFieldConfirm": "Are you sure to remove the field?"
+    "fieldSetRemoveFieldConfirm": "Are you sure to remove the field?",
+    "upload": "Upload"
   }
 }
