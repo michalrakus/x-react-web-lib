@@ -1,6 +1,7 @@
 import {XField} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XFormComponentDT, XFormComponentDTProps} from "./XFormComponentDT";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XInputDTProps extends XFormComponentDTProps {
     field: string;
@@ -14,7 +15,7 @@ export abstract class XInputDT<P extends XInputDTProps> extends XFormComponentDT
     protected constructor(props: P) {
         super(props);
 
-        this.xField = XUtilsMetadata.getXFieldByPathStr(props.entity, props.field);
+        this.xField = XUtilsMetadataCommon.getXFieldByPathStr(props.entity, props.field);
     }
 
     getField(): string {

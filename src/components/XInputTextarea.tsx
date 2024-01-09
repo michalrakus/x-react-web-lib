@@ -1,5 +1,5 @@
 import React from "react";
-import {stringAsUI, stringFromUI} from "./XUtilsConversions";
+import {stringAsUI, stringFromUI} from "../serverApi/XUtilsConversions";
 import {XInput, XInputProps} from "./XInput";
 import {InputTextarea} from "primereact/inputtextarea";
 import {XUtils} from "./XUtils";

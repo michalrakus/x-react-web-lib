@@ -7,6 +7,7 @@ import {Dialog} from "primereact/dialog";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XSearchBrowseParams} from "./XSearchBrowseParams";
 import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocField: string; displayField: string, searchBrowse: JSX.Element; assocForm?: JSX.Element; rowData: any; readOnly?: XTableFieldReadOnlyProp}) => {
 
@@ -77,8 +78,8 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
         }
         else {
             if (props.assocForm !== undefined) {
-                const xEntity = XUtilsMetadata.getXEntity(props.entity);
-                const xEntityAssoc = XUtilsMetadata.getXEntityForAssocToOne(xEntity, props.assocField)
+                const xEntity = XUtilsMetadataCommon.getXEntity(props.entity);
+                const xEntityAssoc = XUtilsMetadataCommon.getXEntityForAssocToOne(xEntity, props.assocField)
                 if (props.rowData !== null) {
                     const assocObject = props.rowData[props.assocField];
                     // OTAZKA - ziskavat id priamo z root objektu? potom ho vsak treba do root objektu pridat

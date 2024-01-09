@@ -6,6 +6,7 @@ import {OperationType, XUtils} from "./XUtils";
 import {XError} from "./XErrors";
 import {XAutoCompleteBase} from "./XAutoCompleteBase";
 import {XTableFieldFilterProp} from "./XFormDataTable2";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XAutoCompleteDTProps extends XFormComponentDTProps {
     assocField: string;
@@ -32,7 +33,7 @@ export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
     constructor(props: XAutoCompleteDTProps) {
         super(props);
 
-        this.xAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.entity), props.assocField);
+        this.xAssoc = XUtilsMetadataCommon.getXAssocToOne(XUtilsMetadataCommon.getXEntity(props.entity), props.assocField);
         this.errorInBase = undefined;
 
         this.state = {
@@ -95,8 +96,8 @@ export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
     }
 
     render() {
-        const xEntityAssoc = XUtilsMetadata.getXEntity(this.xAssoc.entityName);
-        //const xDisplayField = XUtilsMetadata.getXFieldByPath(xEntityAssoc, this.props.displayField);
+        const xEntityAssoc = XUtilsMetadataCommon.getXEntity(this.xAssoc.entityName);
+        //const xDisplayField = XUtilsMetadataCommon.getXFieldByPath(xEntityAssoc, this.props.displayField);
 
         // TODO - size
         //const size = this.props.size ?? xDisplayField.length;

@@ -59,12 +59,13 @@ function generateApi(cb) {
         "./lib/components/XToken",
         "./lib/components/XToOneAssocButton",
         "./lib/components/XUtils",
-        "./lib/components/XUtilsConversions",
         "./lib/components/XUtilsMetadata",
 
         "./lib/serverApi/ExportImportParam",
         "./lib/serverApi/FindParam",
-        "./lib/serverApi/XUtilsCommon"
+        "./lib/serverApi/XUtilsCommon",
+        "./lib/serverApi/XUtilsConversions",
+        "./lib/serverApi/XUtilsMetadataCommon"
     ];
 
     for (const apiFile of apiFileList) {

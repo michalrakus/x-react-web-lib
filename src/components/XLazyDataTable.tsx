@@ -9,11 +9,11 @@ import {
 import {Column, ColumnBodyOptions, ColumnFilterElementTemplateOptions} from 'primereact/column';
 import {XButton} from "./XButton";
 import {OperationType, XUtils} from "./XUtils";
-import {XSearchBrowseParams, XFieldFilter} from "./XSearchBrowseParams";
+import {XFieldFilter, XSearchBrowseParams} from "./XSearchBrowseParams";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XEntity, XField} from "../serverApi/XEntityMetadata";
-import {dateAsUI, datetimeAsUI, numberAsUI, numberFromModel} from "./XUtilsConversions";
+import {AsUIType, convertValue, numberAsUI, numberFromModel} from "../serverApi/XUtilsConversions";
 import {FindResult} from "../serverApi/FindResult";
 import {
     FindParam,
@@ -21,7 +21,8 @@ import {
     XAggregateItem,
     XAggregateType,
     XCustomFilter,
-    XCustomFilterItem, XFullTextSearch
+    XCustomFilterItem,
+    XFullTextSearch
 } from "../serverApi/FindParam";
 import {XButtonIconSmall} from "./XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
@@ -34,8 +35,18 @@ import {XCalendar} from "./XCalendar";
 import {XInputDecimalBase} from "./XInputDecimalBase";
 import {xLocaleOption} from "./XLocale";
 import {XFtsInput, XFtsInputValue} from "./XFtsInput";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import {IconType} from "primereact/utils";
+import {ButtonProps} from "primereact/button";
 
 export type XBetweenFilterProp = "row" | "column" | undefined;
+
+export interface XAppButtonForRow {
+    key?: string;
+    icon?: IconType<ButtonProps>;
+    label: string;
+    onClick: (selectedRow: any) => void;
+}
 
 export interface XEditModeHandlers {
     onStart: () => void;
@@ -80,7 +91,8 @@ export interface XLazyDataTableProps {
     onEdit?: (selectedRow: any) => void;
     removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean;
     onRemoveRow?: XOnSaveOrCancelProp;
-    appButtons?: any;
+    appButtonsForRow?: XAppButtonForRow[]; // do funkcii tychto buttonov sa posiela vyselectovany row
+    appButtons?: any; // vseobecne buttons (netreba im poslat vyselectovany row) - mozno by sa mali volat appButtonsGeneral
     filters?: DataTableFilterMeta; // pouzivatelsky filter
     customFilter?: XCustomFilter; // (programatorsky) filter ktory sa aplikuje na zobrazovane data (uzivatel ho nedokaze zmenit)
     sortField?: string;
@@ -98,7 +110,7 @@ export interface XLazyDataTableProps {
 export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     // must be here, is used in createInitFilters()
-    const xEntity: XEntity = XUtilsMetadata.getXEntity(props.entity);
+    const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(props.entity);
 
     const createAggregateItems = (): XAggregateItem[] => {
 
@@ -124,7 +136,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         for (let column of columns) {
             const xLazyColumn = column as {props: XLazyColumnProps}; // nevedel som to krajsie...
             const field: string = xLazyColumn.props.field;
-            const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
+            const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
             // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
             const filterMatchMode: FilterMatchMode = getFilterMatchMode(xField);
             initFilters[field] = createFilterItem(props.filterDisplay, {value: null, matchMode: filterMatchMode});
@@ -136,7 +148,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const getFilterMatchMode = (xField: XField) : FilterMatchMode => {
         let filterMatchMode: FilterMatchMode;
         if (xField.type === "string") {
-            filterMatchMode = FilterMatchMode.STARTS_WITH;
+            filterMatchMode = FilterMatchMode.CONTAINS;
         }
         // zatial vsetky ostatne EQUALS
         else if (xField.type === "decimal" || xField.type === "number" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
@@ -233,7 +245,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     }); // eslint-disable-line react-hooks/exhaustive-deps
 
     // TODO - preco je to tu? presunut dole ak sa da...
-    const dataKey = props.dataKey !== undefined ? props.dataKey : XUtilsMetadata.getXEntity(props.entity).idField;
+    const dataKey = props.dataKey !== undefined ? props.dataKey : XUtilsMetadataCommon.getXEntity(props.entity).idField;
 
     const onPage = async (event: any) => {
 
@@ -420,6 +432,16 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
     }
 
+    const onClickAppButtonForRow = (onClick: (selectedRow: any) => void) => {
+
+        if (selectedRow !== null) {
+            onClick(selectedRow);
+        }
+        else {
+            alert(xLocaleOption('pleaseSelectRow'));
+        }
+    }
+
     const onClickExport = async () => {
 
         // exportujeme zaznamy zodpovedajuce filtru
@@ -562,47 +584,15 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     }
 
     const valueAsUI = (value: any, xField: XField): React.ReactNode => {
-        let valueResult: React.ReactNode = '';
-        if (xField.type === "decimal") {
-            // tuto zatial hack, mal by vzdy prist number
-            let numberValue: number | null = null;
-            if (typeof value === 'string') {
-                numberValue = parseFloat(value);
-            }
-            else if (typeof value === 'number') {
-                numberValue = value;
-            }
-            valueResult = numberAsUI(numberValue, xField.scale);
-        }
-        else if (xField.type === "date") {
-            // tuto zatial hack, mal by prist Date
-            let dateValue: Date | null = null;
-            if (typeof value === 'string') {
-                dateValue = new Date(value);
-            }
-            else if (typeof value === 'object' && value instanceof Date) {
-                dateValue = value;
-            }
-            valueResult = dateAsUI(dateValue);
-        }
-        else if (xField.type === "datetime") {
-            // tuto zatial hack, mal by prist Date
-            let dateValue: Date | null = null;
-            if (typeof value === 'string') {
-                dateValue = new Date(value);
-            }
-            else if (typeof value === 'object' && value instanceof Date) {
-                dateValue = value;
-            }
-            valueResult = datetimeAsUI(dateValue);
-        }
-        else if (xField.type === "boolean") {
+        let valueResult: React.ReactNode;
+        if (xField.type === "boolean") {
             // TODO - efektivnejsie by bolo renderovat len prislusne ikonky
             valueResult = <TriStateCheckbox value={value} disabled={true}/>
         }
         else {
-            // string a ine typy
-            valueResult = value;
+            // ine typy - convertValue vrati string
+            // mame zapnutu konverziu fromModel, lebo z json-u nam prichadzaju objekty typu string (napr. pri datumoch)
+            valueResult = convertValue(xField, value, true, AsUIType.Form);
         }
         return valueResult;
     }
@@ -729,7 +719,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             // priklad je na https://soshace.com/building-react-components-using-children-props-and-context-api/
             // (vzdy musime robit manipulacie so stlpcom, lebo potrebujeme pridat filter={true} sortable={true}
             const childColumn = child as any as {props: XLazyColumnProps}; // nevedel som to krajsie...
-            const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, childColumn.props.field);
+            const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, childColumn.props.field);
 
             // *********** header ***********
             const headerLabel = childColumn.props.header !== undefined ? childColumn.props.header : childColumn.props.field;
@@ -917,6 +907,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {props.onEdit !== undefined && props.searchBrowseParams === undefined ? <XButton key="editRow" icon="pi pi-pencil" label={xLocaleOption('editRow')} onClick={onClickEdit}/> : null}
                 {props.removeRow !== undefined && props.removeRow !== false && props.searchBrowseParams === undefined ? <XButton key="removeRow" icon="pi pi-times" label={xLocaleOption('removeRow')} onClick={onClickRemoveRow}/> : null}
                 {exportRows ? <XButton key="exportRows" icon="pi pi-file-export" label={xLocaleOption('exportRows')} onClick={onClickExport} /> : null}
+                {props.appButtonsForRow ? props.appButtonsForRow.map((xAppButton: XAppButtonForRow) => <XButton key={xAppButton.key} icon={xAppButton.icon} label={xAppButton.label} onClick={() => onClickAppButtonForRow(xAppButton.onClick)}/>) : null}
                 {props.appButtons}
                 {props.searchBrowseParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
                 {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogOpened={exportRowsDialogOpened} hideDialog={() => setExportRowsDialogOpened(false)}

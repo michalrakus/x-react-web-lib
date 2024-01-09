@@ -6,6 +6,7 @@ import {XDropdownOptionsMap, XTableFieldReadOnlyProp} from "./XFormDataTable2";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XAssoc} from "../serverApi/XEntityMetadata";
 import {XCustomFilter} from "../serverApi/FindParam";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export const XDropdownDT = (props: {
         form: XFormBase;
@@ -23,8 +24,8 @@ export const XDropdownDT = (props: {
     // poznamka: nacitanie/ulozenie options je vytiahnute do parent komponentu XFormDataTable koli tomu aby sme nenacitavali options pre kazdy riadok tabulky
 
     // "members"
-    const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.entity), props.assocField);
-    const idField: string = XUtilsMetadata.getXEntity(xAssoc.entityName).idField;
+    const xAssoc: XAssoc = XUtilsMetadataCommon.getXAssocToOne(XUtilsMetadataCommon.getXEntity(props.entity), props.assocField);
+    const idField: string = XUtilsMetadataCommon.getXEntity(xAssoc.entityName).idField;
 
     // parameter [] zabezpeci ze sa metoda zavola len po prvom renderingu (a nie po kazdej zmene stavu (zavolani setNieco()))
     useEffect(() => {
@@ -46,7 +47,7 @@ export const XDropdownDT = (props: {
             // ak by tu tento riadok nebol, tak by sa options nacitavali tolkokrat, kolko je riadkov v tabulke
             props.dropdownOptionsMap[props.assocField] = [];
 
-            const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.entity), props.assocField);
+            const xAssoc: XAssoc = XUtilsMetadataCommon.getXAssocToOne(XUtilsMetadataCommon.getXEntity(props.entity), props.assocField);
 
             //options = await XUtils.fetchMany('findRowsForAssoc', {entity: props.entity, assocField: props.assocField});
             options = await XUtils.fetchRows(xAssoc.entityName, props.filter, props.sortField ?? props.displayField);

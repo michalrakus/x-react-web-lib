@@ -4,6 +4,7 @@ import {Dropdown} from "primereact/dropdown";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {XAssoc, XField} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 // pouzivany vo filtri v XLazyDataTable aj v XFormDataTable2
 export const XDropdownDTFilter = (props: {entity: string; path: string; value: any; onValueChange: (field: string, displayValue: any) => void;}) => {
@@ -26,7 +27,7 @@ export const XDropdownDTFilter = (props: {entity: string; path: string; value: a
     }
 
     const findOptions = async (entity: string, path: string, displayField: string) => {
-        const xAssoc: XAssoc = XUtilsMetadata.getLastXAssocByPath(XUtilsMetadata.getXEntity(entity), path);
+        const xAssoc: XAssoc = XUtilsMetadataCommon.getLastXAssocByPath(XUtilsMetadataCommon.getXEntity(entity), path);
         const options: any[] = await XUtils.fetchRows(xAssoc.entityName, undefined, displayField);
         const emptyOption: {[field: string]: any;} = {};
         emptyOption[displayField] = XUtils.dropdownEmptyOptionValue;

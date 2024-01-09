@@ -9,6 +9,7 @@ import {XAssoc} from "../serverApi/XEntityMetadata";
 import {XObject} from "./XObject";
 import {XCustomFilter} from "../serverApi/FindParam";
 import {XSearchBrowseParams} from "./XSearchBrowseParams";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XSearchButtonProps extends XFormComponentProps<XObject> {
     assocField: string;
@@ -35,7 +36,7 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
     constructor(props: XSearchButtonProps) {
         super(props);
 
-        this.xAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.form.getEntity()), props.assocField);
+        this.xAssoc = XUtilsMetadataCommon.getXAssocToOne(XUtilsMetadataCommon.getXEntity(props.form.getEntity()), props.assocField);
 
         this.inputTextRef = React.createRef();
         // POVODNY KOD
@@ -61,8 +62,8 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
     render() {
         const props = this.props;
 
-        const xEntityAssoc = XUtilsMetadata.getXEntity(this.xAssoc.entityName);
-        const xDisplayField = XUtilsMetadata.getXFieldByPath(xEntityAssoc, props.displayField);
+        const xEntityAssoc = XUtilsMetadataCommon.getXEntity(this.xAssoc.entityName);
+        const xDisplayField = XUtilsMetadataCommon.getXFieldByPath(xEntityAssoc, props.displayField);
 
         // tu boli hook-y kedysi...
         const inputChanged: boolean = this.state.inputChanged;

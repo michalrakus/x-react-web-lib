@@ -1,6 +1,6 @@
 import {InputText} from "primereact/inputtext";
 import React, {CSSProperties, useState} from "react";
-import {intervalAsUI, intervalFromUI} from "./XUtilsConversions";
+import {intervalAsUI, intervalFromUI} from "../serverApi/XUtilsConversions";
 import {IPostgresInterval, XUtils} from "./XUtils";
 
 // zatial podporuje len hours a minutes - TODO - pridat aj seconds, ale cez nejaky prepinac

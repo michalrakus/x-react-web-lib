@@ -25,6 +25,8 @@
     "fieldSetSaveEditConfirm": "Are you sure to save the form?",
     "fieldSetCancelEditConfirm": "Are you sure to cancel editing? All changes will be lost.",
     "fieldSetRemoveFieldConfirm": "Are you sure to remove the field?",
-    "upload": "Upload"
+    "upload": "Upload",
+    "yes": "yes",
+    "no": "no"
   }
 }

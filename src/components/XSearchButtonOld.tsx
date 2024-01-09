@@ -6,15 +6,16 @@ import {Button} from "primereact/button";
 import {XUtils} from "./XUtils";
 import {Dialog} from "primereact/dialog";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export const XSearchButtonOld = (props: {form: XFormBase; assocField: string; displayField: string, searchTable: any; assocForm?: any; label?: string; readOnly?: boolean; size?: number; inputStyle?: React.CSSProperties;}) => {
 
     props.form.addField(props.assocField + '.' + props.displayField);
 
-    const xEntity = XUtilsMetadata.getXEntity(props.form.getEntity());
-    const xAssoc = XUtilsMetadata.getXAssocToOne(xEntity, props.assocField);
-    const xEntityAssoc = XUtilsMetadata.getXEntity(xAssoc.entityName);
-    const xDisplayField = XUtilsMetadata.getXFieldByPath(xEntityAssoc, props.displayField);
+    const xEntity = XUtilsMetadataCommon.getXEntity(props.form.getEntity());
+    const xAssoc = XUtilsMetadataCommon.getXAssocToOne(xEntity, props.assocField);
+    const xEntityAssoc = XUtilsMetadataCommon.getXEntity(xAssoc.entityName);
+    const xDisplayField = XUtilsMetadataCommon.getXFieldByPath(xEntityAssoc, props.displayField);
 
     // POVODNY KOD
     //const overlayPanelEl = useRef<any>(null);

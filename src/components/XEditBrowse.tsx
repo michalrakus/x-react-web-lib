@@ -7,6 +7,7 @@ import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtils} from "./XUtils";
 import {XEditModeHandlers, XLazyColumn, XLazyDataTable} from "./XLazyDataTable";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XEditBrowseProps {
     entity: string;
@@ -60,8 +61,8 @@ export class XEditBrowse extends Component<XEditBrowseProps> {
 
     createDefaultXBrowseMeta(): XBrowseMeta {
         const xColumnMetaList: XColumnMeta[] = [];
-        const xEntity: XEntity = XUtilsMetadata.getXEntity(this.props.entity);
-        const xFieldList = XUtilsMetadata.getXFieldList(xEntity);
+        const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(this.props.entity);
+        const xFieldList = XUtilsMetadataCommon.getXFieldList(xEntity);
         for (const xField of xFieldList) {
             xColumnMetaList.push({field: xField.name, header: xField.name, dropdownInFilter: false});
         }
@@ -194,7 +195,7 @@ export class XEditBrowse extends Component<XEditBrowseProps> {
 
         const formElement = XUtils.getAppForm(this.props.entity);
         if (formElement !== undefined) {
-            const xEntity: XEntity = XUtilsMetadata.getXEntity(this.props.entity);
+            const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(this.props.entity);
             const id = selectedRow[xEntity.idField];
             // we add property id={selectedRow.<id>} into formElement
             const formElementCloned = React.cloneElement(formElement, {id: id}, formElement.children);

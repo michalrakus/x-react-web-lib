@@ -12,7 +12,7 @@ import {Dropdown} from "primereact/dropdown";
 import {Checkbox} from "primereact/checkbox";
 import {XButton} from "./XButton";
 import {XUtils} from "./XUtils";
-import {numberAsUI} from "./XUtilsConversions";
+import {numberAsUI} from "../serverApi/XUtilsConversions";
 import {xLocaleOption} from "./XLocale";
 
 // parametre potrebne na zavolanie servisu pre export

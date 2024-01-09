@@ -4,6 +4,7 @@ import {XFilterProp, XFormComponent, XFormComponentProps} from "./XFormComponent
 import {XAssoc} from "../serverApi/XEntityMetadata";
 import {XObject} from "./XObject";
 import {XDropdownForEntity} from "./XDropdownForEntity";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XDropdownProps extends XFormComponentProps<XObject> {
     assocField: string;
@@ -19,7 +20,7 @@ export class XDropdown extends XFormComponent<XObject, XDropdownProps> {
     constructor(props: XDropdownProps) {
         super(props);
 
-        this.xAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.form.getEntity()), props.assocField);
+        this.xAssoc = XUtilsMetadataCommon.getXAssocToOne(XUtilsMetadataCommon.getXEntity(props.form.getEntity()), props.assocField);
 
         props.form.addField(props.assocField + '.' + props.displayField);
     }

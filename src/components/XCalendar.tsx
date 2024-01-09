@@ -1,6 +1,6 @@
 import React from "react";
 import {Calendar, CalendarChangeEvent} from "primereact/calendar";
-import {dateFormatCalendar} from "./XUtilsConversions";
+import {dateFormatCalendar} from "../serverApi/XUtilsConversions";
 
 // wrapper for Calendar component, maybe better name would be XInputDateBase
 export const XCalendar = (props: {

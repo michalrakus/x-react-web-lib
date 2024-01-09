@@ -1,6 +1,6 @@
 import {InputText} from "primereact/inputtext";
 import React from "react";
-import {stringAsUI, stringFromUI} from "./XUtilsConversions";
+import {stringAsUI, stringFromUI} from "../serverApi/XUtilsConversions";
 
 // typ XFtsInputValue reprezentuje hodnoty ktore sa daju menit touto komponentou
 // tento typ ciastocne zodpoveda typu XFullTextSearch pouzivanom v api

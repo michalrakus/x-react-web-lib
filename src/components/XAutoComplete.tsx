@@ -7,6 +7,7 @@ import {XAutoCompleteBase} from "./XAutoCompleteBase";
 import {XError} from "./XErrors";
 import {XObject} from "./XObject";
 import {DataTableSortMeta} from "primereact/datatable";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     assocField: string;
@@ -33,7 +34,7 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
     constructor(props: XAutoCompleteProps) {
         super(props);
 
-        this.xAssoc = XUtilsMetadata.getXAssocToOne(XUtilsMetadata.getXEntity(props.form.getEntity()), props.assocField);
+        this.xAssoc = XUtilsMetadataCommon.getXAssocToOne(XUtilsMetadataCommon.getXEntity(props.form.getEntity()), props.assocField);
         this.errorInBase = undefined;
 
         this.state = {
@@ -106,8 +107,8 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
 
     render() {
 
-        const xEntityAssoc = XUtilsMetadata.getXEntity(this.xAssoc.entityName);
-        //const xDisplayField = XUtilsMetadata.getXFieldByPath(xEntityAssoc, this.props.displayField);
+        const xEntityAssoc = XUtilsMetadataCommon.getXEntity(this.xAssoc.entityName);
+        //const xDisplayField = XUtilsMetadataCommon.getXFieldByPath(xEntityAssoc, this.props.displayField);
 
         // TODO - readOnly
 
@@ -119,7 +120,7 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
             <div className="field grid">
                 <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <XAutoCompleteBase value={this.getValue()} suggestions={this.props.suggestions ?? this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
-                                   field={this.props.displayField} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
+                                   field={this.props.displayField} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm} idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
                                    error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}
                                    customFilterFunction={() => this.getFilterBase(this.props.filter)}
                                    onSearchStart={this.props.lazy ? this.onSearchStart : undefined}/>

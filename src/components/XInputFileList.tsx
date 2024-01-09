@@ -8,9 +8,10 @@ import {XUtils} from "./XUtils";
 import {XObject} from "./XObject";
 import {XButton} from "./XButton";
 import {XButtonIconNarrow} from "./XButtonIconNarrow";
-import {numberAsUI} from "./XUtilsConversions";
+import {numberAsUI} from "../serverApi/XUtilsConversions";
 import {xLocaleOption} from "./XLocale";
 import {XFileJsonField} from "../serverApi/XFileJsonField";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 interface XFile {
     id: number;
@@ -49,12 +50,12 @@ export class XInputFileList extends Component<XInputFileListProps> {
         this.fileUploadRef = React.createRef();
 
         this.props = props;
-        const xEntityForm: XEntity = XUtilsMetadata.getXEntity(props.form.getEntity());
-        const xAssocToMany: XAssoc = XUtilsMetadata.getXAssocToMany(xEntityForm, props.assocField);
+        const xEntityForm: XEntity = XUtilsMetadataCommon.getXEntity(props.form.getEntity());
+        const xAssocToMany: XAssoc = XUtilsMetadataCommon.getXAssocToMany(xEntityForm, props.assocField);
         this.entity = xAssocToMany.entityName;
-        const xEntity = XUtilsMetadata.getXEntity(this.entity);
+        const xEntity = XUtilsMetadataCommon.getXEntity(this.entity);
         this.idField = xEntity.idField;
-        this.xFileField = XUtilsMetadata.getXAssocToOneByAssocEntity(xEntity, 'XFile').name;
+        this.xFileField = XUtilsMetadataCommon.getXAssocToOneByAssocEntity(xEntity, 'XFile').name;
 
         this.onDownloadFile = this.onDownloadFile.bind(this);
         this.onRemoveFile = this.onRemoveFile.bind(this);

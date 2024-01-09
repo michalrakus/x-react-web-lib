@@ -2,6 +2,7 @@ import React from "react";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XFormComponent, XFormComponentProps} from "./XFormComponent";
 import {XField} from "../serverApi/XEntityMetadata";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XInputProps<T> extends XFormComponentProps<T> {
     field: string;
@@ -16,7 +17,7 @@ export abstract class XInput<T, P extends XInputProps<T>> extends XFormComponent
     protected constructor(props: P) {
         super(props);
 
-        this.xField = XUtilsMetadata.getXFieldByPathStr(props.form.getEntity(), props.field);
+        this.xField = XUtilsMetadataCommon.getXFieldByPathStr(props.form.getEntity(), props.field);
 
         props.form.addField(props.field);
     }

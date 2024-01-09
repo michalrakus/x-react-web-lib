@@ -1,22 +1,19 @@
-import {XAssoc, XAssocMap, XEntity, XEntityMap, XField, XRelationType} from "../serverApi/XEntityMetadata";
+import {XField} from "../serverApi/XEntityMetadata";
 import {XUtils} from "./XUtils";
 import {XBrowseMeta, XBrowseMetaMap} from "../serverApi/XBrowseMetadata";
-import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {XBetweenFilterProp} from "./XLazyDataTable";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 // idelany nazov: UtilsEntityMetadata - ale strasne dlhy
 // tato funkcionalita by mala ist bud do tried XEntity, XField alebo lepsie do nejakeho servisu
 // ekvivalentna funkcionalita sa nachadza aj na servri v servise XEntityMetadataService.ts (TODO - v buducnosti spravit spolocnu triedu/servis)
 export class XUtilsMetadata {
     // nacachovane metadata (setuju sa v App.fetchAndSetXMetadata)
-    private static xEntityMap: XEntityMap;
-    // nacachovane metadata (setuju sa v App.fetchAndSetXMetadata)
     private static xBrowseMetaMap: XBrowseMetaMap;
 
     static async fetchAndSetXEntityMap(): Promise<any> {
-        if (XUtilsMetadata.xEntityMap === undefined) {
-            XUtilsMetadata.xEntityMap = await XUtils.fetch("getXEntityMap", {dummy: "dummy"});
-            //console.log(XUtilsMetadata.xEntityMap);
+        if (XUtilsMetadataCommon.getXEntityMap() === undefined) {
+            XUtilsMetadataCommon.setXEntityMap(await XUtils.fetch("getXEntityMap", {dummy: "dummy"}));
         }
     }
 
@@ -24,103 +21,6 @@ export class XUtilsMetadata {
         if (XUtilsMetadata.xBrowseMetaMap === undefined) {
             XUtilsMetadata.xBrowseMetaMap = await XUtils.fetch("getXBrowseMetaMap", {dummy: "dummy"});
         }
-    }
-
-    static getXEntity(entity: string): XEntity {
-        const xEntity: XEntity = XUtilsMetadata.xEntityMap[entity];
-        if (xEntity === undefined) {
-            throw `Entity ${entity} was not found in entity metadata`;
-        }
-        return xEntity;
-    }
-
-    static getXField(xEntity: XEntity, field: string): XField {
-        // TODO - pozor, vo fieldMap su aj asociacie, trebalo by zmenit vytvaranie metadat tak aby tam tie asociacie neboli
-        const xField: XField = xEntity.fieldMap[field];
-        if (xField === undefined) {
-            throw `Field ${field} was not found in entity ${xEntity.name}`;
-        }
-        return xField;
-    }
-
-    static getXFieldByPath(xEntity: XEntity, path: string): XField {
-        const [field, restPath] = XUtilsCommon.getFieldAndRestPath(path);
-        if (restPath === null) {
-            return XUtilsMetadata.getXField(xEntity, field);
-        }
-        else {
-            const xAssoc: XAssoc = XUtilsMetadata.getXAssoc(xEntity, field);
-            const xAssocEntity = XUtilsMetadata.getXEntity(xAssoc.entityName);
-            return XUtilsMetadata.getXFieldByPath(xAssocEntity, restPath);
-        }
-    }
-
-    static getXFieldByPathStr(entity: string, path: string): XField {
-        return XUtilsMetadata.getXFieldByPath(XUtilsMetadata.getXEntity(entity), path);
-    }
-
-    static getXAssocByPath(xEntity: XEntity, path: string): XAssoc {
-        const [field, restPath] = XUtilsCommon.getFieldAndRestPath(path);
-        if (restPath === null) {
-            return XUtilsMetadata.getXAssoc(xEntity, field);
-        }
-        else {
-            const xAssoc: XAssoc = XUtilsMetadata.getXAssoc(xEntity, field);
-            const xAssocEntity = XUtilsMetadata.getXEntity(xAssoc.entityName);
-            return XUtilsMetadata.getXAssocByPath(xAssocEntity, restPath);
-        }
-    }
-
-    // for path assoc1.assoc2.field returns assoc2 (last assoc before field)
-    static getLastXAssocByPath(xEntity: XEntity, path: string): XAssoc {
-        const pathToAssoc: string = XUtilsCommon.getPathToAssoc(path);
-        return XUtilsMetadata.getXAssocByPath(xEntity, pathToAssoc);
-    }
-
-    static getXAssocToOne(xEntity: XEntity, assocField: string): XAssoc {
-        return XUtilsMetadata.getXAssoc(xEntity, assocField, ["many-to-one", "one-to-one"]);
-    }
-
-    static getXAssocToMany(xEntity: XEntity, assocField: string): XAssoc {
-        return XUtilsMetadata.getXAssoc(xEntity, assocField, ["one-to-many", "many-to-many"]);
-    }
-
-    static getXAssocToOneByAssocEntity(xEntity: XEntity, assocEntityName: string): XAssoc {
-        return XUtilsMetadata.getXAssocByAssocEntity(xEntity, assocEntityName, ["many-to-one", "one-to-one"]);
-    }
-
-    static getXAssocToManyByAssocEntity(xEntity: XEntity, assocEntityName: string): XAssoc {
-        return XUtilsMetadata.getXAssocByAssocEntity(xEntity, assocEntityName, ["one-to-many", "many-to-many"]);
-    }
-
-    static getXEntityForAssocToOne(xEntity: XEntity, assocField: string): XEntity {
-        return XUtilsMetadata.getXEntityForAssoc(XUtilsMetadata.getXAssocToOne(xEntity, assocField));
-    }
-
-    static getXEntityForAssocToMany(xEntity: XEntity, assocField: string): XEntity {
-        return XUtilsMetadata.getXEntityForAssoc(XUtilsMetadata.getXAssocToMany(xEntity, assocField));
-    }
-
-    static getXFieldList(xEntity: XEntity): XField[] {
-        const xFieldList: XField[] = [];
-        for (const [key, xField] of Object.entries(xEntity.fieldMap)) {
-            // assoc fieldy sa nachadzaju aj v xEntity.fieldMap ako typ number (netusim preco), preto ich vyfiltrujeme
-            if (xEntity.assocMap[xField.name] === undefined) {
-                xFieldList.push(xField);
-            }
-        }
-        return xFieldList;
-    }
-
-    static getXAssocList(xEntity: XEntity, relationTypeList?: XRelationType[]): XAssoc[] {
-        //const xAssocList: XAssoc[] = Array.from(xEntity.assocMap, (v: XAssoc, k: string) => v);
-        const xAssocList: XAssoc[] = [];
-        for (const [key, xAssoc] of Object.entries(xEntity.assocMap)) {
-            if (relationTypeList === undefined || relationTypeList.includes(xAssoc.relationType)) {
-                xAssocList.push(xAssoc);
-            }
-        }
-        return xAssocList;
     }
 
     // docasne sem, kym nemame jednotny XInputDecimal/XInputDecimalDT
@@ -320,43 +220,5 @@ export class XUtilsMetadata {
             key = key + '_' + browseId;
         }
         return key;
-    }
-
-    private static getXAssoc(xEntity: XEntity, assocField: string, relationTypeList?: XRelationType[]): XAssoc {
-        const xAssoc: XAssoc = xEntity.assocMap[assocField];
-        if (xAssoc === undefined) {
-            throw `Assoc ${assocField} was not found in entity = ${xEntity.name}`;
-        }
-        // relationTypeList is optional and is only for check (not to get some unwanted type of assoc)
-        if (relationTypeList !== undefined && !relationTypeList.includes(xAssoc.relationType)) {
-            throw `Assoc ${assocField} in entity ${xEntity.name} is of type ${xAssoc.relationType} and required type is ${JSON.stringify(relationTypeList)}`;
-        }
-        return xAssoc;
-    }
-
-    private static getXAssocByAssocEntity(xEntity: XEntity, assocEntityName: string, relationTypeList?: XRelationType[]): XAssoc {
-        let xAssocFound: XAssoc | undefined = undefined;
-        for (const [key, xAssoc] of Object.entries(xEntity.assocMap)) {
-            if (xAssoc.entityName === assocEntityName) {
-                if (xAssocFound === undefined) {
-                    xAssocFound = xAssoc;
-                }
-                else {
-                    throw `In entity ${xEntity.name} found more then 1 assoc for assocEntityName = ${assocEntityName}`;
-                }
-            }
-        }
-        if (xAssocFound === undefined) {
-            throw `Assoc for assocEntityName = ${assocEntityName} not found in entity ${xEntity.name}`;
-        }
-        // relationTypeList is optional and is only for check (not to get some unwanted type of assoc)
-        if (relationTypeList !== undefined && !relationTypeList.includes(xAssocFound.relationType)) {
-            throw `Assoc for assocEntityName = ${assocEntityName} in entity ${xEntity.name} is of type ${xAssocFound.relationType} and required type is ${JSON.stringify(relationTypeList)}`;
-        }
-        return xAssocFound;
-    }
-
-    private static getXEntityForAssoc(xAssoc: XAssoc): XEntity {
-        return XUtilsMetadata.getXEntity(xAssoc.entityName);
     }
 }

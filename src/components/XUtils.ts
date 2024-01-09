@@ -11,6 +11,7 @@ import {FindParam, ResultType, XCustomFilter, XCustomFilterItem} from "../server
 import {DataTableSortMeta} from "primereact/datatable";
 import {XObject} from "./XObject";
 import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export enum OperationType {
     None,
@@ -346,7 +347,7 @@ export class XUtils {
     // funkcionalita ktoru by bolo dobre dat do servisov
 
     static async removeRow(entity: string, row: any) {
-        const xEntity: XEntity = XUtilsMetadata.getXEntity(entity);
+        const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(entity);
         const id = row[xEntity.idField];
         await XUtils.post('removeRow', {entity: entity, id: id});
     }

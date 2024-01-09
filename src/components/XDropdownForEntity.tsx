@@ -3,6 +3,7 @@ import {Dropdown, DropdownChangeEvent} from "primereact/dropdown";
 import {XUtils} from "./XUtils";
 import {XCustomFilter} from "../serverApi/FindParam";
 import {XUtilsMetadata} from "./XUtilsMetadata";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XDropdownForEntityProps {
     id?: string;
@@ -35,7 +36,7 @@ export class XDropdownForEntity extends Component<XDropdownForEntityProps> {
     constructor(props: XDropdownForEntityProps) {
         super(props);
 
-        this.idField = XUtilsMetadata.getXEntity(this.props.entity).idField;
+        this.idField = XUtilsMetadataCommon.getXEntity(this.props.entity).idField;
 
         this.state = {
             options: []

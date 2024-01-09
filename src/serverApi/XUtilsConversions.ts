@@ -1,5 +1,8 @@
-import {dateFormat} from "../serverApi/XUtilsCommon";
-import {IPostgresInterval} from "./XUtils";
+import {dateFormat} from "./XUtilsCommon";
+import {IPostgresInterval} from "../components/XUtils";
+import {XAssoc, XEntity, XField} from "./XEntityMetadata";
+import {xLocaleOption} from "../components/XLocale";
+import {XUtilsMetadataCommon} from "./XUtilsMetadataCommon";
 
 export function stringFromUI(stringValue: string): string | null {
     let value: string | null;
@@ -14,6 +17,11 @@ export function stringFromUI(stringValue: string): string | null {
 
 export function stringAsUI(value: string | null): string {
     return value !== null ? value : "";
+}
+
+// aby sme sa vyhli sql injection problemu - tam kde je problematicke pouzivat klasicke params
+export function stringAsDB(value: string | null): string {
+    return value !== null ? `'${value.replaceAll("'", "''")}'` : "NULL";
 }
 
 export function numberFromUI(stringValue: string): number | null {
@@ -136,7 +144,7 @@ export function intervalFromUI(valueString: string): IPostgresInterval | null | 
             if (!isNaN(minutes)) {
                 const hours = Math.floor(minutes / 60);
                 minutes = minutes - (hours * 60);
-                valueInterval = {hours: hours, minutes: minutes};
+                valueInterval = {hours: hours, minutes: minutes} as IPostgresInterval;
             }
         }
         else {
@@ -148,7 +156,7 @@ export function intervalFromUI(valueString: string): IPostgresInterval | null | 
                     hours += hoursFromMinutes;
                     minutes = minutes - (hoursFromMinutes * 60);
                 }
-                valueInterval = {hours: hours, minutes: minutes};
+                valueInterval = {hours: hours, minutes: minutes} as IPostgresInterval;
             }
         }
     }
@@ -171,4 +179,105 @@ export function intervalAsUI(valueInterval: IPostgresInterval | null): string {
         valueString = ''; // null
     }
     return valueString;
+}
+
+export function booleanAsUIText(value: boolean | null): string {
+    if (value !== null) {
+        return value ? xLocaleOption('yes') : xLocaleOption('no');
+    }
+    else {
+        return "";
+    }
+}
+
+export enum AsUIType {
+    Form = 1, // formulare - boolean sa ponecha, neskor sa konvertuje na Checkbox
+    Text = 2  // reporty - boolean sa konvertuje na ano/nie
+}
+
+/**
+ * converts values of object
+ *
+ * @param entity
+ * @param object
+ * @param fromModel
+ * @param asUI
+ */
+export function convertObject(entity: string, object: any, fromModel: boolean, asUI: AsUIType | undefined) {
+
+    const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(entity);
+
+    for (const [field, value] of Object.entries(object)) {
+        const xField: XField | undefined = XUtilsMetadataCommon.getXFieldBase(xEntity, field);
+        if (xField) {
+            object[field] = convertValue(xField, value, fromModel, asUI);
+        }
+        else {
+            // nenasli sme medzi fieldami, skusime hladat xAssoc
+            const xAssoc: XAssoc | undefined = XUtilsMetadataCommon.getXAssocBase(xEntity, field);
+            if (xAssoc) {
+                if (value) {
+                    if (xAssoc.relationType === "many-to-one" || xAssoc.relationType === "one-to-one") {
+                        convertObject(xAssoc.entityName, value, fromModel, asUI);
+                    }
+                    else if (xAssoc.relationType === "one-to-many" || xAssoc.relationType === "many-to-many") {
+                        if (!Array.isArray(value)) {
+                            throw `Unexpected error: entity ${entity} - field ${field} is expected to be array`;
+                        }
+                        for (const valueItem of value) {
+                            convertObject(xAssoc.entityName, valueItem, fromModel, asUI);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+}
+
+export function convertValue(xField: XField, value: any, fromModel: boolean, asUI: AsUIType | undefined): any {
+    if (xField.type === "decimal") {
+        if (fromModel) {
+            value = numberFromModel(value);
+        }
+        if (asUI) {
+            value = numberAsUI(value, xField.scale);
+        }
+    }
+    else if (xField.type === "date") {
+        if (fromModel) {
+            value = dateFromModel(value);
+        }
+        if (asUI) {
+            value = dateAsUI(value);
+        }
+    }
+    else if (xField.type === "datetime") {
+        if (fromModel) {
+            value = dateFromModel(value);
+        }
+        if (asUI) {
+            value = datetimeAsUI(value);
+        }
+    }
+    else if (xField.type === "interval") {
+        // konverziu z modelu (json objekt-u) netreba
+        if (asUI) {
+            value = intervalAsUI(value);
+        }
+    }
+    else if (xField.type === "boolean") {
+        // konverziu z modelu (json objekt-u) netreba
+        // pre AsUIType.Form ponechame typ boolean (spracujeme neskor)
+        if (asUI === AsUIType.Text) {
+            value = booleanAsUIText(value);
+        }
+    }
+    else {
+        // vsetko ostatne
+        if (asUI) {
+            value = value ? value.toString() : "";
+        }
+    }
+    return value;
 }

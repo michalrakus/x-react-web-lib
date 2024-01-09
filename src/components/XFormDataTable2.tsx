@@ -32,6 +32,7 @@ import {ButtonProps} from "primereact/button";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {xLocaleOption} from "./XLocale";
 import {XInputIntervalDT} from "./XInputIntervalDT";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 // typ pre technicky field row.__x_rowTechData (row je item zoznamu editovaneho v XFormDataTable2)
 export interface XRowTechData {
@@ -110,11 +111,11 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         super(props);
         this.props = props;
         this.dataKey = props.dataKey;
-        const xEntityForm: XEntity = XUtilsMetadata.getXEntity(props.form.getEntity());
-        const xAssocToMany: XAssoc = XUtilsMetadata.getXAssocToMany(xEntityForm, props.assocField);
+        const xEntityForm: XEntity = XUtilsMetadataCommon.getXEntity(props.form.getEntity());
+        const xAssocToMany: XAssoc = XUtilsMetadataCommon.getXAssocToMany(xEntityForm, props.assocField);
         this.entity = xAssocToMany.entityName;
         if (this.dataKey === undefined) {
-            this.dataKey = XUtilsMetadata.getXEntity(this.entity).idField;
+            this.dataKey = XUtilsMetadataCommon.getXEntity(this.entity).idField;
         }
         this.state = {
             selectedRow: undefined,
@@ -177,19 +178,19 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else if (columnProps.type === "dropdown") {
             const columnPropsDropdown = (columnProps as XFormDropdownColumnProps);
-            const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(xEntity, columnPropsDropdown.assocField);
+            const xAssoc: XAssoc = XUtilsMetadataCommon.getXAssocToOne(xEntity, columnPropsDropdown.assocField);
             isNullable = xAssoc.isNullable;
             readOnly = XFormDataTable2.isReadOnlyHeader(undefined, columnProps.readOnly);
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
-            const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(xEntity, columnPropsAutoComplete.assocField);
+            const xAssoc: XAssoc = XUtilsMetadataCommon.getXAssocToOne(xEntity, columnPropsAutoComplete.assocField);
             isNullable = xAssoc.isNullable;
             readOnly = XFormDataTable2.isReadOnlyHeader(undefined, columnProps.readOnly);
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
-            const xAssoc: XAssoc = XUtilsMetadata.getXAssocToOne(xEntity, columnPropsSearchButton.assocField);
+            const xAssoc: XAssoc = XUtilsMetadataCommon.getXAssocToOne(xEntity, columnPropsSearchButton.assocField);
             isNullable = xAssoc.isNullable;
             readOnly = XFormDataTable2.isReadOnlyHeader(undefined, columnProps.readOnly);
         }
@@ -245,13 +246,13 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             return initFilters;
         }
 
-        const xEntity: XEntity = XUtilsMetadata.getXEntity(this.getEntity());
+        const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(this.getEntity());
 
         // TODO - asi by bolo fajn si tieto field, xField niekam ulozit a iterovat ulozene hodnoty, pouziva sa to na viacerych miestach
         for (const child of this.props.children) {
             const childColumn = child as {props: XFormColumnProps}; // nevedel som to krajsie...
             const field: string = this.getPathForColumn(childColumn.props);
-            const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
+            const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
             // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
             const filterMatchMode: FilterMatchMode = this.getFilterMatchMode(xField);
             let filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData;
@@ -276,7 +277,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
     getFilterMatchMode(xField: XField): FilterMatchMode {
         let filterMatchMode: FilterMatchMode;
         if (xField.type === "string") {
-            filterMatchMode = FilterMatchMode.STARTS_WITH;
+            filterMatchMode = FilterMatchMode.CONTAINS;
         }
         // zatial vsetky ostatne EQUALS
         else if (xField.type === "decimal" || xField.type === "number" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
@@ -379,7 +380,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         const readOnly: XTableFieldReadOnlyProp | undefined = tableReadOnly ? true : columnProps.readOnly;
         if (columnProps.type === "inputSimple") {
             const columnPropsInputSimple = (columnProps as XFormInputSimpleColumnProps);
-            const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, columnPropsInputSimple.field);
+            const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, columnPropsInputSimple.field);
             if (xField.type === "decimal" || xField.type === "number") {
                 body = <XInputDecimalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly} onChange={columnPropsInputSimple.onChange}/>;
             }
@@ -528,7 +529,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         const object: XObject | null = this.props.form.state.object;
         const valueList = object !== null ? object[this.props.assocField] : [];
 
-        const xEntity: XEntity = XUtilsMetadata.getXEntity(this.getEntity());
+        const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(this.getEntity());
 
         let scrollWidth: string | undefined = undefined; // vypnute horizontalne scrollovanie
         let scrollHeight: string | undefined = undefined; // vypnute vertikalne scrollovanie
@@ -575,7 +576,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 const field: string = thisLocal.getPathForColumn(childColumnProps);
 
                 // TODO - toto by sa mohlo vytiahnut vyssie, aj v bodyTemplate sa vola metoda XUtilsMetadata.getXFieldByPath
-                const xField: XField = XUtilsMetadata.getXFieldByPath(xEntity, field);
+                const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
 
                 // *********** header ***********
                 const header: string = XFormDataTable2.getHeader(childColumnProps, xEntity, field, xField);
