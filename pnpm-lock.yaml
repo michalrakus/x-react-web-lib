@@ -1,5 +1,9 @@
 lockfileVersion: '6.0'
 
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
 dependencies:
   dateformat:
     specifier: ^4.6.3
@@ -40,8 +44,8 @@ devDependencies:
     specifier: ^29.5.0
     version: 29.5.0
   '@types/lodash':
-    specifier: ^4.14.191
-    version: 4.14.191
+    specifier: ^4.14.202
+    version: 4.14.202
   '@types/node':
     specifier: ^18.15.3
     version: 18.15.3
@@ -205,8 +209,8 @@ packages:
       pretty-format: 29.5.0
     dev: true
 
-  /@types/lodash@4.14.191:
-    resolution: {integrity: sha512-BdZ5BCCvho3EIXw6wUCXHe7rS53AIDPLE+JzwgT+OsJk53oBfbSmZZ7CX4VaRoN78N+TJpFi9QPlfIVNmJYWxQ==}
+  /@types/lodash@4.14.202:
+    resolution: {integrity: sha512-OvlIYQK9tNneDlS0VN54LLd5uiPCBOp7gS5Z0f1mjoJYBrtStzgmJBxONW3U6OZqdtNzZPmn9BS/7WI7BFFcFQ==}
     dev: true
 
   /@types/node@18.15.3:
