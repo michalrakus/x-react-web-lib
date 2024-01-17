@@ -8,7 +8,7 @@ import {
 } from 'primereact/datatable';
 import {Column, ColumnBodyOptions, ColumnFilterElementTemplateOptions} from 'primereact/column';
 import {XButton} from "./XButton";
-import {OperationType, XUtils} from "./XUtils";
+import {OperationType, XUtils, XViewStatus, XViewStatusOrBoolean} from "./XUtils";
 import {XFieldFilter, XSearchBrowseParams} from "./XSearchBrowseParams";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
@@ -713,7 +713,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     // pre lepsiu citatelnost vytvarame stlpce uz tu
     const columnElemList: JSX.Element[] = React.Children.map(
-        props.children,
+        props.children.filter((child: React.ReactChild) => XUtils.xViewStatus((child as {props: XLazyColumnProps}).props.columnViewStatus) !== XViewStatus.Hidden),
         function(child) {
             // ak chceme zmenit child element, tak treba bud vytvorit novy alebo vyklonovat
             // priklad je na https://soshace.com/building-react-components-using-children-props-and-context-api/
@@ -758,7 +758,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 }
                 else if (childColumn.props.dropdownInFilter) {
                     const dropdownValue = getDropdownFilterValue(childColumn.props.field);
-                    filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field} value={dropdownValue} onValueChange={onDropdownFilterChange}/>
+                    filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field} value={dropdownValue} onValueChange={onDropdownFilterChange} filter={childColumn.props.dropdownFilter} sortField={childColumn.props.dropdownSortField}/>
                 }
                 else if (xField.type === "date" || xField.type === "datetime") {
                     betweenFilter = getBetweenFilter(childColumn.props.betweenFilter, props.betweenFilter);
@@ -944,10 +944,13 @@ export interface XLazyColumnProps {
     header?: any;
     align?: "left" | "center" | "right";
     dropdownInFilter?: boolean;
+    dropdownFilter?: XCustomFilter;
+    dropdownSortField?: string;
     showFilterMenu?: boolean;
     betweenFilter?: XBetweenFilterProp | "noBetween"; // creates 2 inputs from to, only for type date/datetime/decimal/number implemented, "row"/"column" - position of inputs from to
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
     aggregateType?: XAggregateType;
+    columnViewStatus: XViewStatusOrBoolean; // aby sme mohli mat Hidden stlpec (nedarilo sa mi priamo v kode "o-if-ovat" stlpec), zatial netreba funkciu, vola sa columnViewStatus lebo napr. v Edit tabulke moze byt viewStatus na row urovni
     filterElement?: XFilterElementProp;
     body?: React.ReactNode | ((data: any, options: ColumnBodyOptions) => React.ReactNode); // the same type as type of property Column.body
 }
@@ -957,3 +960,7 @@ export const XLazyColumn = (props: XLazyColumnProps) => {
     // nevadi ze tu nic nevraciame, field a header vieme precitat a zvysok by sme aj tak zahodili lebo vytvarame novy element
     return (null);
 }
+
+XLazyColumn.defaultProps = {
+    columnViewStatus: true  // XViewStatus.ReadWrite
+};

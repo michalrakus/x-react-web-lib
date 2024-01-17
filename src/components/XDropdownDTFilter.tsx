@@ -5,9 +5,11 @@ import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {XAssoc, XField} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import {XFilterProp} from "./XFormComponent";
+import {XCustomFilter} from "../serverApi/FindParam";
 
 // pouzivany vo filtri v XLazyDataTable aj v XFormDataTable2
-export const XDropdownDTFilter = (props: {entity: string; path: string; value: any; onValueChange: (field: string, displayValue: any) => void;}) => {
+export const XDropdownDTFilter = (props: {entity: string; path: string; value: any; onValueChange: (field: string, displayValue: any) => void; filter?: XCustomFilter; sortField?: string;}) => {
 
     const [options, setOptions] = useState<any[]>([]);
 
@@ -28,7 +30,7 @@ export const XDropdownDTFilter = (props: {entity: string; path: string; value: a
 
     const findOptions = async (entity: string, path: string, displayField: string) => {
         const xAssoc: XAssoc = XUtilsMetadataCommon.getLastXAssocByPath(XUtilsMetadataCommon.getXEntity(entity), path);
-        const options: any[] = await XUtils.fetchRows(xAssoc.entityName, undefined, displayField);
+        const options: any[] = await XUtils.fetchRows(xAssoc.entityName, props.filter, props.sortField ?? displayField);
         const emptyOption: {[field: string]: any;} = {};
         emptyOption[displayField] = XUtils.dropdownEmptyOptionValue;
         options.splice(0, 0, emptyOption); // null polozka (nepridavat pre not null atributy)

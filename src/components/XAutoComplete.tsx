@@ -1,7 +1,6 @@
 import React from "react";
 import {XFilterProp, XFormComponent, XFormComponentProps} from "./XFormComponent";
 import {XAssoc} from "../serverApi/XEntityMetadata";
-import {XUtilsMetadata} from "./XUtilsMetadata";
 import {OperationType, XUtils} from "./XUtils";
 import {XAutoCompleteBase} from "./XAutoCompleteBase";
 import {XError} from "./XErrors";
@@ -18,7 +17,7 @@ export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     sortField?: string | DataTableSortMeta[];
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
     lazy?: boolean;
-    size?: number;
+    width?: string;
     inputStyle?: React.CSSProperties;
 }
 
@@ -108,20 +107,14 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
     render() {
 
         const xEntityAssoc = XUtilsMetadataCommon.getXEntity(this.xAssoc.entityName);
-        //const xDisplayField = XUtilsMetadataCommon.getXFieldByPath(xEntityAssoc, this.props.displayField);
-
-        // TODO - readOnly
-
-        // TODO - size
-        //const size = this.props.size ?? xDisplayField.length;
 
         // div className="col" nam zabezpeci aby XAutoCompleteBase nezaberal celu dlzku grid-u (ma nastaveny width=100% vdaka "formgroup-inline")
         return (
             <div className="field grid">
                 <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <XAutoCompleteBase value={this.getValue()} suggestions={this.props.suggestions ?? this.state.suggestions} onChange={this.onChangeAutoCompleteBase}
-                                   field={this.props.displayField} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm} idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
-                                   error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}
+                                   field={this.props.displayField} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
+                                   readOnly={this.isReadOnly()} error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase} width={this.props.width}
                                    customFilterFunction={() => this.getFilterBase(this.props.filter)}
                                    onSearchStart={this.props.lazy ? this.onSearchStart : undefined}/>
             </div>

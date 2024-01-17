@@ -18,6 +18,11 @@ function generateApi(cb) {
         "./lib/administration/XBrowseMetaBrowse",
         "./lib/administration/XBrowseMetaForm",
 
+        "./lib/components/XFormRowCol/XFormCol",
+        "./lib/components/XFormRowCol/XFormInlineRow",
+        "./lib/components/XFormRowCol/XFormRow",
+        "./lib/components/XFormRowCol/XFormRowCol",
+
         "./lib/components/useXToken",
         "./lib/components/XAutoComplete",
         "./lib/components/XAutoCompleteBase",

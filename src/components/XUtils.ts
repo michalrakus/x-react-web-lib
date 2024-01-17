@@ -20,6 +20,15 @@ export enum OperationType {
     Remove
 }
 
+export enum XViewStatus {
+    ReadWrite,
+    ReadOnly,
+    Hidden
+}
+
+// special type - purpose is to simply use true/false (instead of XViewStatus.ReadWrite/XViewStatus.Hidden)
+export type XViewStatusOrBoolean = XViewStatus | boolean;
+
 // copy of IPostgresInterval at the backend
 // (this type is used only at the frontend)
 export interface IPostgresInterval {
@@ -596,7 +605,25 @@ export class XUtils {
     }
 
     // pomocna metodka
+    // ak je idList prazdny, vytvori podmienku id IN (0) a nevrati ziadne zaznamy
+    static filterIdIn(idField: string, idList: number[]): XCustomFilter {
+        return {where: `[${idField}] IN (:...idList)`, params: {"idList": idList.length > 0 ? idList : [0]}};
+    }
+
+    // pomocna metodka
     static isTableRowInserted(tableRow: any): boolean {
         return tableRow.__x_generatedRowId ?? false; // specialny priznak, ze sme vygenerovali id-cko
+    }
+
+    // pomocna metodka
+    static xViewStatus(xViewStatusOrBoolean: XViewStatusOrBoolean): XViewStatus {
+        let xViewStatus: XViewStatus;
+        if (typeof xViewStatusOrBoolean === "boolean") {
+            xViewStatus = xViewStatusOrBoolean ? XViewStatus.ReadWrite : XViewStatus.Hidden;
+        }
+        else {
+            xViewStatus = xViewStatusOrBoolean;
+        }
+        return xViewStatus;
     }
 }

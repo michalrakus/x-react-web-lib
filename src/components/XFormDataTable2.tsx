@@ -14,7 +14,7 @@ import {XInputTextDT} from "./XInputTextDT";
 import {XSearchButtonDT} from "./XSearchButtonDT";
 import {XAssoc, XEntity, XField} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
-import {XUtils} from "./XUtils";
+import {XUtils, XViewStatus, XViewStatusOrBoolean} from "./XUtils";
 import {XDropdownDTFilter} from "./XDropdownDTFilter";
 import {XInputDecimalDT} from "./XInputDecimalDT";
 import {XInputDateDT} from "./XInputDateDT";
@@ -33,6 +33,7 @@ import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {xLocaleOption} from "./XLocale";
 import {XInputIntervalDT} from "./XInputIntervalDT";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import {XLazyColumnProps} from "./XLazyDataTable";
 
 // typ pre technicky field row.__x_rowTechData (row je item zoznamu editovaneho v XFormDataTable2)
 export interface XRowTechData {
@@ -83,8 +84,8 @@ export interface XFormDataTableProps {
 export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
     public static defaultProps = {
-        filterDisplay: "row",
-        sortable: true,
+        filterDisplay: "none",
+        sortable: false,
         scrollable: true,
         scrollWidth: '100%', // hodnota '100%' zapne horizontalne scrollovanie, ak je tabulka sirsia ako parent element (a ten by mal byt max 100vw) (hodnota 'auto' (podobna ako '100%') nefunguje dobre)
         scrollHeight: '200vh', // ak by sme dali 'none' (do DataTable by islo undefined), tak nam nezarovnava header a body (v body chyba disablovany vertikalny scrollbar),
@@ -138,15 +139,15 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
         //props.form.addField(props.assocField + '.*FAKE*'); - vzdy mame aspon 1 field, nie je to potrebne
         for (const child of props.children) {
-            const childColumn = child as {props: XFormColumnProps}; // nevedel som to krajsie...
+            const childColumn = child as {props: XFormColumnBaseProps}; // nevedel som to krajsie...
             const field = props.assocField + '.' + this.getPathForColumn(childColumn.props);
             props.form.addField(field);
         }
     }
 
-    getPathForColumn(columnProps: XFormColumnProps): string {
+    getPathForColumn(columnProps: XFormColumnBaseProps): string {
         if (columnProps.type === "inputSimple") {
-            const columnPropsInputSimple = (columnProps as XFormInputSimpleColumnProps);
+            const columnPropsInputSimple = (columnProps as XFormColumnProps);
             return columnPropsInputSimple.field;
         }
         else if (columnProps.type === "dropdown") {
@@ -166,13 +167,13 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
     }
 
-    static getHeader(columnProps: XFormColumnProps, xEntity: XEntity, field: string, xField: XField): string {
+    static getHeader(columnProps: XFormColumnBaseProps, xEntity: XEntity, field: string, xField: XField): string {
         // poznamky - parametre field a xField by sme mohli vyratavat na zaklade columnProps ale kedze ich uz mame, setrime performance a neduplikujeme vypocet
         // nie je to tu uplne idealne nakodene, ale je to pomerne prehladne
         let isNullable: boolean = true;
         let readOnly: boolean = false;
         if (columnProps.type === "inputSimple") {
-            const columnPropsInputSimple = (columnProps as XFormInputSimpleColumnProps);
+            const columnPropsInputSimple = (columnProps as XFormColumnProps);
             isNullable = xField.isNullable;
             readOnly = XFormDataTable2.isReadOnlyHeader(columnPropsInputSimple.field, columnProps.readOnly);
         }
@@ -250,7 +251,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
         // TODO - asi by bolo fajn si tieto field, xField niekam ulozit a iterovat ulozene hodnoty, pouziva sa to na viacerych miestach
         for (const child of this.props.children) {
-            const childColumn = child as {props: XFormColumnProps}; // nevedel som to krajsie...
+            const childColumn = child as {props: XFormColumnBaseProps}; // nevedel som to krajsie...
             const field: string = this.getPathForColumn(childColumn.props);
             const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
             // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
@@ -374,12 +375,23 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
     }
 */
     // body={(rowData: any) => bodyTemplate(childColumn.props.field, rowData)}
-    bodyTemplate(columnProps: XFormColumnProps, tableReadOnly: boolean, rowData: any, xEntity: XEntity): any {
+    bodyTemplate(columnProps: XFormColumnBaseProps, tableReadOnly: boolean, rowData: any, xEntity: XEntity): any {
         let body: any;
+        // columnProps.columnViewStatus "ReadOnly" has higher prio then tableReadOnly
         // tableReadOnly has higher prio then property readOnly
-        const readOnly: XTableFieldReadOnlyProp | undefined = tableReadOnly ? true : columnProps.readOnly;
+        // (viewStatus "Hidden" - column is not rendered (bodyTemplate not called), viewStatus "ReadWrite" (default) - tableReadOnly/columnProps.readOnly is applied)
+        let readOnly: XTableFieldReadOnlyProp | undefined;
+        if (XUtils.xViewStatus(columnProps.columnViewStatus) === XViewStatus.ReadOnly) {
+            readOnly = true;
+        }
+        else if (tableReadOnly) {
+            readOnly = true;
+        }
+        else {
+            readOnly = columnProps.readOnly;
+        }
         if (columnProps.type === "inputSimple") {
-            const columnPropsInputSimple = (columnProps as XFormInputSimpleColumnProps);
+            const columnPropsInputSimple = (columnProps as XFormColumnProps);
             const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, columnPropsInputSimple.field);
             if (xField.type === "decimal" || xField.type === "number") {
                 body = <XInputDecimalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly} onChange={columnPropsInputSimple.onChange}/>;
@@ -509,6 +521,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
     }
 
     render() {
+        const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(this.getEntity());
+
         const paginator: boolean = this.props.paginator !== undefined ? this.props.paginator : false;
         let rows: number | undefined = undefined;
         if (paginator) {
@@ -520,6 +534,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             }
         }
         const filterDisplay: "menu" | "row" | undefined = this.props.filterDisplay !== "none" ? this.props.filterDisplay : undefined;
+        // default sortovanie - ak mame insert tak nesortujeme (drzime poradie v akom user zaznam vytvoril), ak mame update tak podla id zosortujeme (nech je to zobrazene vzdy rovnako)
+        const sortField: string | undefined = this.props.sortField ?? this.props.form.isAddRow() ? undefined : xEntity.idField;
         const label = this.props.label !== undefined ? this.props.label : this.props.assocField;
         const readOnly = this.isReadOnly();
 
@@ -528,8 +544,6 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
         const object: XObject | null = this.props.form.state.object;
         const valueList = object !== null ? object[this.props.assocField] : [];
-
-        const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(this.getEntity());
 
         let scrollWidth: string | undefined = undefined; // vypnute horizontalne scrollovanie
         let scrollHeight: string | undefined = undefined; // vypnute vertikalne scrollovanie
@@ -564,12 +578,12 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
         // pre lepsiu citatelnost vytvarame stlpce uz tu
         const columnElemList: JSX.Element[] = React.Children.map(
-            this.props.children,
+            this.props.children.filter((child: React.ReactChild) => XUtils.xViewStatus((child as {props: XLazyColumnProps}).props.columnViewStatus) !== XViewStatus.Hidden),
             function (child) {
                 // ak chceme zmenit child element, tak treba bud vytvorit novy alebo vyklonovat
                 // priklad je na https://soshace.com/building-react-components-using-children-props-and-context-api/
                 // (vzdy musime robit manipulacie so stlpcom, lebo potrebujeme pridat filter={true} sortable={true}
-                const childColumn = child as {props: XFormColumnProps}; // nevedel som to krajsie...
+                const childColumn = child as {props: XFormColumnBaseProps}; // nevedel som to krajsie...
                 const childColumnProps = childColumn.props;
                 // je dolezite, aby field obsahoval cely path az po zobrazovany atribut, lebo podla neho sa vykonava filtrovanie a sortovanie
                 // (aj ked, da sa to prebit na stlpcoch (na elemente Column), su na to atributy)
@@ -673,7 +687,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                     <DataTable ref={(el) => this.dt = el} value={valueList} dataKey={this.dataKey} paginator={paginator} rows={rows}
                                totalRecords={valueList.length}
                                filterDisplay={filterDisplay} filters={this.state.filters} onFilter={this.onFilter}
-                               sortMode="multiple" removableSort={true} multiSortMeta={this.props.sortField !== undefined ? [{field: this.props.sortField, order: 1}] : undefined}
+                               sortMode="multiple" removableSort={true} multiSortMeta={sortField !== undefined ? [{field: sortField, order: 1}] : undefined}
                                selectionMode="single" selection={this.state.selectedRow} onSelectionChange={this.onSelectionChange}
                                className="p-datatable-sm x-form-datatable" resizableColumns columnResizeMode="expand" tableStyle={tableStyle}
                                scrollable={this.props.scrollable} scrollHeight={scrollHeight} style={style}>
@@ -696,12 +710,14 @@ export type XTableFieldOnChange = (e: XTableFieldChangeEvent<any, any>) => void;
 
 export type XTableFieldReadOnlyProp = boolean | ((object: any, tableRow: any) => boolean);
 
+// do buducna (kedze object mame vo formulari pristupny cez this.state.object, tak nepotrebujeme nutne pouzivat funkciu, vystacime si priamo s hodnotou)
+//export type XFormColumnViewStatusProp = XViewStatusOrBoolean | ((object: any) => XViewStatusOrBoolean);
 
 // typ property pre vytvorenie filtra na assoc fieldoch (XAutoComplete, XDropdown, ...)
 // pouzivame (zatial) parameter typu any aby sme na formulari vedeli pouzit konkretny typ (alebo XObject)
 export type XTableFieldFilterProp = XCustomFilter | ((object: any, rowData: any) => XCustomFilter | undefined);
 
-export interface XFormColumnProps {
+export interface XFormColumnBaseProps {
     type: "inputSimple" | "dropdown" | "autoComplete" | "searchButton";
     header?: any;
     readOnly?: XTableFieldReadOnlyProp;
@@ -709,20 +725,27 @@ export interface XFormColumnProps {
     showFilterMenu?: boolean;
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
     onChange?: XTableFieldOnChange;
+    columnViewStatus: XViewStatusOrBoolean;
 }
 
-export interface XFormInputSimpleColumnProps extends XFormColumnProps {
+// default props for XFormColumnBaseProps
+const XFormColumnBase_defaultProps = {
+    columnViewStatus: true
+};
+
+
+export interface XFormColumnProps extends XFormColumnBaseProps {
     field: string;
 }
 
-export interface XFormDropdownColumnProps extends XFormColumnProps {
+export interface XFormDropdownColumnProps extends XFormColumnBaseProps {
     assocField: string;
     displayField: string;
     sortField?: string;
     filter?: XCustomFilter;
 }
 
-export interface XFormAutoCompleteColumnProps extends XFormColumnProps {
+export interface XFormAutoCompleteColumnProps extends XFormColumnBaseProps {
     assocField: string;
     displayField: string;
     searchBrowse?: JSX.Element;
@@ -731,18 +754,19 @@ export interface XFormAutoCompleteColumnProps extends XFormColumnProps {
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
 }
 
-export interface XFormSearchButtonColumnProps extends XFormColumnProps {
+export interface XFormSearchButtonColumnProps extends XFormColumnBaseProps {
     assocField: string;
     displayField: string;
     searchBrowse: JSX.Element;
 }
 
-export const XFormColumn = (props: XFormInputSimpleColumnProps) => {
+export const XFormColumn = (props: XFormColumnProps) => {
     // nevadi ze tu nic nevraciame, field a header vieme precitat a zvysok by sme aj tak zahodili lebo vytvarame novy element
     return (null);
 }
 
 XFormColumn.defaultProps = {
+    ...XFormColumnBase_defaultProps,
     type: "inputSimple"
 };
 
@@ -752,6 +776,7 @@ export const XFormDropdownColumn = (props: XFormDropdownColumnProps) => {
 }
 
 XFormDropdownColumn.defaultProps = {
+    ...XFormColumnBase_defaultProps,
     type: "dropdown"
 };
 
@@ -761,6 +786,7 @@ export const XFormAutoCompleteColumn = (props: XFormAutoCompleteColumnProps) => 
 }
 
 XFormAutoCompleteColumn.defaultProps = {
+    ...XFormColumnBase_defaultProps,
     type: "autoComplete"
 };
 
@@ -770,5 +796,6 @@ export const XFormSearchButtonColumn = (props: XFormSearchButtonColumnProps) => 
 }
 
 XFormSearchButtonColumn.defaultProps = {
+    ...XFormColumnBase_defaultProps,
     type: "searchButton"
 };
