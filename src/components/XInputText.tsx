@@ -37,9 +37,10 @@ export class XInputText extends XInput<string, XInputTextProps> {
         const size = this.props.size ?? this.xField.length;
 
         // note: style overrides size (width of the input according to character count)
+        const label: string | undefined = this.getLabel();
         return (
             <div className="field grid">
-                <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
+                {label !== undefined ? <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{label}</label> : null}
                 <InputText id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} maxLength={this.xField.length} size={size} style={this.props.inputStyle}
                            {...this.getClassNameTooltip()} onBlur={this.onBlur}/>
             </div>

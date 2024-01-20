@@ -49,9 +49,10 @@ export class XInputDecimal extends XInput<number, XInputDecimalProps> {
         const sizeInput = this.props.size ?? size;
 
         // note: style overrides size (width of the input according to character count)
+        const label: string | undefined = this.getLabel();
         return (
             <div className="field grid">
-                <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
+                {label !== undefined ? <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{label}</label> : null}
                 <InputNumber id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} mode="decimal" locale="de-DE"
                              useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}
                              size={sizeInput} style={this.props.inputStyle} {...this.getClassNameTooltip()} onBlur={this.onBlur}/>

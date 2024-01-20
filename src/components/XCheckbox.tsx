@@ -1,13 +1,15 @@
 import React from "react";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XInput, XInputProps} from "./XInput";
+import {Checkbox, CheckboxChangeEvent} from "primereact/checkbox";
 
 export class XCheckbox extends XInput<boolean, XInputProps<boolean>> {
 
     constructor(props: XInputProps<boolean>) {
         super(props);
 
-        this.onValueChange = this.onValueChange.bind(this);
+        this.checkboxOnValueChange = this.checkboxOnValueChange.bind(this);
+        this.triStateCheckboxOnValueChange = this.triStateCheckboxOnValueChange.bind(this);
     }
 
     getValue(): boolean | null {
@@ -16,7 +18,11 @@ export class XCheckbox extends XInput<boolean, XInputProps<boolean>> {
         return value;
     }
 
-    onValueChange(e: any) {
+    checkboxOnValueChange(e: CheckboxChangeEvent) {
+        this.onValueChangeBase(e.checked, this.props.onChange);
+    }
+
+    triStateCheckboxOnValueChange(e: any) {
         let newValue: boolean | null = e.value;
         // pri klikani na TriStateCheckbox prichadza v newValue cyklicky: true -> false -> null
         // ak mame not null atribut, tak pri null hodnote skocime rovno na true
@@ -32,11 +38,18 @@ export class XCheckbox extends XInput<boolean, XInputProps<boolean>> {
 
     render() {
         // note: style overrides size (width of the input according to character count)
-        return (
-            <div className="field grid">
-                <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
-                <TriStateCheckbox id={this.props.field} value={this.getValue()} onChange={this.onValueChange} disabled={this.isReadOnly()} style={this.props.inputStyle}/>
-            </div>
-        );
+        // pre not null atributy pouzijeme standardny checkbox aby sme pre false mali prazdny biely checkbox - TODO - pomenit ikonky na TriStateCheckbox aby to pekne sedelo
+        let element: JSX.Element = this.isNotNull()
+            ? <Checkbox id={this.props.field} checked={this.getValue() ?? false} onChange={this.checkboxOnValueChange} disabled={this.isReadOnly()} style={this.props.inputStyle}/>
+            : <TriStateCheckbox id={this.props.field} value={this.getValue()} onChange={this.triStateCheckboxOnValueChange} disabled={this.isReadOnly()} style={this.props.inputStyle}/>;
+
+        if (!this.props.onlyInput) {
+            const label: string | undefined = this.getLabel();
+            element =   <div className="field grid">
+                            {label !== undefined ? <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{label}</label> : null}
+                            {element}
+                        </div>;
+        }
+        return element;
     }
 }

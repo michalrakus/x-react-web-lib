@@ -8,7 +8,7 @@ import {
     DataTableFilterMetaData,
     DataTableOperatorFilterMetaData
 } from "primereact/datatable";
-import {Column} from "primereact/column";
+import {Column, ColumnBodyOptions} from "primereact/column";
 import {XButton} from "./XButton";
 import {XInputTextDT} from "./XInputTextDT";
 import {XSearchButtonDT} from "./XSearchButtonDT";
@@ -140,8 +140,10 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         //props.form.addField(props.assocField + '.*FAKE*'); - vzdy mame aspon 1 field, nie je to potrebne
         for (const child of props.children) {
             const childColumn = child as {props: XFormColumnBaseProps}; // nevedel som to krajsie...
-            const field = props.assocField + '.' + this.getPathForColumn(childColumn.props);
-            props.form.addField(field);
+            if (childColumn.props.type !== "custom") {
+                const field = props.assocField + '.' + this.getPathForColumn(childColumn.props);
+                props.form.addField(field);
+            }
         }
     }
 
@@ -252,24 +254,27 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         // TODO - asi by bolo fajn si tieto field, xField niekam ulozit a iterovat ulozene hodnoty, pouziva sa to na viacerych miestach
         for (const child of this.props.children) {
             const childColumn = child as {props: XFormColumnBaseProps}; // nevedel som to krajsie...
-            const field: string = this.getPathForColumn(childColumn.props);
-            const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
-            // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
-            const filterMatchMode: FilterMatchMode = this.getFilterMatchMode(xField);
-            let filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData;
-            if (this.props.filterDisplay === "menu") {
-                // DataTableOperatorFilterMetaData: operator + filter values
-                filterItem = {
-                    operator: FilterOperator.OR,
-                    constraints: [{value: null, matchMode: filterMatchMode}]
-                };
+            // zatial nepodporujeme filter pre custom stlpce
+            if (childColumn.props.type !== "custom") {
+                const field: string | undefined = this.getPathForColumn(childColumn.props);
+                const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
+                // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
+                const filterMatchMode: FilterMatchMode = this.getFilterMatchMode(xField);
+                let filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData;
+                if (this.props.filterDisplay === "menu") {
+                    // DataTableOperatorFilterMetaData: operator + filter values
+                    filterItem = {
+                        operator: FilterOperator.OR,
+                        constraints: [{value: null, matchMode: filterMatchMode}]
+                    };
+                }
+                else {
+                    // props.filterDisplay === "row"
+                    // DataTableFilterMetaData: filter value
+                    filterItem = {value: null, matchMode: filterMatchMode};
+                }
+                initFilters[field] = filterItem;
             }
-            else {
-                // props.filterDisplay === "row"
-                // DataTableFilterMetaData: filter value
-                filterItem = {value: null, matchMode: filterMatchMode};
-            }
-            initFilters[field] = filterItem;
         }
 
         return initFilters;
@@ -585,82 +590,109 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 // (vzdy musime robit manipulacie so stlpcom, lebo potrebujeme pridat filter={true} sortable={true}
                 const childColumn = child as {props: XFormColumnBaseProps}; // nevedel som to krajsie...
                 const childColumnProps = childColumn.props;
-                // je dolezite, aby field obsahoval cely path az po zobrazovany atribut, lebo podla neho sa vykonava filtrovanie a sortovanie
-                // (aj ked, da sa to prebit na stlpcoch (na elemente Column), su na to atributy)
-                const field: string = thisLocal.getPathForColumn(childColumnProps);
 
-                // TODO - toto by sa mohlo vytiahnut vyssie, aj v bodyTemplate sa vola metoda XUtilsMetadata.getXFieldByPath
-                const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
-
-                // *********** header ***********
-                const header: string = XFormDataTable2.getHeader(childColumnProps, xEntity, field, xField);
-
-                // *********** filterElement ***********
+                let fieldParam: string | undefined;
+                let header: string | undefined;
                 let filterElement;
-                if (thisLocal.props.filterDisplay !== "none") {
-                    if (xField.type === "boolean") {
-                        const checkboxValue: boolean | null = thisLocal.getCheckboxFilterValue(field);
-                        filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => thisLocal.onCheckboxFilterChange(field, e.value)}/>;
-                    }
-                    else if (childColumnProps.dropdownInFilter) {
-                        const dropdownValue = thisLocal.getDropdownFilterValue(field);
-                        filterElement = <XDropdownDTFilter entity={thisLocal.getEntity()} path={field} value={dropdownValue} onValueChange={thisLocal.onDropdownFilterChange}/>
-                    }
-                }
+                let showFilterMenu: boolean;
+                let width: string | undefined;
+                let align: "left" | "center" | "right" | undefined;
+                let body;
 
-                // *********** showFilterMenu ***********
-                let showFilterMenu: boolean = false;
-                if (thisLocal.props.filterDisplay !== "none") {
-                    if (childColumnProps.showFilterMenu !== undefined) {
-                        showFilterMenu = childColumnProps.showFilterMenu;
-                    } else {
-                        showFilterMenu = true; // default
-                        if (thisLocal.props.filterDisplay === "row") {
-                            if (xField.type === "boolean" || childColumnProps.dropdownInFilter) {
-                                showFilterMenu = false;
+                if (childColumnProps.type === "custom") {
+                    // len jednoduche hodnoty, zatial nebude takmer ziadna podpora
+                    const columnPropsCustom = (childColumnProps as XFormCustomColumnProps);
+                    fieldParam = columnPropsCustom.field;
+                    header = columnPropsCustom.header;
+                    filterElement = undefined;
+                    showFilterMenu = false;
+                    width = XUtils.processPropWidth(columnPropsCustom.width);
+                    align = undefined;
+                    body = columnPropsCustom.body;
+                }
+                else {
+                    // fieldy ktore su v modeli (existuje xField)
+
+                    // je dolezite, aby field obsahoval cely path az po zobrazovany atribut, lebo podla neho sa vykonava filtrovanie a sortovanie
+                    // (aj ked, da sa to prebit na stlpcoch (na elemente Column), su na to atributy)
+                    const field: string = thisLocal.getPathForColumn(childColumnProps);
+
+                    // TODO - toto by sa mohlo vytiahnut vyssie, aj v bodyTemplate sa vola metoda XUtilsMetadata.getXFieldByPath
+                    const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
+
+                    // *********** header ***********
+                    header = XFormDataTable2.getHeader(childColumnProps, xEntity, field, xField);
+
+                    // *********** filterElement ***********
+                    if (thisLocal.props.filterDisplay !== "none") {
+                        if (xField.type === "boolean") {
+                            const checkboxValue: boolean | null = thisLocal.getCheckboxFilterValue(field);
+                            filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => thisLocal.onCheckboxFilterChange(field, e.value)}/>;
+                        }
+                        else if (childColumnProps.dropdownInFilter) {
+                            const dropdownValue = thisLocal.getDropdownFilterValue(field);
+                            filterElement = <XDropdownDTFilter entity={thisLocal.getEntity()} path={field} value={dropdownValue} onValueChange={thisLocal.onDropdownFilterChange}/>
+                        }
+                    }
+
+                    // *********** showFilterMenu ***********
+                    showFilterMenu = false;
+                    if (thisLocal.props.filterDisplay !== "none") {
+                        if (childColumnProps.showFilterMenu !== undefined) {
+                            showFilterMenu = childColumnProps.showFilterMenu;
+                        } else {
+                            showFilterMenu = true; // default
+                            if (thisLocal.props.filterDisplay === "row") {
+                                if (xField.type === "boolean" || childColumnProps.dropdownInFilter) {
+                                    showFilterMenu = false;
+                                }
                             }
                         }
                     }
+
+                    // *********** width/headerStyle ***********
+                    width = XUtils.processPropWidth(childColumn.props.width);
+                    if (width === undefined || width === "default") {
+                        const filterMenuInFilterRow: boolean = thisLocal.props.filterDisplay === "row" && showFilterMenu;
+                        const sortableButtonInHeader: boolean = thisLocal.props.sortable;
+                        const filterButtonInHeader: boolean = thisLocal.props.filterDisplay === "menu";
+                        width = XUtilsMetadata.computeColumnWidth(xField, undefined, filterMenuInFilterRow, childColumnProps.type, header, sortableButtonInHeader, filterButtonInHeader);
+                    }
+
+                    // *********** align ***********
+                    align = undefined; // default undefined (left)
+                    // do buducna
+                    // if (childColumnProps.align !== undefined) {
+                    //     align = childColumnProps.align;
+                    // }
+                    // else {
+                    // decimal defaultne zarovnavame doprava
+                    // if (xField.type === "decimal") {
+                    //     align = "right";
+                    // }
+                    // else
+                    if (xField.type === "boolean") {
+                        align = "center";
+                    }
+                    // }
+
+                    // *********** body ***********
+                    body = (rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, readOnly, rowData, xEntity);};
+                    fieldParam = field;
                 }
 
                 // *********** showClearButton ***********
                 // pre filterDisplay = "row" nechceme clear button, chceme setrit miesto
                 let showClearButton: boolean = thisLocal.props.filterDisplay === "menu";
 
-                // *********** width/headerStyle ***********
-                let width: string | undefined = XUtils.processPropWidth(childColumn.props.width);
-                if (width === undefined || width === "default") {
-                    const filterMenuInFilterRow: boolean = thisLocal.props.filterDisplay === "row" && showFilterMenu;
-                    const sortableButtonInHeader: boolean = thisLocal.props.sortable;
-                    const filterButtonInHeader: boolean = thisLocal.props.filterDisplay === "menu";
-                    width = XUtilsMetadata.computeColumnWidth(xField, undefined, filterMenuInFilterRow, childColumnProps.type, header, sortableButtonInHeader, filterButtonInHeader);
-                }
                 let headerStyle: React.CSSProperties = {};
                 if (width !== undefined) {
                     headerStyle = {width: width};
                 }
 
-                // *********** align ***********
-                let align: "left" | "center" | "right" | undefined = undefined; // default undefined (left)
-                // do buducna
-                // if (childColumnProps.align !== undefined) {
-                //     align = childColumnProps.align;
-                // }
-                // else {
-                // decimal defaultne zarovnavame doprava
-                // if (xField.type === "decimal") {
-                //     align = "right";
-                // }
-                // else
-                if (xField.type === "boolean") {
-                    align = "center";
-                }
-                // }
-
-                return <Column field={field} header={header} filter={thisLocal.props.filterDisplay !== "none"} sortable={thisLocal.props.sortable}
+                return <Column field={fieldParam} header={header} filter={thisLocal.props.filterDisplay !== "none"} sortable={thisLocal.props.sortable}
                                filterElement={filterElement} showFilterMenu={showFilterMenu} showClearButton={showClearButton}
-                               headerStyle={headerStyle} align={align}
-                               body={(rowData: any) => {return thisLocal.bodyTemplate(childColumnProps, readOnly, rowData, xEntity);}}/>;
+                               headerStyle={headerStyle} align={align} body={body}/>;
             }
         );
 
@@ -718,7 +750,7 @@ export type XTableFieldReadOnlyProp = boolean | ((object: any, tableRow: any) =>
 export type XTableFieldFilterProp = XCustomFilter | ((object: any, rowData: any) => XCustomFilter | undefined);
 
 export interface XFormColumnBaseProps {
-    type: "inputSimple" | "dropdown" | "autoComplete" | "searchButton";
+    type: "inputSimple" | "dropdown" | "autoComplete" | "searchButton" | "custom";
     header?: any;
     readOnly?: XTableFieldReadOnlyProp;
     dropdownInFilter?: boolean; // moze byt len na stlpcoch ktore zobrazuju asociavany atribut (dlzka path >= 2)
@@ -760,6 +792,12 @@ export interface XFormSearchButtonColumnProps extends XFormColumnBaseProps {
     searchBrowse: JSX.Element;
 }
 
+// TODO - XFormCustomColumnProps by nemal extendovat od XFormColumnBaseProps, niektore propertiesy nedavaju zmysel
+export interface XFormCustomColumnProps extends XFormColumnBaseProps {
+    body: React.ReactNode | ((data: any, options: ColumnBodyOptions) => React.ReactNode); // the same type as type of property Column.body
+    field?: string; // koli pripadnemu sortovaniu/filtrovaniu
+}
+
 export const XFormColumn = (props: XFormColumnProps) => {
     // nevadi ze tu nic nevraciame, field a header vieme precitat a zvysok by sme aj tak zahodili lebo vytvarame novy element
     return (null);
@@ -798,4 +836,14 @@ export const XFormSearchButtonColumn = (props: XFormSearchButtonColumnProps) => 
 XFormSearchButtonColumn.defaultProps = {
     ...XFormColumnBase_defaultProps,
     type: "searchButton"
+};
+
+export const XFormCustomColumn = (props: XFormCustomColumnProps) => {
+    // nevadi ze tu nic nevraciame, field a header vieme precitat a zvysok by sme aj tak zahodili lebo vytvarame novy element
+    return (null);
+}
+
+XFormCustomColumn.defaultProps = {
+    ...XFormColumnBase_defaultProps,
+    type: "custom"
 };

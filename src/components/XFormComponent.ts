@@ -25,6 +25,7 @@ export interface XFormComponentProps<T> {
     labelStyle?: React.CSSProperties;
     inline?: boolean;
     onChange?: XFieldOnChange;
+    onlyInput?: boolean; // ak true, tak vyrenderuje len input element (nerenderuje <div className="field grid"> ani label)
 }
 
 export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extends Component<P> {
@@ -102,11 +103,14 @@ export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extend
         return readOnly;
     }
 
-    getLabel(): string {
-        let label = this.props.label ?? this.getField();
-        // test na readOnly je tu hlavne koli tomu aby sme nemali * pri ID atribute, ktory sa pri inserte generuje az pri zapise do DB
-        if (this.isNotNull() && !this.isReadOnly()) {
-            label = XUtils.markNotNull(label);
+    // ak je label undefined, label element sa nevykresli
+    getLabel(): string | undefined {
+        let label: string | undefined = this.props.label;
+        if (label !== undefined) {
+            // test na readOnly je tu hlavne koli tomu aby sme nemali * pri ID atribute, ktory sa pri inserte generuje az pri zapise do DB
+            if (this.isNotNull() && !this.isReadOnly()) {
+                label = XUtils.markNotNull(label);
+            }
         }
         return label;
     }
