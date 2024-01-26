@@ -21,6 +21,7 @@ export type XFilterProp = XCustomFilter | ((object: any) => XCustomFilter | unde
 export interface XFormComponentProps<T> {
     form: XFormBase;
     label?: string;
+    tooltip?: string;
     readOnly?: XReadOnlyProp;
     labelStyle?: React.CSSProperties;
     inline?: boolean;
@@ -30,8 +31,13 @@ export interface XFormComponentProps<T> {
 
 export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extends Component<P> {
 
+    private valueChanged: boolean; // priznak, ci uzivatel zmenil hodnotu v inpute (ci bol volany onChange); ak nebola zmena, tak nevolame aplikacny onChange z onBlur
+                                    // mali sme problem ze aplikacny onChange sa volal aj ked uzivatel iba klikol do inputu a odisiel z neho
+
     protected constructor(props: P) {
         super(props);
+
+        this.valueChanged = false;
 
         props.form.addXFormComponent(this);
     }
@@ -63,6 +69,7 @@ export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extend
     onValueChangeBase(value: any, onChange?: XFieldOnChange, assocObjectChange?: OperationType) {
         const error: string | undefined = this.validateOnChange(value);
         this.props.form.onFieldChange(this.getField(), value, error, onChange, assocObjectChange);
+        this.valueChanged = true;
     }
 
     // ******** properties (not only) for rendering ***********
@@ -183,12 +190,13 @@ export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extend
     }
 
     callOnChangeFromOnBlur() {
-        if (this.props.onChange) {
+        if (this.valueChanged && this.props.onChange) {
             const object: XObject = this.props.form.getXObject();
             // developer v onChange nastavi atributy na object-e
             this.props.onChange({object: object});
             // rovno zavolame form.setState({...}), nech to nemusi robit developer
             this.props.form.setStateXForm();
+            this.valueChanged = false; // resetneme na false (dalsi onChange volame az ked user zmeni hodnotu)
         }
     }
 

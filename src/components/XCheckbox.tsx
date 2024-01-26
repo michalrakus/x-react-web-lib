@@ -40,8 +40,8 @@ export class XCheckbox extends XInput<boolean, XInputProps<boolean>> {
         // note: style overrides size (width of the input according to character count)
         // pre not null atributy pouzijeme standardny checkbox aby sme pre false mali prazdny biely checkbox - TODO - pomenit ikonky na TriStateCheckbox aby to pekne sedelo
         let element: JSX.Element = this.isNotNull()
-            ? <Checkbox id={this.props.field} checked={this.getValue() ?? false} onChange={this.checkboxOnValueChange} disabled={this.isReadOnly()} style={this.props.inputStyle}/>
-            : <TriStateCheckbox id={this.props.field} value={this.getValue()} onChange={this.triStateCheckboxOnValueChange} disabled={this.isReadOnly()} style={this.props.inputStyle}/>;
+            ? <Checkbox id={this.props.field} checked={this.getValue() ?? false} onChange={this.checkboxOnValueChange} disabled={this.isReadOnly()} style={this.props.inputStyle} tooltip={this.props.tooltip}/>
+            : <TriStateCheckbox id={this.props.field} value={this.getValue()} onChange={this.triStateCheckboxOnValueChange} disabled={this.isReadOnly()} style={this.props.inputStyle} tooltip={this.props.tooltip}/>;
 
         if (!this.props.onlyInput) {
             const label: string | undefined = this.getLabel();

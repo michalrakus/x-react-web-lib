@@ -619,7 +619,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         if (props.scrollWidth !== "none") {
             scrollWidth = props.scrollWidth;
             if (scrollWidth === "viewport") {
-                scrollWidth = 'calc(100vw - 1.4rem)'; // 20px okraje
+                scrollWidth = 'calc(100vw - 2.2rem)'; // povodne bolo 1.4rem (20px okraje) ale pri vela stlpcoch vznikal horizontalny scrollbar
             }
         }
 

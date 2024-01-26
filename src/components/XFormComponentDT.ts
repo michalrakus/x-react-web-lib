@@ -17,8 +17,12 @@ export interface XFormComponentDTProps {
 
 export abstract class XFormComponentDT<P extends XFormComponentDTProps> extends Component<P> {
 
+    private valueChanged: boolean; // priznak, ci uzivatel zmenil hodnotu v inpute (pozri poznamku v XFormComponent)
+
     protected constructor(props: P) {
         super(props);
+
+        this.valueChanged = false;
 
         XFormBase.getXRowTechData(props.rowData).xFormComponentDTList.push(this);
     }
@@ -50,6 +54,7 @@ export abstract class XFormComponentDT<P extends XFormComponentDTProps> extends 
     onValueChangeBase(value: any, onChange?: XTableFieldOnChange, assocObjectChange?: OperationType) {
         const error: string | undefined = this.validateOnChange(value);
         this.props.form.onTableFieldChange(this.props.rowData, this.getField(), value, error, onChange, assocObjectChange);
+        this.valueChanged = true;
     }
 
     // ******** properties (not only) for rendering ***********
@@ -132,12 +137,13 @@ export abstract class XFormComponentDT<P extends XFormComponentDTProps> extends 
     }
 
     callOnChangeFromOnBlur() {
-        if (this.props.onChange) {
+        if (this.valueChanged && this.props.onChange) {
             const object: XObject = this.props.form.getXObject();
             // developer v onChange nastavi atributy na object-e
             this.props.onChange({object: object, tableRow: this.props.rowData, assocObjectChange: undefined});
             // rovno zavolame form.setState({...}), nech to nemusi robit developer
             this.props.form.setStateXForm();
+            this.valueChanged = false; // resetneme na false (dalsi onChange volame az ked user zmeni hodnotu)
         }
     }
 

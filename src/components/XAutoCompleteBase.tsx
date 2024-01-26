@@ -413,10 +413,10 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
         // formgroup-inline lepi SplitButton na autocomplete a zarovna jeho vysku
         return (
-            <div className="x-auto-complete-base">
+            <div className="x-auto-complete-base" style={{width: this.props.width}}>
                 <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} field={this.props.field}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} maxLength={this.props.maxLength}
-                              ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createErrorProps(error)} style={{width: this.props.width}}/>
+                              ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createErrorProps(error)}/>
                 {dropdownButton}
                 {this.props.valueForm != undefined && !readOnly ?
                     <Dialog visible={this.state.formDialogOpened} onHide={this.formDialogOnHide} header={this.formDialogObjectId ? 'Modification' : 'New row'}>
