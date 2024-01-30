@@ -22,14 +22,17 @@ export const XFormRowCol = (props: XFormRowColProps) => {
         childElemList = React.Children.map(
             props.children,
             child => {
-                // klonujeme len nase X* komponenty (napr. XInputText), child.type.name vracia nazov komponenty (napr. XInputText)
-                // ak vyklonujeme cudziu komponentu, funguje, ale prida do nej property labelstyle=[object Object]
-                if (child.type.name && child.type.name.startsWith("X")) {
+                // chceli by sme klonovat len nase X* komponenty (napr. XInputText)
+                // ak vyklonujeme cudziu komponentu (napr. div), funguje, ale prida do nej property labelstyle=[object Object]
+                // child.type.name vracia nazov komponenty (napr. XInputText) ale ked sa vytvori optimalizovany build, uz to nefunguje (uz je tam napr. "t")
+                // takze zatial klonujeme vzdy
+
+                //if (child.type.name && child.type.name.startsWith("X")) {
                     return React.cloneElement(child, {form: child.props.form ?? props.form, labelStyle: child.props.labelStyle ?? props.labelStyle});
-                }
-                else {
-                    return child;
-                }
+                //}
+                //else {
+                //    return child;
+                //}
             }
         );
     }

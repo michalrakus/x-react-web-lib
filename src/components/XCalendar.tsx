@@ -1,6 +1,7 @@
 import React from "react";
 import {Calendar, CalendarChangeEvent} from "primereact/calendar";
 import {dateFormatCalendar} from "../serverApi/XUtilsConversions";
+import {XUtils} from "./XUtils";
 
 // wrapper for Calendar component, maybe better name would be XInputDateBase
 export const XCalendar = (props: {
@@ -9,6 +10,7 @@ export const XCalendar = (props: {
     onChange: (value: Date | null) => void;
     onBlur?: (event: React.FocusEvent<HTMLInputElement, Element>) => void;
     readOnly?: boolean;
+    error?: string; // chybova hlaska, ak chceme field oznacit za nevalidny
     datetime?: boolean;
 }) => {
 
@@ -29,6 +31,6 @@ export const XCalendar = (props: {
     return (
         <Calendar id={props.id} value={props.value} onChange={onChange} disabled={props.readOnly} showIcon={true} showOnFocus={false}
                   dateFormat={dateFormatCalendar()} showTime={datetime} showSeconds={datetime} inputClassName={datetime ? 'x-input-datetime' : 'x-input-date'}
-                  onBlur={props.onBlur}/>
+                  onBlur={props.onBlur} {...XUtils.createErrorProps(props.error)}/>
     );
 }

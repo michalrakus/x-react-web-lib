@@ -15,6 +15,7 @@ export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     assocForm?: JSX.Element; // na insert/update
     filter?: XFilterProp;
     sortField?: string | DataTableSortMeta[];
+    fields?: string[]; // ak chceme pri citani suggestions nacitat aj asociovane objekty
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
     lazy?: boolean;
     width?: string;
@@ -56,7 +57,7 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
 
     async readAndSetSuggestions(setStateCallback?: () => void) {
         if (this.props.suggestions === undefined) {
-            let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), this.props.sortField ?? this.props.displayField);
+            let suggestions: any[] = await XUtils.fetchRows(this.xAssoc.entityName, this.getFilterBase(this.props.filter), this.props.sortField ?? this.props.displayField, this.props.fields);
             this.setState({suggestions: suggestions}, setStateCallback);
         }
     }

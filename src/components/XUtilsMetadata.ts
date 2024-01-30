@@ -75,7 +75,7 @@ export class XUtilsMetadata {
                 width = XUtilsMetadata.computeColumnWidthBase(size, 0.5 + 0.5);
             }
             else if (xField.type === "date") {
-                width = XUtilsMetadata.computeColumnWidthBase(10, 0.25 + 1.25 + 0.25); // napr. 31.12.2021, 1.25 rem date picker button
+                width = XUtilsMetadata.computeColumnWidthBase(11, 0.25 + 1.25 + 0.25); // napr. 31.12.2021 (poznamka: dal som 11 lebo vo filtri nebolo vidno cely datum), 1.25 rem date picker button
             }
             else if (xField.type === "datetime") {
                 width = XUtilsMetadata.computeColumnWidthBase(10 + 9, 0.25 + 1.25 + 0.25); // napr. 31.12.2021 03:03:00

@@ -46,7 +46,7 @@ export class XInputDate extends XInput<Date, XInputDateProps> {
         return (
             <div className="field grid">
                 <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
-                <XCalendar id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()}
+                <XCalendar id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} error={this.getError()}
                            datetime={this.xField.type === 'datetime'} onBlur={this.onBlur}/>
             </div>
         );

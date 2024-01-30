@@ -3,6 +3,8 @@ export enum XEnvVar {
     REACT_APP_BACKEND_URL = 'REACT_APP_BACKEND_URL',
     REACT_APP_AUTH = 'REACT_APP_AUTH',
 
+    REACT_APP_AUTH_OFF_USERNAME = 'REACT_APP_AUTH_OFF_USERNAME',
+
     REACT_APP_AUTH0_DOMAIN = 'REACT_APP_AUTH0_DOMAIN',
     REACT_APP_AUTH0_CLIENT_ID = 'REACT_APP_AUTH0_CLIENT_ID',
     REACT_APP_AUTH0_AUDIENCE = 'REACT_APP_AUTH0_AUDIENCE',
@@ -15,6 +17,7 @@ export enum XEnvVar {
 
 // enum for values of the environment variable REACT_APP_AUTH
 export enum XReactAppAuth {
+    OFF = 'OFF',
     LOCAL = 'LOCAL',
     AUTH0 = 'AUTH0',
     MS_ENTRA_ID = 'MS_ENTRA_ID'

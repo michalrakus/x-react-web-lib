@@ -304,9 +304,8 @@ export abstract class XFormBase extends Component<XFormProps> {
     }
 
     async onClickSave() {
-        //console.log("zavolany onClickSave");
 
-        if (!this.validateSave()) {
+        if (!await this.validateSave()) {
             return;
         }
 
@@ -358,9 +357,9 @@ export abstract class XFormBase extends Component<XFormProps> {
         }
     }
 
-    validateSave(): boolean {
+    async validateSave(): Promise<boolean> {
 
-        const xErrorMap: XErrorMap = this.validateForm();
+        const xErrorMap: XErrorMap = await this.validateForm();
 
         // zatial takto jednoducho
         let msg: string = XUtils.getErrorMessages(xErrorMap);
@@ -386,11 +385,11 @@ export abstract class XFormBase extends Component<XFormProps> {
         return ok;
     }
 
-    validateForm(): XErrorMap {
+    async validateForm(): Promise<XErrorMap> {
         const xErrorMap: XErrorMap = this.fieldValidation();
 
         // form validation
-        const xErrors: XErrors = this.validate(this.getXObject());
+        const xErrors: XErrors = await this.validate(this.getXObject());
         for (const [field, error] of Object.entries(xErrors)) {
             if (error) {
                 // skusime zistit label
@@ -464,7 +463,7 @@ export abstract class XFormBase extends Component<XFormProps> {
     }
 
     // this method can be overriden in subclass if needed (custom validation)
-    validate(object: XObject): XErrors {
+    async validate(object: XObject): Promise<XErrors> {
         return {};
     }
 

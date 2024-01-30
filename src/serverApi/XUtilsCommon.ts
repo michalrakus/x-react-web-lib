@@ -138,6 +138,11 @@ export class XUtilsCommon {
         const match: RegExpExecArray | null = pattern.exec(value);
         return match != null ? match[0] : null;
     }
+
+    // to be used in sql expressions
+    static sqlMaxDateIfNull(sqlExp: string): string {
+        return `coalesce(${sqlExp}, '9999-12-31'::DATE)`;
+    }
 }
 
 // nevedel som importnut dateFormat, tak som to dal sem aby som nemusel vsade pouzivat require("dateformat")
