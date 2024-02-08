@@ -38,6 +38,7 @@ import {XFtsInput, XFtsInputValue} from "./XFtsInput";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 import {IconType} from "primereact/utils";
 import {ButtonProps} from "primereact/button";
+import {InputSwitch} from "primereact/inputswitch";
 
 export type XBetweenFilterProp = "row" | "column" | undefined;
 
@@ -97,6 +98,7 @@ export interface XLazyDataTableProps {
     customFilter?: XCustomFilter; // (programatorsky) filter ktory sa aplikuje na zobrazovane data (uzivatel ho nedokaze zmenit)
     sortField?: string;
     fullTextSearch: boolean | string[]; // false - nemame full-text search, true - mame full-text search na default stlpcoch, string[] - full-text search na danych stlpcoch
+    multiLineSwitch: boolean; // default false, ak true tak zobrazi switch, ktorym sa da vypnut zobrazenie viacriadkovych textov v sirokom riadku
     searchBrowseParams?: XSearchBrowseParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
     // ak chceme zavolat reload zaznamov, treba vytiahnut "const [dataLoaded, setDataLoaded] = useState<boolean>(false);" do browse komponentu a zavolat setDataLoaded(false);
@@ -208,6 +210,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
     const initFtsInputValue: XFtsInputValue | undefined = props.fullTextSearch ? createInitFtsInputValue() : undefined;
     const [ftsInputValue, setFtsInputValue] = useState<XFtsInputValue | undefined>(initFtsInputValue);
+    const [multiLineSwitchValue, setMultiLineSwitchValue] = useState<boolean>(true);
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.sortField ? [{field: props.sortField, order: 1}] : []);
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
@@ -593,12 +596,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             // ine typy - convertValue vrati string
             // mame zapnutu konverziu fromModel, lebo z json-u nam prichadzaju objekty typu string (napr. pri datumoch)
             valueResult = convertValue(xField, value, true, AsUIType.Form);
-            // ak mame viacriadkovy text
-            if (xField.type === "string" && typeof valueResult === "string" && valueResult) {
-                const lines: string[] = valueResult.split(XUtilsCommon.newLine);
-                if (lines.length >= 2) {
-                    const elemList: React.ReactNode[] = lines.map((value: any, index: number) => <div key={index}>{value}</div>);
-                    valueResult = <div>{elemList}</div>;
+            // ak mame viacriadkovy text a zapnuty multiLineSwitch (defaultne je zapnuty aj ked nie je zobrazeny)
+            if (multiLineSwitchValue) {
+                if (xField.type === "string" && typeof valueResult === "string" && valueResult) {
+                    const lines: string[] = valueResult.split(XUtilsCommon.newLine);
+                    if (lines.length >= 2) {
+                        const elemList: React.ReactNode[] = lines.map((value: any, index: number) => <div key={index}>{value}</div>);
+                        valueResult = <div>{elemList}</div>;
+                    }
                 }
             }
         }
@@ -895,6 +900,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)}/> : null}
                 <XButton key="filter" label={xLocaleOption('filter')} onClick={onClickFilter} />
                 <XButton key="clearFilter" label={xLocaleOption('clearFilter')} onClick={onClickClearFilter} />
+                {props.multiLineSwitch ? <InputSwitch checked={multiLineSwitchValue} onChange={(e) => setMultiLineSwitchValue(e.value)} className="m-1"/> : null}
             </div>
             <div className="flex justify-content-center">
                 <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator}
@@ -930,6 +936,7 @@ XLazyDataTable.defaultProps = {
     rows: 10,
     filterDisplay: "row",
     fullTextSearch: true,
+    multiLineSwitch: false,
     scrollable: true,
     scrollWidth: 'viewport', // nastavi sirku tabulky na (100vw - nieco) (ak bude obsah sirsi, zapne horizontalny scrollbar)
     scrollHeight: 'viewport', // nastavi vysku tabulky na (100vh - nieco) (ak bude obsah vecsi, zapne vertikalny scrollbar)
