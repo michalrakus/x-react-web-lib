@@ -1,7 +1,8 @@
 import React from "react";
-import {Calendar, CalendarChangeEvent} from "primereact/calendar";
+import {Calendar} from "primereact/calendar";
 import {dateFormatCalendar} from "../serverApi/XUtilsConversions";
 import {XUtils} from "./XUtils";
+import {FormEvent} from "primereact/ts-helpers";
 
 // wrapper for Calendar component, maybe better name would be XInputDateBase
 export const XCalendar = (props: {
@@ -14,7 +15,7 @@ export const XCalendar = (props: {
     datetime?: boolean;
 }) => {
 
-    const onChange = (e: CalendarChangeEvent) => {
+    const onChange = (e: FormEvent<Date>) => {
         // z Calendar prichadza e.value - typ Date alebo null
         // typ Date prichadza ak uzivatel vyplnil validny datum, null (typeof e.value vracia "object") prichadza ak uzivatel vymazal datum
         // alebo je este datum nekompletny (uzivatel prave zadava datum)

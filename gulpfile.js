@@ -55,6 +55,7 @@ function generateApi(cb) {
         "./lib/components/XInputIntervalBase",
         "./lib/components/XInputText",
         "./lib/components/XInputTextarea",
+        "./lib/components/XInputTextareaBase",
         "./lib/components/XLazyDataTable",
         "./lib/components/XLocale",
         "./lib/components/XLoginDialog",

@@ -593,6 +593,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             // ine typy - convertValue vrati string
             // mame zapnutu konverziu fromModel, lebo z json-u nam prichadzaju objekty typu string (napr. pri datumoch)
             valueResult = convertValue(xField, value, true, AsUIType.Form);
+            // ak mame viacriadkovy text
+            if (xField.type === "string" && typeof valueResult === "string" && valueResult) {
+                const lines: string[] = valueResult.split(XUtilsCommon.newLine);
+                if (lines.length >= 2) {
+                    const elemList: React.ReactNode[] = lines.map((value: any, index: number) => <div key={index}>{value}</div>);
+                    valueResult = <div>{elemList}</div>;
+                }
+            }
         }
         return valueResult;
     }
