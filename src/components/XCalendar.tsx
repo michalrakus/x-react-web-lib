@@ -9,7 +9,10 @@ export const XCalendar = (props: {
     id?: string;
     value: Date | null;
     onChange: (value: Date | null) => void;
-    onBlur?: (event: React.FocusEvent<HTMLInputElement, Element>) => void;
+    /**
+     * @deprecated - docasne riesenie - trebalo by XCalendar spravit podobne ako XInputTextarea, lebo teraz sa onChange vola po kazdom pismenku a koli tomu mame tento onBlurOrSelect (plus parseDateTime zapracovat)
+     */
+    onBlurOrSelect?: () => void;
     readOnly?: boolean;
     error?: string; // chybova hlaska, ak chceme field oznacit za nevalidny
     datetime?: boolean;
@@ -32,6 +35,6 @@ export const XCalendar = (props: {
     return (
         <Calendar id={props.id} value={props.value} onChange={onChange} disabled={props.readOnly} showIcon={true} showOnFocus={false}
                   dateFormat={dateFormatCalendar()} showTime={datetime} showSeconds={datetime} inputClassName={datetime ? 'x-input-datetime' : 'x-input-date'}
-                  onBlur={props.onBlur} {...XUtils.createErrorProps(props.error)}/>
+                  onBlur={props.onBlurOrSelect} onSelect={props.onBlurOrSelect} {...XUtils.createErrorProps(props.error)}/>
     );
 }

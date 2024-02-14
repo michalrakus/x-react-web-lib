@@ -55,7 +55,7 @@ export class XInputDecimal extends XInput<number, XInputDecimalProps> {
                 {label !== undefined ? <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{label}</label> : null}
                 <InputNumber id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} mode="decimal" locale="de-DE"
                              useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}
-                             size={sizeInput} style={this.props.inputStyle} {...this.getClassNameTooltip()} onBlur={this.onBlur}/>
+                             size={sizeInput} inputStyle={this.props.inputStyle} {...this.getClassNameTooltip()} onBlur={this.onBlur}/>
             </div>
         );
     }

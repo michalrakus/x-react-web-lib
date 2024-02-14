@@ -92,7 +92,7 @@ export class XUtilsMetadata {
         }
         else {
             // form datatable (formColumnType is defined)
-            if (formColumnType === "inputSimple") {
+            if (formColumnType === "inputSimple" || formColumnType === "textarea") {
                 const padding = 0.21 + 0.07 + 0.5; // padding is 2.94px + 1px border + 7px padding in input
                 if (xField.type === "string") {
                     width = XUtilsMetadata.computeColumnWidthBase(xField.length, padding + padding); // padding left + right

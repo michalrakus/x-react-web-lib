@@ -34,6 +34,7 @@ import {xLocaleOption} from "./XLocale";
 import {XInputIntervalDT} from "./XInputIntervalDT";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 import {XLazyColumnProps} from "./XLazyDataTable";
+import {XInputTextareaDT} from "./XInputTextareaDT";
 
 // typ pre technicky field row.__x_rowTechData (row je item zoznamu editovaneho v XFormDataTable2)
 export interface XRowTechData {
@@ -164,6 +165,10 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
             return columnPropsSearchButton.assocField + '.' + columnPropsSearchButton.displayField;
         }
+        else if (columnProps.type === "textarea") {
+            const columnPropsTextarea = (columnProps as XFormTextareaColumnProps);
+            return columnPropsTextarea.field;
+        }
         else {
             throw "Unknown prop type = " + columnProps.type;
         }
@@ -196,6 +201,11 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             const xAssoc: XAssoc = XUtilsMetadataCommon.getXAssocToOne(xEntity, columnPropsSearchButton.assocField);
             isNullable = xAssoc.isNullable;
             readOnly = XFormDataTable2.isReadOnlyHeader(undefined, columnProps.readOnly);
+        }
+        else if (columnProps.type === "textarea") {
+            const columnPropsTextarea = (columnProps as XFormTextareaColumnProps);
+            isNullable = xField.isNullable;
+            readOnly = XFormDataTable2.isReadOnlyHeader(columnPropsTextarea.field, columnProps.readOnly);
         }
         else {
             throw "Unknown prop type = " + columnProps.type;
@@ -426,6 +436,10 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
             body = <XSearchButtonDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsSearchButton.assocField} displayField={columnPropsSearchButton.displayField} searchBrowse={columnPropsSearchButton.searchBrowse} rowData={rowData} readOnly={columnPropsSearchButton.readOnly}/>;
+        }
+        else if (columnProps.type === "textarea") {
+            const columnPropsTextarea = (columnProps as XFormTextareaColumnProps);
+            body = <XInputTextareaDT form={this.props.form} entity={this.getEntity()} field={columnPropsTextarea.field} rows={columnPropsTextarea.rows} autoResize={columnPropsTextarea.autoResize} rowData={rowData} readOnly={columnPropsTextarea.readOnly}/>;
         }
         else {
             throw "Unknown prop type = " + columnProps.type;
@@ -750,7 +764,7 @@ export type XTableFieldReadOnlyProp = boolean | ((object: any, tableRow: any) =>
 export type XTableFieldFilterProp = XCustomFilter | ((object: any, rowData: any) => XCustomFilter | undefined);
 
 export interface XFormColumnBaseProps {
-    type: "inputSimple" | "dropdown" | "autoComplete" | "searchButton" | "custom";
+    type: "inputSimple" | "dropdown" | "autoComplete" | "searchButton" | "textarea" | "custom";
     header?: any;
     readOnly?: XTableFieldReadOnlyProp;
     dropdownInFilter?: boolean; // moze byt len na stlpcoch ktore zobrazuju asociavany atribut (dlzka path >= 2)
@@ -790,6 +804,12 @@ export interface XFormSearchButtonColumnProps extends XFormColumnBaseProps {
     assocField: string;
     displayField: string;
     searchBrowse: JSX.Element;
+}
+
+export interface XFormTextareaColumnProps extends XFormColumnBaseProps {
+    field: string;
+    rows: number;
+    autoResize?: boolean;
 }
 
 // TODO - XFormCustomColumnProps by nemal extendovat od XFormColumnBaseProps, niektore propertiesy nedavaju zmysel
@@ -836,6 +856,18 @@ export const XFormSearchButtonColumn = (props: XFormSearchButtonColumnProps) => 
 XFormSearchButtonColumn.defaultProps = {
     ...XFormColumnBase_defaultProps,
     type: "searchButton"
+};
+
+export const XFormTextareaColumn = (props: XFormTextareaColumnProps) => {
+    // nevadi ze tu nic nevraciame, field a header vieme precitat a zvysok by sme aj tak zahodili lebo vytvarame novy element
+    return (null);
+}
+
+XFormTextareaColumn.defaultProps = {
+    ...XFormColumnBase_defaultProps,
+    type: "textarea",
+    rows: 1,
+    autoResize: true
 };
 
 export const XFormCustomColumn = (props: XFormCustomColumnProps) => {

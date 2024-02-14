@@ -28,7 +28,7 @@ export class XInputTextarea extends XInput<string, XInputTextareaProps> {
     }
 
     onValueChange(value: string | null) {
-        this.onValueChangeBase(value);
+        this.onValueChangeBase(value, this.props.onChange);
     }
 
     getLabelStyle(): React.CSSProperties {

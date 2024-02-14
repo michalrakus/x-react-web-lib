@@ -13,7 +13,7 @@ export class XInputDate extends XInput<Date, XInputDateProps> {
         super(props);
 
         this.onValueChange = this.onValueChange.bind(this);
-        this.onBlur = this.onBlur.bind(this);
+        this.onBlurOrSelect = this.onBlurOrSelect.bind(this);
     }
 
     getValue(): Date | null {
@@ -37,7 +37,7 @@ export class XInputDate extends XInput<Date, XInputDateProps> {
 
     // nedame do onChange inputu, lebo by sa nas onChange volal po kazdej zmene pismenka
     // ak bude treba, mozme este dorobit metodu "onChange2", ktora sa bude volat po kazdej zmene pismenka (asi iba do XInputText)
-    onBlur(e: any) {
+    onBlurOrSelect() {
         this.callOnChangeFromOnBlur();
     }
 
@@ -47,7 +47,7 @@ export class XInputDate extends XInput<Date, XInputDateProps> {
             <div className="field grid">
                 <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <XCalendar id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} error={this.getError()}
-                           datetime={this.xField.type === 'datetime'} onBlur={this.onBlur}/>
+                           datetime={this.xField.type === 'datetime'} onBlurOrSelect={this.onBlurOrSelect}/>
             </div>
         );
     }
