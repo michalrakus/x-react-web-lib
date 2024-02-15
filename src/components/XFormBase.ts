@@ -4,6 +4,7 @@ import {OperationType, XUtils} from "./XUtils";
 import {XFieldOnChange, XFormComponent} from "./XFormComponent";
 import {XTableFieldOnChange, XFormDataTable2, XRowTechData} from "./XFormDataTable2";
 import {XErrorMap, XErrors} from "./XErrors";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 export type XOnSaveOrCancelProp = (object: XObject | null, objectChange: OperationType) => void;
 
@@ -140,8 +141,12 @@ export abstract class XFormBase extends Component<XFormProps> {
 
     onFieldChange(field: string, value: any, error?: string | undefined, onChange?: XFieldOnChange, assocObjectChange?: OperationType) {
 
+        // field moze byt aj na asociovanom objekte (field length > 1, napr.: <assocX>.<fieldY>)
+        // v takom pripade sa do errorMap zapise ako key cely field <assocX>.<fieldY>
+        // (zlozitejsie riesenie by bolo zapisovat errors do specialneho technickeho atributu asociovaneho objektu ale zatial to nechame takto jednoducho)
+
         const object: XObject = this.getXObject();
-        object[field] = value;
+        XUtilsCommon.setValueByPath(object, field, value);
 
         const errorMap: XErrorMap = this.state.errorMap;
         errorMap[field] = {...errorMap[field], onChange: error};

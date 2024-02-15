@@ -80,13 +80,9 @@ export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extend
     isReadOnly(): boolean {
 
         let readOnly: boolean;
-        if (!XUtilsCommon.isSingleField(this.getField())) {
-            // if the length of field is 2 or more, then readOnly
-            readOnly = true;
-        }
         // the purpose of formReadOnly is to put the whole form to read only mode,
         // that's why the formReadOnly has higher prio then property this.props.readOnly
-        else if (this.props.form.formReadOnlyBase(this.getField())) {
+        if (this.props.form.formReadOnlyBase(this.getField())) {
             readOnly = true;
         }
         else if (typeof this.props.readOnly === 'boolean') {
@@ -104,7 +100,14 @@ export abstract class XFormComponent<T, P extends XFormComponentProps<T>> extend
         }
         else {
             // readOnly is undefined
-            readOnly = false;
+            if (!XUtilsCommon.isSingleField(this.getField())) {
+                // if the length of field is 2 or more, then readOnly
+                readOnly = true;
+            }
+            else {
+                // length of field is 1, default readOnly = false
+                readOnly = false;
+            }
         }
 
         return readOnly;
