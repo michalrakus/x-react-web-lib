@@ -277,13 +277,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                         if (this.props.value === null) {
                             alert('Please select some row.');
                         } else {
-                            // otvorime dialog na update
-                            if (this.props.idField === undefined) {
-                                throw "XAutoCompleteBase: property valueForm is defined but property idField is also needed for form editation.";
-                            }
-                            this.formDialogObjectId = this.props.value[this.props.idField];
-                            this.formDialogInitValuesForInsert = undefined;
-                            this.setState({formDialogOpened: true});
+                            this.onEditAssocValue();
                         }
                     }
                 }
@@ -347,6 +341,16 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         this.autoCompleteRef.current.search(e, '', 'dropdown');
     }
 
+    onEditAssocValue() {
+        // otvorime dialog na update
+        if (this.props.idField === undefined) {
+            throw "XAutoCompleteBase: property valueForm is defined but property idField is also needed for form editation.";
+        }
+        this.formDialogObjectId = this.props.value[this.props.idField];
+        this.formDialogInitValuesForInsert = undefined;
+        this.setState({formDialogOpened: true});
+    }
+
     // vracia objekt (ak inputChanged === false) alebo string (ak inputChanged === true)
     computeInputValue(): any {
         let inputValue;
@@ -375,25 +379,38 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         const readOnly: boolean = this.props.readOnly ?? false;
 
         let dropdownButton: JSX.Element;
-        if ((this.props.searchBrowse && !readOnly) || this.props.valueForm) {
-            // mame searchBrowse alebo CRUD operacie, potrebujeme SplitButton
-            const splitButtonItems: MenuItem[] = [];
+        if (!readOnly) {
+            if (this.props.searchBrowse || this.props.valueForm) {
+                // mame searchBrowse alebo CRUD operacie, potrebujeme SplitButton
+                const splitButtonItems: MenuItem[] = [];
 
-            if (this.props.valueForm) {
-                this.createInsertUpdateItems(splitButtonItems);
+                if (this.props.valueForm) {
+                    this.createInsertUpdateItems(splitButtonItems);
+                }
+
+                if (this.props.searchBrowse && !readOnly) {
+                    this.createSearchItem(splitButtonItems);
+                }
+
+                this.createDropdownItem(splitButtonItems);
+
+                dropdownButton = <SplitButton model={splitButtonItems} className={'x-splitbutton-only-dropdown' + XUtils.mobileCssSuffix()} menuClassName={'x-splitbutton-only-dropdown-menu' + XUtils.mobileCssSuffix()} disabled={readOnly}/>;
             }
-
-            if (this.props.searchBrowse && !readOnly) {
-                this.createSearchItem(splitButtonItems);
+            else {
+                // mame len 1 operaciu - dame jednoduchy button
+                dropdownButton = <Button icon="pi pi-chevron-down" onClick={(e: any) => this.onOpenDropdown(e)} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>;
             }
-
-            this.createDropdownItem(splitButtonItems);
-
-            dropdownButton = <SplitButton model={splitButtonItems} className={'x-splitbutton-only-dropdown' + XUtils.mobileCssSuffix()} menuClassName={'x-splitbutton-only-dropdown-menu' + XUtils.mobileCssSuffix()} disabled={readOnly}/>;
         }
         else {
-            // mame len 1 operaciu - dame jednoduchy button
-            dropdownButton = <Button icon="pi pi-chevron-down" onClick={(e: any) => this.onOpenDropdown(e)} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()} disabled={readOnly}/>;
+            // readOnly
+            // ak mame valueForm a mame asociovany objekt, umoznime editovat asociovany objekt
+            if (this.props.valueForm && this.props.value !== null) {
+                dropdownButton = <Button icon="pi pi-pencil" onClick={(e: any) => this.onEditAssocValue()} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>;
+            }
+            else {
+                // dame disablovany button (z estetickych dovodov, zachovame sirku)
+                dropdownButton = <Button icon="pi pi-chevron-down" className={'x-dropdownbutton' + XUtils.mobileCssSuffix()} disabled={true}/>;
+            }
         }
 
         // vypocitame inputValue
@@ -418,7 +435,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} maxLength={this.props.maxLength}
                               ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createErrorProps(error)}/>
                 {dropdownButton}
-                {this.props.valueForm != undefined && !readOnly ?
+                {this.props.valueForm != undefined ?
                     <Dialog visible={this.state.formDialogOpened} onHide={this.formDialogOnHide} header={this.formDialogObjectId ? 'Modification' : 'New row'}>
                         {/* klonovanim elementu pridame atributy id, initValues, onSaveOrCancel */}
                         {React.cloneElement(this.props.valueForm, {

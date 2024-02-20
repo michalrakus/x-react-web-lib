@@ -10,6 +10,7 @@ export interface XFormRowColProps {
     className: "x-form-row" | "x-form-inline-row" | "x-form-col";
     form?: XFormBase; // toto sa zatial neda pouzit, lebo form je povinny atribut na komponentoch a pouziva sa uz v konstruktore, ktovie ci by to vobec zafungovalo
     labelStyle?: React.CSSProperties;
+    style?: React.CSSProperties; // prenesie sa na div
     children: JSX.Element | JSX.Element[];
 }
 
@@ -40,6 +41,6 @@ export const XFormRowCol = (props: XFormRowColProps) => {
         childElemList = props.children; // netreba klonovat - viac menej koli performance
     }
 
-    return <div className={props.className}>{childElemList}</div>;
+    return <div className={props.className} style={props.style}>{childElemList}</div>;
 }
 
