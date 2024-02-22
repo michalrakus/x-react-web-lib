@@ -412,10 +412,10 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 body = <XInputDecimalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly} onChange={columnPropsInputSimple.onChange}/>;
             }
             else if (xField.type === "date" || xField.type === "datetime") {
-                body = <XInputDateDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly}/>;
+                body = <XInputDateDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly} onChange={columnPropsInputSimple.onChange}/>;
             }
             else if (xField.type === "interval") {
-                body = <XInputIntervalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly}/>;
+                body = <XInputIntervalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly} onChange={columnPropsInputSimple.onChange}/>;
             }
             else if (xField.type === "boolean") {
                 body = <XCheckboxDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly}/>;

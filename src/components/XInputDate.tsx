@@ -2,6 +2,7 @@ import React from "react";
 import {XCalendar} from "./XCalendar";
 import {XFormComponentProps} from "./XFormComponent";
 import {XInput} from "./XInput";
+import {dateFromModel} from "../serverApi/XUtilsConversions";
 
 export interface XInputDateProps extends XFormComponentProps<number> {
     field: string;
@@ -13,32 +14,16 @@ export class XInputDate extends XInput<Date, XInputDateProps> {
         super(props);
 
         this.onValueChange = this.onValueChange.bind(this);
-        this.onBlurOrSelect = this.onBlurOrSelect.bind(this);
     }
 
     getValue(): Date | null {
-        let value: Date | null = null;
-        const objectValue: string | Date | null = this.getValueFromObject();
-        // tuto zatial hack, mal by prist Date
-        if (typeof objectValue === 'string') {
-            value = new Date(objectValue);
-        }
-        else if (typeof objectValue === 'object' && objectValue instanceof Date) {
-            value = objectValue;
-        }
-        // value zostalo null ak nebol vykonany ziaden if
+        const value: Date | null = dateFromModel(this.getValueFromObject());
         return value;
     }
 
     onValueChange(value: Date | null) {
         // z XCalendar prichadza value - typ Date alebo null
-        this.onValueChangeBase(value);
-    }
-
-    // nedame do onChange inputu, lebo by sa nas onChange volal po kazdej zmene pismenka
-    // ak bude treba, mozme este dorobit metodu "onChange2", ktora sa bude volat po kazdej zmene pismenka (asi iba do XInputText)
-    onBlurOrSelect() {
-        this.callOnChangeFromOnBlur();
+        this.onValueChangeBase(value, this.props.onChange);
     }
 
     render() {
@@ -47,7 +32,7 @@ export class XInputDate extends XInput<Date, XInputDateProps> {
             <div className="field grid">
                 <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <XCalendar id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} error={this.getError()}
-                           datetime={this.xField.type === 'datetime'} onBlurOrSelect={this.onBlurOrSelect}/>
+                           datetime={this.xField.type === 'datetime'}/>
             </div>
         );
     }
