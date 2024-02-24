@@ -7,7 +7,6 @@ import {Button} from "primereact/button";
 import {MenuItem} from "primereact/menuitem";
 import {XSearchBrowseParams} from "./XSearchBrowseParams";
 import {XCustomFilter} from "../serverApi/FindParam";
-import { XFormProps } from "./XFormBase";
 
 export interface XAutoCompleteBaseProps {
     value: any;
@@ -44,6 +43,9 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
     };
 
     wasSearchStartCalled: boolean; // pomocny priznak - zapisujeme si sem, ci sme uz zavolali onSearchStart v pripade ak user zadava hodnotu typovanim
+    wasOnChangeCalled: boolean; // pomocny priznak - oprava bug-u, ked sa onChange zavolal 2-krat
+                                // - raz z onBlur - ak uzivatel typovanim "vybral" prave jeden zaznam do suggestions dropdown-u
+                                // a druhy raz z onSelect ked uzivatel klikol na tento jeden "vybraty" zaznam
 
     // parametre pre form dialog (vzdy aspon jeden musi byt undefined)
     formDialogObjectId: number | undefined;
@@ -64,6 +66,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         };
 
         this.wasSearchStartCalled = false;
+        this.wasOnChangeCalled = false;
 
         this.completeMethod = this.completeMethod.bind(this);
         this.onChange = this.onChange.bind(this);
@@ -115,11 +118,15 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                 }
             }
             this.setState({inputChanged: true, inputValueState: e.value});
+            this.wasOnChangeCalled = false; // reset na default hodnotu
         }
     }
 
     onSelect(e: any) {
-        this.setObjectValue(e.value, OperationType.None);
+        // nevolame this.setObjectValue ak uz bol zavolany z onBlur
+        if (!this.wasOnChangeCalled) {
+            this.setObjectValue(e.value, OperationType.None);
+        }
     }
 
     onBlur(e: React.FocusEvent<HTMLInputElement>) {
@@ -133,6 +140,11 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                 const filteredSuggestions = this.state.filteredSuggestions;
                 if (filteredSuggestions && filteredSuggestions.length === 1) {
                     this.setObjectValue(filteredSuggestions[0], OperationType.None);
+                    // ak bol tento this.setObjectValue vyvolany klikom do suggestions dropdown-u,
+                    // tak bude este nasledne zavolany onSelect a tam chceme zamedzit volaniu this.setObjectValue,
+                    // preto nastavujeme tento priznak
+                    // priznak vratime naspet na false ak uzivatel zacne cokolvek robit s autocomplete (zacne don typovat alebo klikne na dropdown)
+                    this.wasOnChangeCalled = true;
                 }
                 else {
                     // tu by sme mohli skusit vyratat vysledok pre filteredSuggestions este raz, mozno este vypocet filteredSuggestions nedobehol
@@ -330,10 +342,9 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             this.props.onSearchStart(() => this.openDropdown(e));
         }
         else {
-            // otvori dropdown (search je metoda popisana v API, volanie sme skopcili zo zdrojakov primereact)
-            //this.autoCompleteRef.current.search(e, '', 'dropdown');
             this.openDropdown(e);
         }
+        this.wasOnChangeCalled = false; // reset na default hodnotu
     }
 
     openDropdown(e: any) {

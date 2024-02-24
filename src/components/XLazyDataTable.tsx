@@ -98,9 +98,11 @@ export interface XLazyDataTableProps {
     customFilter?: XCustomFilter; // (programatorsky) filter ktory sa aplikuje na zobrazovane data (uzivatel ho nedokaze zmenit)
     sortField?: string;
     fullTextSearch: boolean | string[]; // false - nemame full-text search, true - mame full-text search na default stlpcoch, string[] - full-text search na danych stlpcoch
+    fields?: string[]; // ak chceme nacitat aj asociovane objekty mimo tych ktore sa nacitavaju koli niektoremu zo stlpcov
     multiLineSwitch: boolean; // default false, ak true tak zobrazi switch, ktorym sa da vypnut zobrazenie viacriadkovych textov v sirokom riadku
     searchBrowseParams?: XSearchBrowseParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
+    rowClassName?: (data: any) => object | string | undefined;
     // ak chceme zavolat reload zaznamov, treba vytiahnut "const [dataLoaded, setDataLoaded] = useState<boolean>(false);" do browse komponentu a zavolat setDataLoaded(false);
     dataLoadedState?: [boolean, React.Dispatch<React.SetStateAction<boolean>>]; // TODO - specialny typ vytvor, napr. XuseState<boolean>
     editMode?: boolean;
@@ -337,6 +339,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         let columns = dataTableEl.current.props.children;
         for (let column of columns) {
             fields.push(column.props.field);
+        }
+        if (props.fields) {
+            fields.push(...props.fields);
         }
         return fields;
     }
@@ -909,7 +914,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                            filterDisplay={props.filterDisplay} filters={filters} onFilter={onFilter}
                            sortMode="multiple" removableSort={true} multiSortMeta={multiSortMeta} onSort={onSort}
                            selectionMode="single" selection={selectedRow} onSelectionChange={onSelectionChange}
-                           onRowDoubleClick={onRowDoubleClick}
+                           onRowDoubleClick={onRowDoubleClick} rowClassName={props.rowClassName}
                            ref={dataTableEl} className="p-datatable-sm x-lazy-datatable" resizableColumns columnResizeMode="expand" tableStyle={tableStyle}
                            paginatorLeft={paginatorLeft} paginatorRight={paginatorRight}
                            scrollable={props.scrollable} scrollHeight={scrollHeight} style={style}>
