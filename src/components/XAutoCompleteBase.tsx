@@ -6,13 +6,40 @@ import {OperationType, XUtils} from "./XUtils";
 import {Button} from "primereact/button";
 import {MenuItem} from "primereact/menuitem";
 import {XSearchBrowseParams} from "./XSearchBrowseParams";
-import {XCustomFilter} from "../serverApi/FindParam";
+import {XCustomFilter, XLazyAutoCompleteSuggestionsRequest} from "../serverApi/FindParam";
+import {DataTableSortMeta} from "primereact/datatable";
+import { XFormProps } from "./XFormBase"; /* DO NOT REMOVE - IS USED EVEN IF IT IS MARKED AS NOT USED */
+import {FindResult} from "../serverApi/FindResult";
+
+// type of suggestions load from DB:
+// suggestions - custom suggestions from parent component - no DB load used
+// eager - in this.componentDidMount(), before user starts searching
+// onSerachStart (default) - suggestions are being loaded when user starts typing or when user clicks on dropdown button (only one request is invoked)
+// lazy - suggestions are being loaded always when user types some character but only if the count of suggestions is less or equal then threshold (prop lazyLoadMaxRows, default is 10)
+//      -> this options must be used in the case if large amount of suggestions can be loaded
+export type XSuggestionsLoadProp = "eager" | "onSearchStart" | "lazy";
+export type XSuggestionsLoadType = "suggestions" | XSuggestionsLoadProp;
+
+// XQuery zatial docasne sem - ale je to globalny objekt - parametre pre XUtils.fetchRows, taky jednoduchsi FindParam (este sem mozme pridat fullTextSearch ak bude treba)
+
+export type XFilterOrFunction = XCustomFilter | (() => XCustomFilter | undefined);
+
+export interface XQuery {
+    entity: string;
+    filter?: XFilterOrFunction;
+    sortField?: string | DataTableSortMeta[];
+    fields?: string[];
+}
 
 export interface XAutoCompleteBaseProps {
     value: any;
-    suggestions: any[];
     onChange: (object: any, objectChange: OperationType) => void; // odovzda vybraty objekt, ak bol vybraty objekt zmeneny cez dialog (aj v DB), tak vrati objectChange !== OperationType.None
+    suggestions?: any[]; // ak su priamo zadane suggestions, nepouziva sa suggestionsLoad a suggestionsQuery (vynimka je ak mame aj searchBrowse, vtedy do searchBrowse posleme filter (aj sortField?))
+    suggestionsLoad?: XSuggestionsLoadProp; // ak nemame suggestions, pouzijeme suggestionsLoad (resp. jeho default) a suggestionsQuery (ten musi byt zadany)
+    suggestionsQuery?: XQuery; // musi byt zadany ak nie su zadane suggestions (poznamka: filter (a sortField?) sa posielaju do searchBrowse)
+    lazyLoadMaxRows: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
     field: string; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
+    splitQueryValue: boolean; // ak true, tak splituje natypovanu hodnotu podla space a vsetky parcialne hodnoty sa musia vyskytovat v danom suggestion (default je true)
     searchBrowse?: JSX.Element; // ak je zadany, moze uzivatel vyhladavat objekt podobne ako pri XSearchButton (obchadza tym suggestions)
     valueForm?: JSX.Element; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
@@ -22,11 +49,14 @@ export interface XAutoCompleteBaseProps {
     error?: string; // chybova hlaska, ak chceme field oznacit za nevalidny (pozor! netreba sem davat error z onErrorCahnge, ten si riesi XAutoCompleteBase sam)
     onErrorChange: (error: string | undefined) => void; // "vystup" pre validacnu chybu ktoru "ohlasi" AutoComplete; chyba by mala byt ohlasena vzdy ked this.state.inputChanged = true (a nemame focus na inpute)
     setFocusOnCreate?: boolean; // ak je true, nastavi focus do inputu po vytvoreni komponentu
-    customFilterFunction?: () => XCustomFilter | undefined; // pouziva sa pri searchBrowse a planuje sa pouzivat pri lazy citani suggestions (vyhodnocuje sa pri otvoreni searchBrowse, t.j. co najneskor)
-    onSearchStart?: (finishSearchStart?: () => void) => void; // pouziva sa ak chceme vykonat nieco tesne pred tym ako zacne user pracovat s autocomplete-om - pouziva sa hlavne na lazy nacitavanie suggestions
 }
 
 export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
+
+    public static defaultProps = {
+        lazyLoadMaxRows: 10,
+        splitQueryValue: true
+    };
 
     autoCompleteRef: any;
 
@@ -37,12 +67,13 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                             // (natypovanej hodnote zodpovedaju 2 a viac poloziek alebo ziadna polozka) a uzivatel odisiel z inputu
                             // ak je true, input je cerveny
                             // zmena je hlasena cez onErrorChange parentovi, parent by mal zabezpecit, ze ak mame nejaky nevalidny autocomplete, formular sa neda sejvnut na stacenie Save
+        suggestions: any[] | undefined; // pouzivane ak suggestionsLoad = eager alebo onSearchStart, nepouzivane ak mame this.props.suggestions alebo suggestionsLoad = lazy
         filteredSuggestions: any[] | undefined;
         formDialogOpened: boolean;
         searchDialogOpened: boolean;
     };
 
-    wasSearchStartCalled: boolean; // pomocny priznak - zapisujeme si sem, ci sme uz zavolali onSearchStart v pripade ak user zadava hodnotu typovanim
+    suggestionsLoadedForOSS: boolean; // pomocny priznak - zapisujeme si sem, ci sme uz zavolali loadSuggestions ak pouzivame suggestionsLoad = onSearchStart
     wasOnChangeCalled: boolean; // pomocny priznak - oprava bug-u, ked sa onChange zavolal 2-krat
                                 // - raz z onBlur - ak uzivatel typovanim "vybral" prave jeden zaznam do suggestions dropdown-u
                                 // a druhy raz z onSelect ked uzivatel klikol na tento jeden "vybraty" zaznam
@@ -60,12 +91,13 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             inputChanged: false,
             inputValueState: undefined,
             notValid: false,
+            suggestions: undefined,
             filteredSuggestions: undefined,
             formDialogOpened: false,
             searchDialogOpened: false
         };
 
-        this.wasSearchStartCalled = false;
+        this.suggestionsLoadedForOSS = false;
         this.wasOnChangeCalled = false;
 
         this.completeMethod = this.completeMethod.bind(this);
@@ -78,29 +110,131 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         this.searchDialogOnHide = this.searchDialogOnHide.bind(this);
     }
 
+    getXSuggestionsLoadType(): XSuggestionsLoadType {
+        let suggestionsLoadType: XSuggestionsLoadType;
+        if (this.props.suggestions) {
+            suggestionsLoadType = "suggestions";
+        }
+        else if (!this.props.suggestionsLoad) {
+            suggestionsLoadType = "onSearchStart"; // default
+        }
+        else {
+            suggestionsLoadType = this.props.suggestionsLoad;
+        }
+        return suggestionsLoadType;
+    }
+
     componentDidMount() {
+        if (this.getXSuggestionsLoadType() === "eager") {
+            this.loadSuggestions();
+        }
         if (this.props.setFocusOnCreate) {
             this.setFocusToInput();
         }
     }
 
-    completeMethod(event: {query: string;}) {
+    async loadSuggestions() {
+        const suggestions: any[] = await this.fetchSuggestions();
+        this.setState({suggestions: suggestions});
+    }
+
+    async fetchSuggestions(): Promise<any[]> {
+        if (!this.props.suggestionsQuery) {
+            throw `XAutoCompleteBase.loadSuggestions: unexpected error - prop suggestionsQuery is undefined`;
+        }
+        return XUtils.fetchRows(
+            this.props.suggestionsQuery.entity,
+            XUtils.evalFilter(this.props.suggestionsQuery.filter),
+            this.props.suggestionsQuery.sortField,
+            this.props.suggestionsQuery.fields
+        );
+    }
+
+    async completeMethod(event: {query: string;}) {
         let filteredSuggestions: any[];
-        if (!event.query.trim().length) {
-            filteredSuggestions = [...this.props.suggestions];
+        const xSuggestionsLoadType: XSuggestionsLoadType = this.getXSuggestionsLoadType();
+        if (xSuggestionsLoadType !== "lazy") {
+            let suggestions: any[];
+            if (xSuggestionsLoadType === "suggestions") {
+                suggestions = this.props.suggestions!;
+            }
+            else if (xSuggestionsLoadType === "eager") {
+                suggestions = this.state.suggestions!;
+            }
+            else if (xSuggestionsLoadType === "onSearchStart") {
+                if (!this.suggestionsLoadedForOSS) {
+                    suggestions = await this.fetchSuggestions();
+                    // ulozime si
+                    this.setState({suggestions: suggestions});
+                    this.suggestionsLoadedForOSS = true; // ak user dalej typuje, nechceme znova nacitavat suggestions
+                }
+                else {
+                    // uz mame nacitane
+                    suggestions = this.state.suggestions!;
+                }
+            }
+            else {
+                throw 'Unexpected error - unknown xSuggestionsLoadType';
+            }
+            if (!event.query.trim().length) {
+                // input je prazdny - volanie sem nastane ak user otvori dropdown cez dropdown button
+                filteredSuggestions = [...suggestions];
+            }
+            else {
+                const queryNormalized = XUtils.normalizeString(event.query);
+                // ak mame viac hodnot oddelenych space-om, tak kazda hodnota sa musi vyskytovat zvlast
+                // (podobny princip ako pri lazy, resp. full text search - pozri backend lazyAutoCompleteSuggestions resp. XMainQueryData.createFtsWhereItem)
+                let queryNormalizedList: string[];
+                if (this.props.splitQueryValue) {
+                    queryNormalizedList = queryNormalized.split(' ').filter((value: string) => value !== ''); // nechceme pripadne prazdne retazce ''
+                }
+                else {
+                    queryNormalizedList = [queryNormalized]; // nesplitujeme
+                }
+                filteredSuggestions = suggestions.filter((suggestion) => {
+                    const fieldValue: string = suggestion[this.props.field];
+                    // specialna null polozka (prazdny objekt) - test dame az za test fieldValue na undefined - koli performance
+                    if (fieldValue === undefined && Object.keys(suggestion).length === 0) {
+                        return false;
+                    }
+                    const fieldValueNormalized: string = XUtils.normalizeString(fieldValue);
+                    // all partial query values must match
+                    let match: boolean = true;
+                    for (const queryItemNormalized of queryNormalizedList) {
+                        // look for substring
+                        if (fieldValueNormalized.indexOf(queryItemNormalized) === -1) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    return match;
+                });
+            }
         }
         else {
-            const queryNormalized = XUtils.normalizeString(event.query);
-            filteredSuggestions = this.props.suggestions.filter((suggestion) => {
-                const fieldValue: string = suggestion[this.props.field];
-                // specialna null polozka (prazdny objekt) - test dame az za test fieldValue na undefined - koli performance
-                if (fieldValue === undefined && Object.keys(suggestion).length === 0) {
-                    return false;
-                }
-                // bolo:
-                //return XUtils.normalizeString(fieldValue).startsWith(queryNormalized);
-                return XUtils.normalizeString(fieldValue).indexOf(queryNormalized) !== -1;
-            });
+            // lazy
+            if (!this.props.suggestionsQuery) {
+                throw `XAutoCompleteBase.loadSuggestions: unexpected error - prop suggestionsQuery is undefined`;
+            }
+            let filter: XCustomFilter | undefined = XUtils.evalFilter(this.props.suggestionsQuery.filter);
+            const suggestionsRequest: XLazyAutoCompleteSuggestionsRequest = {
+                maxRows: this.props.lazyLoadMaxRows,
+                field: this.props.field,
+                queryValue: event.query.trim(),
+                splitQueryValue: this.props.splitQueryValue,
+                entity: this.props.suggestionsQuery.entity,
+                filterItems: XUtils.createCustomFilterItems(filter),
+                multiSortMeta: XUtils.createMultiSortMeta(this.props.suggestionsQuery.sortField),
+                fields: this.props.suggestionsQuery.fields
+            };
+            const findResult: FindResult = await XUtils.fetchOne('x-lazy-auto-complete-suggestions', suggestionsRequest);
+            if (findResult.rowList) {
+                filteredSuggestions = findResult.rowList;
+            }
+            else {
+                // TODO - zobrazit userovi pocet zaznamov a dat inu chybovu hlasku ako ze hodnota sa nenasla?
+                filteredSuggestions = [];
+            }
         }
 
         this.setState({filteredSuggestions: filteredSuggestions});
@@ -108,15 +242,6 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
     onChange(e: AutoCompleteChangeEvent) {
         if (typeof e.value === 'string') {
-            // ak user zacne typovat znaky, nacitame suggestions, ak sme lazy (onSearchStart !== undefined)
-            if (this.props.onSearchStart) {
-                if (e.value !== '') { // ak user vymaze cely input, este nechceme nacitat suggestions, az ked zapise nejaky znak
-                    if (!this.wasSearchStartCalled) {
-                        this.props.onSearchStart();
-                        this.wasSearchStartCalled = true; // ak user dalej typuje, nechceme znova nacitavat suggestions
-                    }
-                }
-            }
             this.setState({inputChanged: true, inputValueState: e.value});
             this.wasOnChangeCalled = false; // reset na default hodnotu
         }
@@ -182,8 +307,9 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                 }
             }
         }
-        // odchadzame z inputu, zresetujeme priznak - ak zacne user pracovat s autocomplete-om, nacitaju sa suggestions z DB (ak mame lazy)
-        this.wasSearchStartCalled = false;
+        // odchadzame z inputu, zresetujeme priznak - ak zacne user pracovat s autocomplete-om, nacitaju sa suggestions z DB (ak mame suggestionsLoad = onSearchStart)
+        // suggestions chceme nacitat, lebo user moze zmenit iny atribut ktory ovplyvnuje filter autocomplete-u -> chceme novy zoznam suggestions
+        this.suggestionsLoadedForOSS = false;
     }
 
     createErrorMessage(): string {
@@ -228,6 +354,14 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         if (object !== null) {
             // ak bol save, treba tento novy object pouzit
             this.setObjectValue(object, objectChange);
+            // ak pouzivame zoznam this.state.suggestions, tak ho rereadneme
+            // poznamka: ak pouzivame this.props.suggestions z parenta, tak si musi zoznam rereadnut parent!
+            if (objectChange !== OperationType.None) {
+                // zmenil sa zaznam dobrovolnika v DB
+                // zatial len refreshneme z DB
+                // ak by bol reqest pomaly, mozme pri inserte (nove id) / update (existujuce id) upravit zoznam a usetrime tym request do DB
+                this.loadSuggestions();
+            }
             // treba upravit this.state.filteredSuggestions? setli sme novy objekt, panel so suggestions by mal byt zavrety - TODO - overit
         }
         else {
@@ -338,12 +472,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
     }
 
     onOpenDropdown(e: any) {
-        if (this.props.onSearchStart) {
-            this.props.onSearchStart(() => this.openDropdown(e));
-        }
-        else {
-            this.openDropdown(e);
-        }
+        this.openDropdown(e);
+        this.suggestionsLoadedForOSS = false; // user mohol vyplnit nieco co meni filter a ide znova pracovat s autocomplete, nacitame suggestions znova (suggestionsLoad = onSearchStart)
         this.wasOnChangeCalled = false; // reset na default hodnotu
     }
 
@@ -380,8 +510,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
     createSearchBrowseParams(): XSearchBrowseParams {
         return {
             onChoose: this.searchDialogOnChoose,
-            displayFieldFilter: (this.state.inputChanged ? {field: this.props.field, constraint: {value: this.state.inputValueState, matchMode: "startsWith"}} : undefined),
-            customFilterFunction: this.props.customFilterFunction
+            displayFieldFilter: (this.state.inputChanged ? {field: this.props.field, constraint: {value: this.state.inputValueState, matchMode: "contains"}} : undefined),
+            customFilter: this.props.suggestionsQuery?.filter
         };
     }
 

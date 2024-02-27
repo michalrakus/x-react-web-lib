@@ -12,6 +12,7 @@ import {DataTableSortMeta} from "primereact/datatable";
 import {XObject} from "./XObject";
 import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import {XFilterOrFunction} from "./XAutoCompleteBase";
 
 export enum OperationType {
     None,
@@ -203,18 +204,16 @@ export class XUtils {
 
     // pomocna metodka pouzivajuca lazyDataTable service
     static async fetchRows(entity: string, customFilter?: XCustomFilter | undefined, sortField?: string | DataTableSortMeta[] | undefined, fields?: string[]): Promise<any[]> {
-        let multiSortMeta: DataTableSortMeta[] | undefined = undefined;
-        if (sortField) {
-            if (Array.isArray(sortField)) {
-                multiSortMeta = sortField;
-            }
-            else {
-                multiSortMeta = [{field: sortField, order: 1}];
-            }
-        }
-        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilterItems: XUtils.createCustomFilterItems(customFilter), multiSortMeta: multiSortMeta, fields: fields};
+        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilterItems: XUtils.createCustomFilterItems(customFilter), multiSortMeta: XUtils.createMultiSortMeta(sortField), fields: fields};
         const {rowList}: {rowList: any[];} = await XUtils.fetchOne('lazyDataTableFindRows', findParam);
         return rowList;
+    }
+
+    // pomocna metodka pouzivajuca lazyDataTable service
+    static async fetchRowCount(entity: string, customFilter?: XCustomFilter | undefined): Promise<number> {
+        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, entity: entity, customFilterItems: XUtils.createCustomFilterItems(customFilter)};
+        const {totalRecords}: {totalRecords: number;} = await XUtils.fetchOne('lazyDataTableFindRows', findParam);
+        return totalRecords;
     }
 
     static fetchOne(path: string, value: any, usePublicToken?: boolean | XToken): Promise<any> {
@@ -589,6 +588,20 @@ export class XUtils {
         return customFilterItems;
     }
 
+    // pomocna metodka - konvertuje sortField -> DataTableSortMeta[]
+    static createMultiSortMeta(sortField: string | DataTableSortMeta[] | undefined): DataTableSortMeta[] | undefined {
+        let multiSortMeta: DataTableSortMeta[] | undefined = undefined;
+        if (sortField) {
+            if (Array.isArray(sortField)) {
+                multiSortMeta = sortField;
+            }
+            else {
+                multiSortMeta = [{field: sortField, order: 1}];
+            }
+        }
+        return multiSortMeta;
+    }
+
     // pomocna metodka
     static filterAnd(...filters: (XCustomFilter | undefined)[]): XCustomFilterItem[] | undefined {
         let customFilterItemsResult: XCustomFilterItem[] | undefined = undefined;
@@ -608,6 +621,18 @@ export class XUtils {
     // ak je idList prazdny, vytvori podmienku id IN (0) a nevrati ziadne zaznamy
     static filterIdIn(idField: string, idList: number[]): XCustomFilter {
         return {where: `[${idField}] IN (:...idList)`, params: {"idList": idList.length > 0 ? idList : [0]}};
+    }
+
+    // pomocna metodka
+    static evalFilter(filter: XFilterOrFunction | undefined): XCustomFilter | undefined {
+        let customFilter: XCustomFilter | undefined = undefined;
+        if (typeof filter === 'object') {
+            customFilter = filter;
+        }
+        if (typeof filter === 'function') {
+            customFilter = filter();
+        }
+        return customFilter;
     }
 
     // pomocna metodka

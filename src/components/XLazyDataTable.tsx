@@ -205,8 +205,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             filtersInit[displayFieldFilter.field] = createFilterItem(props.filterDisplay, displayFieldFilter.constraint);
         }
         // ak mame props.searchBrowseParams.customFilterFunction, pridame filter
-        if (props.searchBrowseParams.customFilterFunction) {
-            customFilterItems = XUtils.filterAnd(customFilterItems, props.searchBrowseParams.customFilterFunction());
+        if (props.searchBrowseParams.customFilter) {
+            customFilterItems = XUtils.filterAnd(customFilterItems, XUtils.evalFilter(props.searchBrowseParams.customFilter));
         }
     }
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)

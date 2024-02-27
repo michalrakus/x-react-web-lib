@@ -4,7 +4,6 @@ import {XUtils} from "./XUtils";
 import {InputText} from "primereact/inputtext";
 import {Button} from "primereact/button";
 import {Dialog} from "primereact/dialog";
-import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XSearchBrowseParams} from "./XSearchBrowseParams";
 import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
@@ -125,8 +124,8 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
                     {
                             searchBrowseParams : {
                                 onChoose: onChoose,
-                                displayFieldFilter: (inputChanged ? {field: props.displayField, constraint: {value: inputValueState, matchMode: "startsWith"}} : undefined),
-                                customFilterFunction: () => undefined // TODO - dorobit
+                                displayFieldFilter: (inputChanged ? {field: props.displayField, constraint: {value: inputValueState, matchMode: "contains"}} : undefined),
+                                customFilter: undefined // TODO - dorobit
                             } satisfies XSearchBrowseParams
                         }/*, props.searchBrowse.children*/)}
             </Dialog>

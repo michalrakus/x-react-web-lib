@@ -176,8 +176,8 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
         const createSearchBrowseParams = (): XSearchBrowseParams => {
             return {
                 onChoose: onChoose,
-                displayFieldFilter: (inputChanged ? {field: props.displayField, constraint: {value: inputValueState, matchMode: "startsWith"}} : undefined),
-                customFilterFunction: () => this.getFilterBase(this.props.filter)
+                displayFieldFilter: (inputChanged ? {field: props.displayField, constraint: {value: inputValueState, matchMode: "contains"}} : undefined),
+                customFilter: () => this.getFilterBase(this.props.filter)
             };
         }
 
