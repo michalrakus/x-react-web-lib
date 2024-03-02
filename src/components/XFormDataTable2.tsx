@@ -554,7 +554,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         const filterDisplay: "menu" | "row" | undefined = this.props.filterDisplay !== "none" ? this.props.filterDisplay : undefined;
         // default sortovanie - ak mame insert tak nesortujeme (drzime poradie v akom user zaznam vytvoril), ak mame update tak podla id zosortujeme (nech je to zobrazene vzdy rovnako)
-        const sortField: string | undefined = this.props.sortField ?? this.props.form.isAddRow() ? undefined : xEntity.idField;
+        const sortField: string | undefined = this.props.sortField ?? (this.props.form.isAddRow() ? undefined : xEntity.idField);
         const label = this.props.label !== undefined ? this.props.label : this.props.assocField;
         const readOnly = this.isReadOnly();
 

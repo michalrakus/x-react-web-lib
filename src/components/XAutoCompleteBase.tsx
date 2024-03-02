@@ -10,6 +10,7 @@ import {XCustomFilter, XLazyAutoCompleteSuggestionsRequest} from "../serverApi/F
 import {DataTableSortMeta} from "primereact/datatable";
 import { XFormProps } from "./XFormBase"; /* DO NOT REMOVE - IS USED EVEN IF IT IS MARKED AS NOT USED */
 import {FindResult} from "../serverApi/FindResult";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 // type of suggestions load from DB:
 // suggestions - custom suggestions from parent component - no DB load used
@@ -38,13 +39,14 @@ export interface XAutoCompleteBaseProps {
     suggestionsLoad?: XSuggestionsLoadProp; // ak nemame suggestions, pouzijeme suggestionsLoad (resp. jeho default) a suggestionsQuery (ten musi byt zadany)
     suggestionsQuery?: XQuery; // musi byt zadany ak nie su zadane suggestions (poznamka: filter (a sortField?) sa posielaju do searchBrowse)
     lazyLoadMaxRows: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
-    field: string; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
+    field: string | string[]; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
     splitQueryValue: boolean; // ak true, tak splituje natypovanu hodnotu podla space a vsetky parcialne hodnoty sa musia vyskytovat v danom suggestion (default je true)
     searchBrowse?: JSX.Element; // ak je zadany, moze uzivatel vyhladavat objekt podobne ako pri XSearchButton (obchadza tym suggestions)
     valueForm?: JSX.Element; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
-    maxLength?: number;
+    minLength?: number; // Minimum number of characters to initiate a search (default 1)
     width?: string;
+    scrollHeight?: string; // Maximum height of the suggestions panel.
     readOnly?: boolean;
     error?: string; // chybova hlaska, ak chceme field oznacit za nevalidny (pozor! netreba sem davat error z onErrorCahnge, ten si riesi XAutoCompleteBase sam)
     onErrorChange: (error: string | undefined) => void; // "vystup" pre validacnu chybu ktoru "ohlasi" AutoComplete; chyba by mala byt ohlasena vzdy ked this.state.inputChanged = true (a nemame focus na inpute)
@@ -53,9 +55,13 @@ export interface XAutoCompleteBaseProps {
 
 export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
+    private static valueMoreSuggestions: string = "...";
+
     public static defaultProps = {
         lazyLoadMaxRows: 10,
-        splitQueryValue: true
+        splitQueryValue: true,
+        minLength: 1,
+        scrollHeight: '15rem'   // primereact has 200px
     };
 
     autoCompleteRef: any;
@@ -104,6 +110,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         this.onChange = this.onChange.bind(this);
         this.onSelect = this.onSelect.bind(this);
         this.onBlur = this.onBlur.bind(this);
+        this.itemTemplate = this.itemTemplate.bind(this);
+        this.computeDisplayValue = this.computeDisplayValue.bind(this);
         this.formDialogOnSaveOrCancel = this.formDialogOnSaveOrCancel.bind(this);
         this.formDialogOnHide = this.formDialogOnHide.bind(this);
         this.searchDialogOnChoose = this.searchDialogOnChoose.bind(this);
@@ -122,6 +130,15 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             suggestionsLoadType = this.props.suggestionsLoad;
         }
         return suggestionsLoadType;
+    }
+
+    // helper
+    getFields(): string[] {
+        return Array.isArray(this.props.field) ? this.props.field : [this.props.field];
+    }
+
+    getFirstField(): string {
+        return this.getFields()[0];
     }
 
     componentDidMount() {
@@ -145,9 +162,22 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         return XUtils.fetchRows(
             this.props.suggestionsQuery.entity,
             XUtils.evalFilter(this.props.suggestionsQuery.filter),
-            this.props.suggestionsQuery.sortField,
+            this.getSortField(),
             this.props.suggestionsQuery.fields
         );
+    }
+
+    getSortField(): string | DataTableSortMeta[] | undefined {
+        let sortField: string | DataTableSortMeta[] | undefined = this.props.suggestionsQuery!.sortField;
+        if (!sortField) {
+            // len pri ne-lazy pouzivame ako default sort prvy displayField
+            // pri lazy to spomaluje selecty v pripade ze klauzula LIMIT vyrazne obmedzi vysledny zoznam suggestions
+            // pri lazy zosortujeme na frontende v XAutoCompleteBase
+            if (this.getXSuggestionsLoadType() !== "lazy") {
+                sortField = this.getFirstField();
+            }
+        }
+        return sortField;
     }
 
     async completeMethod(event: {query: string;}) {
@@ -192,7 +222,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     queryNormalizedList = [queryNormalized]; // nesplitujeme
                 }
                 filteredSuggestions = suggestions.filter((suggestion) => {
-                    const fieldValue: string = suggestion[this.props.field];
+                    const fieldValue: string = this.computeDisplayValue(suggestion);
                     // specialna null polozka (prazdny objekt) - test dame az za test fieldValue na undefined - koli performance
                     if (fieldValue === undefined && Object.keys(suggestion).length === 0) {
                         return false;
@@ -212,28 +242,42 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             }
         }
         else {
-            // lazy
+            // ************* lazy ***************
+
+            // na backendev  SELECT-e pouzijeme klauzulu LIMIT <maxRows + 1>
+            // ak najdeme menej ako <maxRows + 1> zaznamov tak vieme ze sme nasli vsetky
+            // ak najdeme presne <maxRows + 1> zaznamov, tak na konci zobrazime uzivatelovi specialnu polozku "..."
+            // ktora ho upozorni ze existuju aj dalsie zaznamy splnujuce podmienku
+            // pikoska - ak je query je velmi siroke (select by bez LIMIT <maxRows + 1> vratil mnoho zaznamov),
+            // tak je takyto select velmi lacny (niekolko ms) - staci totiz najst prvych napr. 20 zaznamov splnujucich podmienku, t.j. netreba robit full-table scan
+            // to ale plati len v pripade ze nepouzijeme ORDER BY - pri pouziti ORDER BY urobi full-table scan (vyfiltruje) a nasledne zosortuje
+            // toto sa da obist specialnym selectom:
+            // select t.* from (select t0.* from table t0 order by t0.<attr1>) t where <full-text-condition> limit 20
+            // (najprv zosortuje a az potom filtruje prvych 20 zaznamov - predpoklad je ze nad t0.<attr1> mame index aby rychlo sortoval)
+            // tento specialny select mozme v buducnosti dorobit (na backende) ak chceme podporovat (rychle) sortovanie v DB pre autocomplete
+
             if (!this.props.suggestionsQuery) {
                 throw `XAutoCompleteBase.loadSuggestions: unexpected error - prop suggestionsQuery is undefined`;
             }
             let filter: XCustomFilter | undefined = XUtils.evalFilter(this.props.suggestionsQuery.filter);
             const suggestionsRequest: XLazyAutoCompleteSuggestionsRequest = {
-                maxRows: this.props.lazyLoadMaxRows,
-                field: this.props.field,
-                queryValue: event.query.trim(),
-                splitQueryValue: this.props.splitQueryValue,
+                maxRows: this.props.lazyLoadMaxRows + 1,
+                fullTextSearch: {fields: this.getFields(), value: event.query.trim(), splitValue: this.props.splitQueryValue, matchMode: "contains"},
                 entity: this.props.suggestionsQuery.entity,
                 filterItems: XUtils.createCustomFilterItems(filter),
-                multiSortMeta: XUtils.createMultiSortMeta(this.props.suggestionsQuery.sortField),
+                multiSortMeta: XUtils.createMultiSortMeta(this.getSortField()),
                 fields: this.props.suggestionsQuery.fields
             };
             const findResult: FindResult = await XUtils.fetchOne('x-lazy-auto-complete-suggestions', suggestionsRequest);
-            if (findResult.rowList) {
-                filteredSuggestions = findResult.rowList;
+            filteredSuggestions = findResult.rowList!;
+            // ak sme nesortovali v DB (co je draha operacia) tak zosortujeme teraz
+            // (computeDisplayValue sa vola duplicitne ale pre tych cca 20 zaznamov je to ok)
+            if (this.props.suggestionsQuery.sortField === undefined) {
+                filteredSuggestions = XUtils.arraySort(filteredSuggestions, this.computeDisplayValue);
             }
-            else {
-                // TODO - zobrazit userovi pocet zaznamov a dat inu chybovu hlasku ako ze hodnota sa nenasla?
-                filteredSuggestions = [];
+            // ak mame o 1 zaznam viac ako je lazyLoadMaxRows, zmenime posledny zaznam na ...
+            if (filteredSuggestions.length > this.props.lazyLoadMaxRows) {
+                filteredSuggestions[filteredSuggestions.length - 1] = XAutoCompleteBase.valueMoreSuggestions; // zatial priamo string
             }
         }
 
@@ -241,7 +285,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
     }
 
     onChange(e: AutoCompleteChangeEvent) {
-        if (typeof e.value === 'string') {
+        if (typeof e.value === 'string' && !XAutoCompleteBase.isMoreSuggestions(e.value)) {
             this.setState({inputChanged: true, inputValueState: e.value});
             this.wasOnChangeCalled = false; // reset na default hodnotu
         }
@@ -250,7 +294,10 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
     onSelect(e: any) {
         // nevolame this.setObjectValue ak uz bol zavolany z onBlur
         if (!this.wasOnChangeCalled) {
-            this.setObjectValue(e.value, OperationType.None);
+            // nedovolime vybrat specialny zaznam ...
+            if (!XAutoCompleteBase.isMoreSuggestions(e.value)) {
+                this.setObjectValue(e.value, OperationType.None);
+            }
         }
     }
 
@@ -406,7 +453,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     this.formDialogInitValuesForInsert = {};
                     // ak mame nevalidnu hodnotu, tak ju predplnime (snaha o user friendly)
                     if (this.state.inputChanged) {
-                        this.formDialogInitValuesForInsert[this.props.field] = this.state.inputValueState;
+                        this.formDialogInitValuesForInsert[this.getFirstField()] = this.state.inputValueState;
                     }
                     this.setState({formDialogOpened: true});
                 }
@@ -498,7 +545,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         if (!this.state.inputChanged) {
             // poznamka: ak object === null tak treba do inputu zapisovat prazdny retazec, ak by sme pouzili null, neprejavila by sa zmena v modeli na null
             const object = this.props.value;
-            inputValue = (object !== null) ? object : ""; // TODO - je "" ok?
+            inputValue = (object !== null) ? this.computeDisplayValue(object) : ""; // TODO - je "" ok?
         }
         else {
             inputValue = this.state.inputValueState;
@@ -506,11 +553,47 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         return inputValue;
     }
 
+    itemTemplate(suggestion: any, index: number): React.ReactNode {
+        return this.computeDisplayValue(suggestion);
+    }
+
+    computeDisplayValue(suggestion: any): string {
+        let displayValue: string = "";
+        if (XAutoCompleteBase.isMoreSuggestions(suggestion)) {
+            displayValue = suggestion;
+        }
+        else {
+            for (const field of this.getFields()) {
+                // TODO - konverzie na spravny typ/string
+                const [prefix, fieldOnly]: [string | null, string] = XUtilsCommon.getPrefixAndField(field);
+                const value: any = XUtilsCommon.getValueByPath(suggestion, fieldOnly);
+                if (value !== null && value !== undefined) {
+                    const valueStr: string = value.toString(); // TODO - spravnu konverziu
+                    if (valueStr !== "") {
+                        if (displayValue !== "") {
+                            displayValue += " ";
+                        }
+                        if (prefix) {
+                            displayValue += prefix;
+                        }
+                        displayValue += valueStr;
+                    }
+                }
+            }
+        }
+        return displayValue;
+    }
+
+    // vrati true ak sa jedna o specialny typ XAutoCompleteBase.valueMoreSuggestions
+    static isMoreSuggestions(suggestion: any): boolean {
+        return typeof suggestion === "string" && suggestion === XAutoCompleteBase.valueMoreSuggestions;
+    }
+
     // takto cez metodku, mozno sa metodka vola len ked sa otvori dialog a usetrime nieco...
     createSearchBrowseParams(): XSearchBrowseParams {
         return {
             onChoose: this.searchDialogOnChoose,
-            displayFieldFilter: (this.state.inputChanged ? {field: this.props.field, constraint: {value: this.state.inputValueState, matchMode: "contains"}} : undefined),
+            displayFieldFilter: (this.state.inputChanged ? {field: this.getFirstField(), constraint: {value: this.state.inputValueState, matchMode: "contains"}} : undefined),
             customFilter: this.props.suggestionsQuery?.filter
         };
     }
@@ -572,8 +655,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         // formgroup-inline lepi SplitButton na autocomplete a zarovna jeho vysku
         return (
             <div className="x-auto-complete-base" style={{width: this.props.width}}>
-                <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} field={this.props.field}
-                              onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} maxLength={this.props.maxLength}
+                <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} itemTemplate={this.itemTemplate}
+                              onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} minLength={this.props.minLength} scrollHeight={this.props.scrollHeight}
                               ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createErrorProps(error)}/>
                 {dropdownButton}
                 {this.props.valueForm != undefined ?

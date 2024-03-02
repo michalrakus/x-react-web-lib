@@ -10,17 +10,19 @@ import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     assocField: string;
-    displayField: string;
+    displayField: string | string[];
     searchBrowse?: JSX.Element;
     assocForm?: JSX.Element; // na insert/update
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT) (suggestionsLoad sa nepouziva)
     suggestionsLoad?: XSuggestionsLoadProp; // ak nemame suggestions, tak suggestionsLoad (resp. jeho default) urcuje ako sa nacitaju suggestions
     lazyLoadMaxRows?: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
     splitQueryValue?: boolean;
+    minLength?: number; // Minimum number of characters to initiate a search (default 1)
     filter?: XFilterProp;
     sortField?: string | DataTableSortMeta[];
     fields?: string[]; // ak chceme pri citani suggestions nacitat aj asociovane objekty
     width?: string;
+    scrollHeight?: string; // Maximum height of the suggestions panel.
     inputStyle?: React.CSSProperties;
 }
 
@@ -38,7 +40,7 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
         this.onChangeAutoCompleteBase = this.onChangeAutoCompleteBase.bind(this);
         this.onErrorChangeAutoCompleteBase = this.onErrorChangeAutoCompleteBase.bind(this);
 
-        props.form.addField(props.assocField + '.' + props.displayField);
+        props.form.addField(props.assocField + '.' + this.getFirstDisplayField());
     }
 
     // componentDidMount() {
@@ -50,6 +52,10 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
 
     isNotNull(): boolean {
         return !this.xAssoc.isNullable;
+    }
+
+    getFirstDisplayField(): string {
+        return Array.isArray(this.props.displayField) ? this.props.displayField[0] :this.props.displayField;
     }
 
     getValue(): any | null {
@@ -85,9 +91,9 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
                 <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <XAutoCompleteBase value={this.getValue()} onChange={this.onChangeAutoCompleteBase}
                                    field={this.props.displayField} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
-                                   readOnly={this.isReadOnly()} error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase} width={this.props.width}
-                                   suggestions={this.props.suggestions} suggestionsLoad={this.props.suggestionsLoad} lazyLoadMaxRows={this.props.lazyLoadMaxRows} splitQueryValue={this.props.splitQueryValue}
-                                   suggestionsQuery={{entity: this.xAssoc.entityName, filter: () => this.getFilterBase(this.props.filter), sortField: this.props.sortField ?? this.props.displayField, fields: this.props.fields}}/>
+                                   readOnly={this.isReadOnly()} error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase} width={this.props.width} scrollHeight={this.props.scrollHeight}
+                                   suggestions={this.props.suggestions} suggestionsLoad={this.props.suggestionsLoad} lazyLoadMaxRows={this.props.lazyLoadMaxRows} splitQueryValue={this.props.splitQueryValue} minLength={this.props.minLength}
+                                   suggestionsQuery={{entity: this.xAssoc.entityName, filter: () => this.getFilterBase(this.props.filter), sortField: this.props.sortField, fields: this.props.fields}}/>
             </div>
         );
     }

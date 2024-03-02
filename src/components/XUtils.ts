@@ -596,7 +596,16 @@ export class XUtils {
                 multiSortMeta = sortField;
             }
             else {
-                multiSortMeta = [{field: sortField, order: 1}];
+                // default order is asc, supported is also value in form "<column name> desc"
+                let order: 1 | -1 = 1;
+                const fieldAndOrder: string[] = sortField.split(' ');
+                if (fieldAndOrder.length === 2) {
+                    sortField = fieldAndOrder[0];
+                    if (fieldAndOrder[1].toLowerCase() === "desc") {
+                        order = -1;
+                    }
+                }
+                multiSortMeta = [{field: sortField, order: order}];
             }
         }
         return multiSortMeta;

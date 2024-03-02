@@ -21,9 +21,11 @@ export interface XAutoCompleteDTProps extends XFormComponentDTProps {
     suggestionsLoad?: XSuggestionsLoadProp; // ak nemame suggestions, tak suggestionsLoad (resp. jeho default) urcuje ako sa nacitaju suggestions
     lazyLoadMaxRows?: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
     splitQueryValue?: boolean;
+    minLength?: number; // Minimum number of characters to initiate a search (default 1)
     filter?: XTableFieldFilterProp;
     sortField?: string | DataTableSortMeta[];
     fields?: string[]; // ak chceme pri citani suggestions nacitat aj asociovane objekty
+    scrollHeight?: string; // Maximum height of the suggestions panel.
 }
 
 export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
@@ -90,7 +92,8 @@ export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
                                idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
                                error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}
                                suggestions={this.props.suggestions} suggestionsLoad={this.props.suggestionsLoad} lazyLoadMaxRows={this.props.lazyLoadMaxRows} splitQueryValue={this.props.splitQueryValue}
-                               suggestionsQuery={{entity: this.xAssoc.entityName, filter: () => this.getFilterBase(this.props.filter), sortField: this.props.sortField ?? this.props.displayField, fields: this.props.fields}}/>
+                               minLength={this.props.minLength} scrollHeight={this.props.scrollHeight}
+                               suggestionsQuery={{entity: this.xAssoc.entityName, filter: () => this.getFilterBase(this.props.filter), sortField: this.props.sortField, fields: this.props.fields}}/>
         );
     }
 }

@@ -96,7 +96,7 @@ export interface XLazyDataTableProps {
     appButtons?: any; // vseobecne buttons (netreba im poslat vyselectovany row) - mozno by sa mali volat appButtonsGeneral
     filters?: DataTableFilterMeta; // pouzivatelsky filter
     customFilter?: XCustomFilter; // (programatorsky) filter ktory sa aplikuje na zobrazovane data (uzivatel ho nedokaze zmenit)
-    sortField?: string;
+    sortField?: string | DataTableSortMeta[];
     fullTextSearch: boolean | string[]; // false - nemame full-text search, true - mame full-text search na default stlpcoch, string[] - full-text search na danych stlpcoch
     fields?: string[]; // ak chceme nacitat aj asociovane objekty mimo tych ktore sa nacitavaju koli niektoremu zo stlpcov
     multiLineSwitch: boolean; // default false, ak true tak zobrazi switch, ktorym sa da vypnut zobrazenie viacriadkovych textov v sirokom riadku
@@ -213,7 +213,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const initFtsInputValue: XFtsInputValue | undefined = props.fullTextSearch ? createInitFtsInputValue() : undefined;
     const [ftsInputValue, setFtsInputValue] = useState<XFtsInputValue | undefined>(initFtsInputValue);
     const [multiLineSwitchValue, setMultiLineSwitchValue] = useState<boolean>(true);
-    const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[]>(props.sortField ? [{field: props.sortField, order: 1}] : []);
+    const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[] | undefined>(XUtils.createMultiSortMeta(props.sortField));
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
     const [exportRowsDialogOpened, setExportRowsDialogOpened] = useState<boolean>(false);
@@ -324,6 +324,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             xFullTextSearch = {
                 fields: Array.isArray(props.fullTextSearch) ? props.fullTextSearch : undefined,
                 value: ftsInputValue.value,
+                splitValue: true,
                 matchMode: ftsInputValue.matchMode
             }
         }
