@@ -1,7 +1,7 @@
 import {XField} from "../serverApi/XEntityMetadata";
 import {XUtils} from "./XUtils";
 import {XBrowseMeta, XBrowseMetaMap} from "../serverApi/XBrowseMetadata";
-import {XBetweenFilterProp} from "./XLazyDataTable";
+import {XBetweenFilterProp} from "./XLazyDataTable/XLazyDataTable";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 // idelany nazov: UtilsEntityMetadata - ale strasne dlhy

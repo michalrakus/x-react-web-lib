@@ -106,9 +106,13 @@ export abstract class XFormBase extends Component<XFormProps> {
         else {
             // add new row
             object = this.createNewObject();
+            // if object is {} then call async version
+            if (Object.keys(object).length === 0) {
+                object = await this.createNewObjectAsync();
+            }
             // pridame pripadne "init values", ktore pridu cez prop object (pouziva sa napr. pri insertovani cez XAutoComplete na predplnenie hodnoty)
             if (this.props.initValues !== undefined) {
-                object = {...object, ...this.props.initValues}; // values from this.props.object will override values from object (if key is the same)
+                object = {...object, ...this.props.initValues}; // values from this.props.initValues will override values from object (if key is the same)
             }
             operationType = OperationType.Insert;
         }
@@ -460,6 +464,12 @@ export abstract class XFormBase extends Component<XFormProps> {
 
     // this method can be overriden in subclass if needed (to set some default values for insert)
     createNewObject(): XObject {
+        return {};
+    }
+
+    // this method can be overriden in subclass if needed (to set some default values for insert)
+    // if createNewObject() returns empty object {}, then createNewObjectAsync() is called
+    async createNewObjectAsync(): Promise<XObject> {
         return {};
     }
 

@@ -40,6 +40,7 @@ export interface XAutoCompleteBaseProps {
     suggestionsQuery?: XQuery; // musi byt zadany ak nie su zadane suggestions (poznamka: filter (a sortField?) sa posielaju do searchBrowse)
     lazyLoadMaxRows: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
     field: string | string[]; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
+    itemTemplate?: (suggestion: any, index: number, createStringValue: boolean, defaultValue: (suggestion: any) => string) => React.ReactNode; // pouzivane ak potrebujeme nejaky custom format item-om (funkcia defaultValue rata default format)
     splitQueryValue: boolean; // ak true, tak splituje natypovanu hodnotu podla space a vsetky parcialne hodnoty sa musia vyskytovat v danom suggestion (default je true)
     searchBrowse?: JSX.Element; // ak je zadany, moze uzivatel vyhladavat objekt podobne ako pri XSearchButton (obchadza tym suggestions)
     valueForm?: JSX.Element; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
@@ -47,6 +48,7 @@ export interface XAutoCompleteBaseProps {
     minLength?: number; // Minimum number of characters to initiate a search (default 1)
     width?: string;
     scrollHeight?: string; // Maximum height of the suggestions panel.
+    inputClassName?: string;
     readOnly?: boolean;
     error?: string; // chybova hlaska, ak chceme field oznacit za nevalidny (pozor! netreba sem davat error z onErrorCahnge, ten si riesi XAutoCompleteBase sam)
     onErrorChange: (error: string | undefined) => void; // "vystup" pre validacnu chybu ktoru "ohlasi" AutoComplete; chyba by mala byt ohlasena vzdy ked this.state.inputChanged = true (a nemame focus na inpute)
@@ -111,7 +113,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         this.onSelect = this.onSelect.bind(this);
         this.onBlur = this.onBlur.bind(this);
         this.itemTemplate = this.itemTemplate.bind(this);
-        this.computeDisplayValue = this.computeDisplayValue.bind(this);
+        this.itemTemplateString = this.itemTemplateString.bind(this);
+        this.computeDefaultDisplayValue = this.computeDefaultDisplayValue.bind(this);
         this.formDialogOnSaveOrCancel = this.formDialogOnSaveOrCancel.bind(this);
         this.formDialogOnHide = this.formDialogOnHide.bind(this);
         this.searchDialogOnChoose = this.searchDialogOnChoose.bind(this);
@@ -222,7 +225,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     queryNormalizedList = [queryNormalized]; // nesplitujeme
                 }
                 filteredSuggestions = suggestions.filter((suggestion) => {
-                    const fieldValue: string = this.computeDisplayValue(suggestion);
+                    const fieldValue: string = this.itemTemplateString(suggestion);
                     // specialna null polozka (prazdny objekt) - test dame az za test fieldValue na undefined - koli performance
                     if (fieldValue === undefined && Object.keys(suggestion).length === 0) {
                         return false;
@@ -271,11 +274,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             const findResult: FindResult = await XUtils.fetchOne('x-lazy-auto-complete-suggestions', suggestionsRequest);
             filteredSuggestions = findResult.rowList!;
             // ak sme nesortovali v DB (co je draha operacia) tak zosortujeme teraz
-            // (computeDisplayValue sa vola duplicitne ale pre tych cca 20 zaznamov je to ok)
+            // (itemTemplateString sa vola duplicitne ale pre tych cca 20 zaznamov je to ok)
             if (this.props.suggestionsQuery.sortField === undefined) {
-                filteredSuggestions = XUtils.arraySort(filteredSuggestions, this.computeDisplayValue);
+                filteredSuggestions = XUtils.arraySort(filteredSuggestions, this.itemTemplateString);
             }
             // ak mame o 1 zaznam viac ako je lazyLoadMaxRows, zmenime posledny zaznam na ...
+            // TODO - lepsie by bolo posledny zaznam vyhodit a popisok ... zobrazit do footer-a (odpadnu problemy z pripadnou selekciou pseudozaznamu ...)
             if (filteredSuggestions.length > this.props.lazyLoadMaxRows) {
                 filteredSuggestions[filteredSuggestions.length - 1] = XAutoCompleteBase.valueMoreSuggestions; // zatial priamo string
             }
@@ -545,7 +549,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         if (!this.state.inputChanged) {
             // poznamka: ak object === null tak treba do inputu zapisovat prazdny retazec, ak by sme pouzili null, neprejavila by sa zmena v modeli na null
             const object = this.props.value;
-            inputValue = (object !== null) ? this.computeDisplayValue(object) : ""; // TODO - je "" ok?
+            inputValue = (object !== null) ? this.computeItemTemplate(object, -1, true) : ""; // TODO - je "" ok?
         }
         else {
             inputValue = this.state.inputValueState;
@@ -554,10 +558,35 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
     }
 
     itemTemplate(suggestion: any, index: number): React.ReactNode {
-        return this.computeDisplayValue(suggestion);
+        return this.computeItemTemplate(suggestion, index, false);
     }
 
-    computeDisplayValue(suggestion: any): string {
+    // pouziva sa na vytvorenie hodnoty do inputu (vyselectovany zaznam) a tiez na pripadne sortovanie a filtrovanie na frontende (ak nepouzivame lazy nacitavanie)
+    itemTemplateString(suggestion: any): string {
+        const itemValue: React.ReactNode = this.computeItemTemplate(suggestion, -1, true);
+        if (typeof itemValue !== "string") {
+            throw `XAutoCompleteBase: function of the property itemTemplate created non-string value for suggestion. Please create string value if parameter createStringValue = true.`;
+        }
+        return itemValue;
+    }
+
+    computeItemTemplate(suggestion: any, index: number, createStringValue: boolean): React.ReactNode {
+        let itemTemplate: React.ReactNode;
+        // osetrenie specialnej polozky ... dame sem, nech sa to nemusi inde riesit
+        if (XAutoCompleteBase.isMoreSuggestions(suggestion)) {
+            itemTemplate = suggestion;
+        }
+        else {
+            if (this.props.itemTemplate) {
+                itemTemplate = this.props.itemTemplate(suggestion, index, createStringValue, this.computeDefaultDisplayValue);
+            } else {
+                itemTemplate = this.computeDefaultDisplayValue(suggestion);
+            }
+        }
+        return itemTemplate;
+    }
+
+    computeDefaultDisplayValue(suggestion: any): string {
         let displayValue: string = "";
         if (XAutoCompleteBase.isMoreSuggestions(suggestion)) {
             displayValue = suggestion;
@@ -657,7 +686,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             <div className="x-auto-complete-base" style={{width: this.props.width}}>
                 <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} itemTemplate={this.itemTemplate}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} minLength={this.props.minLength} scrollHeight={this.props.scrollHeight}
-                              ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createErrorProps(error)}/>
+                              ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createErrorProps(error)} inputClassName={this.props.inputClassName}/>
                 {dropdownButton}
                 {this.props.valueForm != undefined ?
                     <Dialog visible={this.state.formDialogOpened} onHide={this.formDialogOnHide} header={this.formDialogObjectId ? 'Modification' : 'New row'}>

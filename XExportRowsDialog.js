@@ -2,4 +2,4 @@
 
 'use strict';
 
-module.exports = require('./lib/components/XExportRowsDialog.js');
+module.exports = require('./lib/components/XLazyDataTable/XExportRowsDialog.js');

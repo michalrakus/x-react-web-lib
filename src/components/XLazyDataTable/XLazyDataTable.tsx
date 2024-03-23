@@ -7,14 +7,14 @@ import {
     DataTableSortMeta
 } from 'primereact/datatable';
 import {Column, ColumnBodyOptions, ColumnFilterElementTemplateOptions} from 'primereact/column';
-import {XButton} from "./XButton";
-import {OperationType, XUtils, XViewStatus, XViewStatusOrBoolean} from "./XUtils";
-import {XFieldFilter, XSearchBrowseParams} from "./XSearchBrowseParams";
-import {XUtilsMetadata} from "./XUtilsMetadata";
-import {XDropdownDTFilter} from "./XDropdownDTFilter";
-import {XEntity, XField} from "../serverApi/XEntityMetadata";
-import {AsUIType, convertValue, numberAsUI, numberFromModel} from "../serverApi/XUtilsConversions";
-import {FindResult} from "../serverApi/FindResult";
+import {XButton} from "../XButton";
+import {OperationType, XUtils, XViewStatus, XViewStatusOrBoolean} from "../XUtils";
+import {XFieldFilter, XSearchBrowseParams} from "../XSearchBrowseParams";
+import {XUtilsMetadata} from "../XUtilsMetadata";
+import {XDropdownDTFilter} from "../XDropdownDTFilter";
+import {XEntity, XField} from "../../serverApi/XEntityMetadata";
+import {AsUIType, convertValue, numberAsUI, numberFromModel} from "../../serverApi/XUtilsConversions";
+import {FindResult} from "../../serverApi/FindResult";
 import {
     FindParam,
     ResultType,
@@ -23,24 +23,28 @@ import {
     XCustomFilter,
     XCustomFilterItem,
     XFullTextSearch
-} from "../serverApi/FindParam";
-import {XButtonIconSmall} from "./XButtonIconSmall";
+} from "../../serverApi/FindParam";
+import {XButtonIconSmall} from "../XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
-import {XUtilsCommon} from "../serverApi/XUtilsCommon";
-import {LazyDataTableQueryParam} from "../serverApi/ExportImportParam";
+import {XUtilsCommon} from "../../serverApi/XUtilsCommon";
+import {LazyDataTableQueryParam} from "../../serverApi/ExportImportParam";
 import {XExportParams, XExportRowsDialog} from "./XExportRowsDialog";
 import {FilterMatchMode, FilterOperator} from "primereact/api";
-import {XOnSaveOrCancelProp} from "./XFormBase";
-import {XCalendar} from "./XCalendar";
-import {XInputDecimalBase} from "./XInputDecimalBase";
-import {xLocaleOption} from "./XLocale";
-import {XFtsInput, XFtsInputValue} from "./XFtsInput";
-import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import {XOnSaveOrCancelProp} from "../XFormBase";
+import {XCalendar} from "../XCalendar";
+import {XInputDecimalBase} from "../XInputDecimalBase";
+import {xLocaleOption} from "../XLocale";
+import {XFtsInput, XFtsInputValue} from "../XFtsInput";
+import {XUtilsMetadataCommon} from "../../serverApi/XUtilsMetadataCommon";
 import {IconType} from "primereact/utils";
 import {ButtonProps} from "primereact/button";
-import {InputSwitch} from "primereact/inputswitch";
+import {Editor} from "primereact/editor";
+import {XMultilineSwitch} from "./XMultilineSwitch";
+import {XMultilineRenderer} from "./XMultilineRenderer";
+import {XHtmlRenderer} from "./XHtmlRenderer";
 
 export type XBetweenFilterProp = "row" | "column" | undefined;
+export type XMultilineRenderType = "singleLine" | "fewLines" | "allLines";
 
 export interface XAppButtonForRow {
     key?: string;
@@ -99,7 +103,9 @@ export interface XLazyDataTableProps {
     sortField?: string | DataTableSortMeta[];
     fullTextSearch: boolean | string[]; // false - nemame full-text search, true - mame full-text search na default stlpcoch, string[] - full-text search na danych stlpcoch
     fields?: string[]; // ak chceme nacitat aj asociovane objekty mimo tych ktore sa nacitavaju koli niektoremu zo stlpcov
-    multiLineSwitch: boolean; // default false, ak true tak zobrazi switch, ktorym sa da vypnut zobrazenie viacriadkovych textov v sirokom riadku
+    multilineSwitch: boolean; // default false, ak true tak zobrazi switch, ktorym sa da vypnut zobrazenie viacriadkovych textov v sirokom riadku
+    multilineSwitchInitValue: XMultilineRenderType; // default "allLines"
+    multilineSwitchFewLinesCount: number; // max count of rendered lines for render type "fewLines" (default 2)
     searchBrowseParams?: XSearchBrowseParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
     rowClassName?: (data: any) => object | string | undefined;
@@ -212,7 +218,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
     const initFtsInputValue: XFtsInputValue | undefined = props.fullTextSearch ? createInitFtsInputValue() : undefined;
     const [ftsInputValue, setFtsInputValue] = useState<XFtsInputValue | undefined>(initFtsInputValue);
-    const [multiLineSwitchValue, setMultiLineSwitchValue] = useState<boolean>(true);
+    const [multilineSwitchValue, setMultilineSwitchValue] = useState<XMultilineRenderType>(props.multilineSwitchInitValue);
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[] | undefined>(XUtils.createMultiSortMeta(props.sortField));
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
@@ -359,6 +365,12 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             headers.push(column.props.header);
         }
         return headers;
+    }
+
+    const hasContentTypeHtml = (): boolean => {
+
+        let columns: XLazyColumnType[] = props.children as XLazyColumnType[];
+        return columns.some((column: XLazyColumnType) => column.props.contentType === "html");
     }
 
     const onSelectionChange = (event: any) => {
@@ -592,23 +604,26 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return betweenFilter;
     }
 
-    const valueAsUI = (value: any, xField: XField): React.ReactNode => {
+    const valueAsUI = (value: any, xField: XField, contentType?: XContentType): React.ReactNode => {
         let valueResult: React.ReactNode;
         if (xField.type === "boolean") {
             // TODO - efektivnejsie by bolo renderovat len prislusne ikonky
             valueResult = <TriStateCheckbox value={value} disabled={true}/>
         }
         else {
-            // ine typy - convertValue vrati string
-            // mame zapnutu konverziu fromModel, lebo z json-u nam prichadzaju objekty typu string (napr. pri datumoch)
-            valueResult = convertValue(xField, value, true, AsUIType.Form);
-            // ak mame viacriadkovy text a zapnuty multiLineSwitch (defaultne je zapnuty aj ked nie je zobrazeny)
-            if (multiLineSwitchValue) {
-                if (xField.type === "string" && typeof valueResult === "string" && valueResult) {
-                    const lines: string[] = valueResult.split(XUtilsCommon.newLine);
-                    if (lines.length >= 2) {
-                        const elemList: React.ReactNode[] = lines.map((value: any, index: number) => <div key={index}>{value}</div>);
-                        valueResult = <div>{elemList}</div>;
+            if (contentType === "html") {
+                // value should be always string (xField.type === "string")
+                valueResult = <XHtmlRenderer htmlValue={value} renderType={multilineSwitchValue} fewLinesCount={props.multilineSwitchFewLinesCount}/>;
+            }
+            else {
+                // ine typy - convertValue vrati string
+                // mame zapnutu konverziu fromModel, lebo z json-u nam prichadzaju objekty typu string (napr. pri datumoch)
+                valueResult = convertValue(xField, value, true, AsUIType.Form);
+                // ak mame viacriadkovy text a multilineSwitch nastaveny na viac ako 1 riadok (defaultne je nastaveny na "allLines") pouzijeme XMultilineRenderer
+                if (contentType === "multiline" && multilineSwitchValue !== "singleLine") {
+                    if (xField.type === "string" && typeof valueResult === "string" && valueResult) {
+                        const lines: string[] = valueResult.split(XUtilsCommon.newLine);
+                        valueResult = <XMultilineRenderer valueList={lines} renderType={multilineSwitchValue} fewLinesCount={props.multilineSwitchFewLinesCount} multilineContent={true}/>;
                     }
                 }
             }
@@ -620,11 +635,11 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         let bodyValue: React.ReactNode;
         const rowDataValue: any | any[] = XUtilsCommon.getValueOrValueListByPath(rowData, columnProps.field);
         if (Array.isArray(rowDataValue)) {
-            const elemList: React.ReactNode[] = rowDataValue.map((value: any, index: number) => <div key={index}>{valueAsUI(value, xField)}</div>);
-            bodyValue = <div>{elemList}</div>;
+            const elemList: React.ReactNode[] = rowDataValue.map((value: any) => valueAsUI(value, xField, columnProps.contentType));
+            bodyValue = <XMultilineRenderer valueList={elemList} renderType={multilineSwitchValue} fewLinesCount={props.multilineSwitchFewLinesCount}/>;
         }
         else {
-            bodyValue = valueAsUI(rowDataValue, xField);
+            bodyValue = valueAsUI(rowDataValue, xField, columnProps.contentType);
         }
         return bodyValue;
     }
@@ -906,7 +921,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)}/> : null}
                 <XButton key="filter" label={xLocaleOption('filter')} onClick={onClickFilter} />
                 <XButton key="clearFilter" label={xLocaleOption('clearFilter')} onClick={onClickClearFilter} />
-                {props.multiLineSwitch ? <InputSwitch checked={multiLineSwitchValue} onChange={(e) => setMultiLineSwitchValue(e.value)} className="m-1"/> : null}
+                {props.multilineSwitch ? <XMultilineSwitch value={multilineSwitchValue} onChange={(value: XMultilineRenderType) => setMultilineSwitchValue(value)} className="m-1"/> : null}
             </div>
             <div className="flex justify-content-center">
                 <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator}
@@ -933,6 +948,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogOpened={exportRowsDialogOpened} hideDialog={() => setExportRowsDialogOpened(false)}
                                                  rowCount={exportRowsDialogRowCount} exportParams={createExportParams}/> : null}
             </div>
+            {hasContentTypeHtml() ? <Editor style={{display: 'none'}} showHeader={false}/> : null /* we want to import css if needed (<style type="text/css" data-primereact-style-id="editor">) */}
         </div>
     );
 }
@@ -942,7 +958,9 @@ XLazyDataTable.defaultProps = {
     rows: 10,
     filterDisplay: "row",
     fullTextSearch: true,
-    multiLineSwitch: false,
+    multilineSwitch: false,
+    multilineSwitchInitValue: "allLines",
+    multilineSwitchFewLinesCount: 2,
     scrollable: true,
     scrollWidth: 'viewport', // nastavi sirku tabulky na (100vw - nieco) (ak bude obsah sirsi, zapne horizontalny scrollbar)
     scrollHeight: 'viewport', // nastavi vysku tabulky na (100vh - nieco) (ak bude obsah vecsi, zapne vertikalny scrollbar)
@@ -952,13 +970,14 @@ XLazyDataTable.defaultProps = {
 // property filterElement is of type function, this functions returns custom filter input (e.g. AutoComplete, type React.ReactNode),
 // setFilterItem is function that the custom filter input calls upon onChange - the function setFilterItem sets the selected filter value into "filters"
 // and from "filters" goes the value to lazy service
-// remark: this complicated way is used only to get filter value form custom filter input to "filters" in XLazyDataTable
+// remark: this complicated way is used only to get filter value from custom filter input to "filters" in XLazyDataTable
 // remark2: filter value transfer "custom filter input" -> "filters" is (temporary?) only one way, if some third party changes filter value in "filters",
 // the change will be not visible in custom filter input!
 export type XGetFilterItem = (field: string) => DataTableFilterMetaData | DataTableOperatorFilterMetaData;
 export type XSetFilterItem = (field: string, filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData) => void;
 export type XFilterElementParams = {getFilterItem: XGetFilterItem; setFilterItem: XSetFilterItem; options: ColumnFilterElementTemplateOptions;};
 export type XFilterElementProp = (params: XFilterElementParams) => React.ReactNode;
+export type XContentType = "multiline" | "html" | undefined;
 
 export interface XLazyColumnProps {
     field: string;
@@ -970,11 +989,14 @@ export interface XLazyColumnProps {
     showFilterMenu?: boolean;
     betweenFilter?: XBetweenFilterProp | "noBetween"; // creates 2 inputs from to, only for type date/datetime/decimal/number implemented, "row"/"column" - position of inputs from to
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
+    contentType?: XContentType; // multiLine (output from InputTextarea) - wraps the content; html (output from Editor) - for rendering raw html
     aggregateType?: XAggregateType;
     columnViewStatus: XViewStatusOrBoolean; // aby sme mohli mat Hidden stlpec (nedarilo sa mi priamo v kode "o-if-ovat" stlpec), zatial netreba funkciu, vola sa columnViewStatus lebo napr. v Edit tabulke moze byt viewStatus na row urovni
     filterElement?: XFilterElementProp;
     body?: React.ReactNode | ((data: any, options: ColumnBodyOptions) => React.ReactNode); // the same type as type of property Column.body
 }
+
+export type XLazyColumnType = {props: XLazyColumnProps};
 
 // TODO - XLazyColumn neni idealny nazov, lepsi je XColumn (ale zatial nechame XLazyColumn)
 export const XLazyColumn = (props: XLazyColumnProps) => {

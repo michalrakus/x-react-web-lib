@@ -2,4 +2,4 @@
 
 'use strict';
 
-module.exports = require('./lib/components/XLazyDataTable.js');
+module.exports = require('./lib/components/XLazyDataTable/XLazyDataTable.js');

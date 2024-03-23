@@ -33,7 +33,7 @@ import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {xLocaleOption} from "./XLocale";
 import {XInputIntervalDT} from "./XInputIntervalDT";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
-import {XLazyColumnProps} from "./XLazyDataTable";
+import {XLazyColumnProps} from "./XLazyDataTable/XLazyDataTable";
 import {XInputTextareaDT} from "./XInputTextareaDT";
 
 // typ pre technicky field row.__x_rowTechData (row je item zoznamu editovaneho v XFormDataTable2)

@@ -4,16 +4,16 @@ import {
     CsvParam,
     CsvSeparator, ExportParam,
     ExportType, LazyDataTableQueryParam
-} from "../serverApi/ExportImportParam";
+} from "../../serverApi/ExportImportParam";
 import React, {useState} from "react";
 import {Dialog} from "primereact/dialog";
 import {InputText} from "primereact/inputtext";
 import {Dropdown} from "primereact/dropdown";
 import {Checkbox} from "primereact/checkbox";
-import {XButton} from "./XButton";
-import {XUtils} from "./XUtils";
-import {numberAsUI} from "../serverApi/XUtilsConversions";
-import {xLocaleOption} from "./XLocale";
+import {XButton} from "../XButton";
+import {XUtils} from "../XUtils";
+import {numberAsUI} from "../../serverApi/XUtilsConversions";
+import {xLocaleOption} from "../XLocale";
 
 // parametre potrebne na zavolanie servisu pre export
 export interface XExportParams {

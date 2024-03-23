@@ -1,4 +1,4 @@
-import {XBrowseProps, XLazyColumn, XLazyDataTable} from "../components/XLazyDataTable";
+import {XBrowseProps, XLazyColumn, XLazyDataTable} from "../components/XLazyDataTable/XLazyDataTable";
 import React from "react";
 import {XUser} from "../serverApi/XUser";
 import {XUserForm} from "./XUserForm";

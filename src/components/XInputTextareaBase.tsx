@@ -18,22 +18,21 @@ export const XInputTextareaBase = (props: {
     maxLength?: number;
 }) => {
 
-    // true, ak uzivatel typuje hodnotu ale hodnota sa este neda skonvertovat na korektny interval (este nevieme vytvorit IPostgresInterval)
-    // false, ak uz mame v inpute korektnu hodnotu - vtedy zavolame props.onChange a posleme mu IPostgresInterval
+    // true, ak uzivatel typuje hodnotu
+    // false, ak bol zavolany onBlur
     const [inputChanged, setInputChanged] = useState<boolean>(false);
     // pouzivane, len ak inputChanged === true, je tu zapisana zmenena hodnota v inpute
     const [inputValueState, setInputValueState] = useState<string | undefined>(undefined);
 
     const onChange = (e: any) => {
-        // conversion to IPostgresInterval will be done in onBlur
         setInputChanged(true);
         setInputValueState(e.target.value);
     }
 
     const onBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
-        // optimalizacia - testujeme len ak inputChanged === true
+        // optimalizacia - onChange volame len ak inputChanged === true
         if (inputChanged) {
-            let value: string | null = stringFromUI(e.target.value);
+            const value: string | null = stringFromUI(e.target.value);
             props.onChange(value);
             setInputChanged(false);
             setInputValueState(undefined); // pre poriadok

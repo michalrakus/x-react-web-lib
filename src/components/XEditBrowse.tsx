@@ -6,7 +6,7 @@ import {XBrowseMeta, XColumnMeta} from "../serverApi/XBrowseMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtils} from "./XUtils";
-import {XEditModeHandlers, XLazyColumn, XLazyDataTable} from "./XLazyDataTable";
+import {XEditModeHandlers, XLazyColumn, XLazyDataTable} from "./XLazyDataTable/XLazyDataTable";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XEditBrowseProps {

@@ -10,7 +10,8 @@ import {DataTableSortMeta} from "primereact/datatable";
 
 export interface XAutoCompleteDTProps extends XFormComponentDTProps {
     assocField: string;
-    displayField: string;
+    displayField: string | string[];
+    itemTemplate?: (suggestion: any, index: number, createStringValue: boolean, defaultValue: (suggestion: any) => string) => React.ReactNode; // pouzivane ak potrebujeme nejaky custom format item-om (funkcia defaultValue rata default format)
     searchBrowse?: JSX.Element;
     assocForm?: JSX.Element; // na insert/update
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu
@@ -26,6 +27,7 @@ export interface XAutoCompleteDTProps extends XFormComponentDTProps {
     sortField?: string | DataTableSortMeta[];
     fields?: string[]; // ak chceme pri citani suggestions nacitat aj asociovane objekty
     scrollHeight?: string; // Maximum height of the suggestions panel.
+    inputClassName?: string;
 }
 
 export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
@@ -88,12 +90,13 @@ export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
         // div className="col" nam zabezpeci aby XAutoCompleteBase nezaberal celu dlzku grid-u (ma nastaveny width=100% vdaka "formgroup-inline")
         return (
             <XAutoCompleteBase value={this.getValue()} onChange={this.onChangeAutoCompleteBase}
-                               field={this.props.displayField} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm}
+                               field={this.props.displayField} itemTemplate={this.props.itemTemplate} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm}
                                idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
                                error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}
                                suggestions={this.props.suggestions} suggestionsLoad={this.props.suggestionsLoad} lazyLoadMaxRows={this.props.lazyLoadMaxRows} splitQueryValue={this.props.splitQueryValue}
                                minLength={this.props.minLength} scrollHeight={this.props.scrollHeight}
-                               suggestionsQuery={{entity: this.xAssoc.entityName, filter: () => this.getFilterBase(this.props.filter), sortField: this.props.sortField, fields: this.props.fields}}/>
+                               suggestionsQuery={{entity: this.xAssoc.entityName, filter: () => this.getFilterBase(this.props.filter), sortField: this.props.sortField, fields: this.props.fields}}
+                               inputClassName={this.props.inputClassName}/>
         );
     }
 }
