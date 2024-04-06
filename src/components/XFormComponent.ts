@@ -22,6 +22,7 @@ export interface XFormComponentProps<T> {
     form: XFormBase;
     label?: string;
     tooltip?: string;
+    placeholder?: string;
     readOnly?: XReadOnlyProp;
     labelStyle?: React.CSSProperties;
     inline?: boolean;

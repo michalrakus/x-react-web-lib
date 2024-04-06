@@ -42,6 +42,8 @@ import {Editor} from "primereact/editor";
 import {XMultilineSwitch} from "./XMultilineSwitch";
 import {XMultilineRenderer} from "./XMultilineRenderer";
 import {XHtmlRenderer} from "./XHtmlRenderer";
+import {Dropdown} from "primereact/dropdown";
+import {XOcfDropdown} from "./XOcfDropdown";
 
 export type XBetweenFilterProp = "row" | "column" | undefined;
 export type XMultilineRenderType = "singleLine" | "fewLines" | "allLines";
@@ -51,6 +53,11 @@ export interface XAppButtonForRow {
     icon?: IconType<ButtonProps>;
     label: string;
     onClick: (selectedRow: any) => void;
+}
+
+export interface XOptionalCustomFilter {
+    label: string;
+    filter: XCustomFilter;
 }
 
 export interface XEditModeHandlers {
@@ -100,6 +107,7 @@ export interface XLazyDataTableProps {
     appButtons?: any; // vseobecne buttons (netreba im poslat vyselectovany row) - mozno by sa mali volat appButtonsGeneral
     filters?: DataTableFilterMeta; // pouzivatelsky filter
     customFilter?: XCustomFilter; // (programatorsky) filter ktory sa aplikuje na zobrazovane data (uzivatel ho nedokaze zmenit)
+    optionalCustomFilters?: XOptionalCustomFilter[]; // programatorom predpripravene filtre, user si moze vybrat predpripraveny filter v dropdown-e vedla Filter/Clear buttonov
     sortField?: string | DataTableSortMeta[];
     fullTextSearch: boolean | string[]; // false - nemame full-text search, true - mame full-text search na default stlpcoch, string[] - full-text search na danych stlpcoch
     fields?: string[]; // ak chceme nacitat aj asociovane objekty mimo tych ktore sa nacitavaju koli niektoremu zo stlpcov
@@ -111,6 +119,9 @@ export interface XLazyDataTableProps {
     rowClassName?: (data: any) => object | string | undefined;
     // ak chceme zavolat reload zaznamov, treba vytiahnut "const [dataLoaded, setDataLoaded] = useState<boolean>(false);" do browse komponentu a zavolat setDataLoaded(false);
     dataLoadedState?: [boolean, React.Dispatch<React.SetStateAction<boolean>>]; // TODO - specialny typ vytvor, napr. XuseState<boolean>
+    exportFieldsToDuplicateValues?: string[]; // zoznam fieldov (stlpcov), hodnoty v tychto stlpcoch sa budu duplikovat v pripade ak je row viacriadkovy koli toMany asociaciam
+                                            // krajsie by bolo priamo tieto stlpce oznacit nejakou {true} properties ale nechce sa mi do toho tolko investovat
+                                            // je to koli nejakym kontingencnym tabulkam v exceli ktore to potrebuju
     editMode?: boolean;
     editModeHandlers?: XEditModeHandlers;
     displayed?: boolean;
@@ -218,6 +229,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
     const initFtsInputValue: XFtsInputValue | undefined = props.fullTextSearch ? createInitFtsInputValue() : undefined;
     const [ftsInputValue, setFtsInputValue] = useState<XFtsInputValue | undefined>(initFtsInputValue);
+    const [optionalCustomFilter, setOptionalCustomFilter] = useState<XOptionalCustomFilter | undefined>(undefined);
     const [multilineSwitchValue, setMultilineSwitchValue] = useState<XMultilineRenderType>(props.multilineSwitchInitValue);
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[] | undefined>(XUtils.createMultiSortMeta(props.sortField));
     const [selectedRow, setSelectedRow] = useState<any>(null);
@@ -226,6 +238,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [exportRowsDialogRowCount, setExportRowsDialogRowCount] = useState<number>(); // param pre dialog
     const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<DataTableFilterMeta>(filtersInit); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
     const [ftsInputValueAfterFiltering, setFtsInputValueAfterFiltering] = useState<XFtsInputValue | undefined>(initFtsInputValue); // tak isto ako filtersAfterFiltering
+    const [optionalCustomFilterAfterFiltering, setOptionalCustomFilterAfterFiltering] = useState<XOptionalCustomFilter | undefined>(undefined); // tak isto ako filtersAfterFiltering
 
     // parameter [] zabezpeci ze sa metoda zavola len po prvom renderingu (a nie po kazdej zmene stavu (zavolani setNieco()))
     useEffect(() => {
@@ -263,7 +276,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onPage");
 
         setFirst(event.first);
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: event.first, rows: rows, filters: filters, fullTextSearch: createXFullTextSearch(ftsInputValue), customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
+        const findParam: FindParam = createFindParam();
+        findParam.first = event.first; // prepiseme first, lebo je tam stara hodnota (volanie setFirst nezmeni first hned)
+        loadDataBase(findParam);
     }
 
     const onFilter = (event: any) => {
@@ -281,7 +296,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onSort - event.multiSortMeta = " + JSON.stringify(event.multiSortMeta));
 
         setMultiSortMeta(event.multiSortMeta);
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, fullTextSearch: createXFullTextSearch(ftsInputValue), customFilterItems: customFilterItems, multiSortMeta: event.multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
+        const findParam: FindParam = createFindParam();
+        findParam.multiSortMeta = event.multiSortMeta; // prepiseme multiSortMeta, lebo je tam stara hodnota (volanie setMultiSortMeta nezmeni multiSortMeta hned)
+        loadDataBase(findParam);
     }
 
     const onClickFilter = () => {
@@ -299,10 +316,29 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         if (ftsInputValue) {
             setFtsInputValue(createInitFtsInputValue());
         }
+
+        if (props.optionalCustomFilters) {
+            setOptionalCustomFilter(undefined);
+        }
     };
 
     const loadData = () => {
-        loadDataBase({resultType: ResultType.RowCountAndPagedRows, first: first, rows: rows, filters: filters, fullTextSearch: createXFullTextSearch(ftsInputValue), customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems});
+        loadDataBase(createFindParam());
+    }
+
+    const createFindParam = (): FindParam => {
+        return {
+            resultType: ResultType.RowCountAndPagedRows,
+            first: first,
+            rows: rows,
+            filters: filters,
+            fullTextSearch: createXFullTextSearch(ftsInputValue),
+            customFilterItems: createXCustomFilterItems(customFilterItems, optionalCustomFilter),
+            multiSortMeta: multiSortMeta,
+            entity: props.entity,
+            fields: getFields(true),
+            aggregateItems: aggregateItems
+        };
     }
 
     const loadDataBase = async (findParam: FindParam) => {
@@ -314,6 +350,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         // odlozime si filter hodnoty pre pripadny export - deep cloning vyzera ze netreba
         setFiltersAfterFiltering(filters);
         setFtsInputValueAfterFiltering(ftsInputValue ? {...ftsInputValue} : undefined);
+        setOptionalCustomFilterAfterFiltering(optionalCustomFilter);
     }
 
     const findByFilter = async (findParam: FindParam) : Promise<FindResult> => {
@@ -337,7 +374,11 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return xFullTextSearch;
     }
 
-    const getFields = (): string[] => {
+    const createXCustomFilterItems = (customFilterItems: XCustomFilterItem[] | undefined, optionalCustomFilter: XOptionalCustomFilter | undefined): XCustomFilterItem[] | undefined => {
+        return XUtils.filterAnd(customFilterItems, optionalCustomFilter?.filter);
+    }
+
+    const getFields = (addPropsFields: boolean): string[] => {
 
         // krasne zobrazi cely objekt!
         //console.log(dataTableEl.current);
@@ -347,8 +388,10 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         for (let column of columns) {
             fields.push(column.props.field);
         }
-        if (props.fields) {
-            fields.push(...props.fields);
+        if (addPropsFields) {
+            if (props.fields) {
+                fields.push(...props.fields);
+            }
         }
         return fields;
     }
@@ -467,7 +510,18 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
         // exportujeme zaznamy zodpovedajuce filtru
         // najprv zistime pocet zaznamov
-        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, first: first, rows: rows, filters: filtersAfterFiltering, fullTextSearch: createXFullTextSearch(ftsInputValueAfterFiltering), customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields(), aggregateItems: aggregateItems};
+        const findParam: FindParam = {
+            resultType: ResultType.OnlyRowCount,
+            first: first,
+            rows: rows,
+            filters: filtersAfterFiltering,
+            fullTextSearch: createXFullTextSearch(ftsInputValueAfterFiltering),
+            customFilterItems: createXCustomFilterItems(customFilterItems, optionalCustomFilterAfterFiltering),
+            multiSortMeta: multiSortMeta,
+            entity: props.entity,
+            fields: getFields(false),
+            aggregateItems: aggregateItems
+        };
         //setLoading(true); - iba co preblikuje, netreba nam
         const findResult = await findByFilter(findParam);
         //setLoading(false);
@@ -477,7 +531,15 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     }
 
     const createExportParams = (): XExportParams => {
-        const queryParam: LazyDataTableQueryParam = {filters: filtersAfterFiltering, fullTextSearch: createXFullTextSearch(ftsInputValueAfterFiltering), customFilterItems: customFilterItems, multiSortMeta: multiSortMeta, entity: props.entity, fields: getFields()};
+        const queryParam: LazyDataTableQueryParam = {
+            filters: filtersAfterFiltering,
+            fullTextSearch: createXFullTextSearch(ftsInputValueAfterFiltering),
+            customFilterItems: createXCustomFilterItems(customFilterItems, optionalCustomFilterAfterFiltering),
+            multiSortMeta: multiSortMeta,
+            entity: props.entity,
+            fields: getFields(false),
+            fieldsToDuplicateValues: props.exportFieldsToDuplicateValues
+        };
         return {
             path: "x-lazy-data-table-export",
             queryParam: queryParam,
@@ -914,13 +976,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
     );
 
-    // align-items-center centruje vertikalne (posuva smerom doulu do stredu)
+    // align-items-center centruje vertikalne (posuva smerom dolu do stredu)
     return (
         <div>
             <div className="flex justify-content-center align-items-center">
                 {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)}/> : null}
                 <XButton key="filter" label={xLocaleOption('filter')} onClick={onClickFilter} />
                 <XButton key="clearFilter" label={xLocaleOption('clearFilter')} onClick={onClickClearFilter} />
+                {props.optionalCustomFilters ? <XOcfDropdown optionalCustomFilters={props.optionalCustomFilters} value={optionalCustomFilter} onChange={(value: XOptionalCustomFilter | undefined) => setOptionalCustomFilter(value)} className="m-1"/> : null}
                 {props.multilineSwitch ? <XMultilineSwitch value={multilineSwitchValue} onChange={(value: XMultilineRenderType) => setMultilineSwitchValue(value)} className="m-1"/> : null}
             </div>
             <div className="flex justify-content-center">

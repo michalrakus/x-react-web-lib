@@ -42,7 +42,7 @@ export class XInputText extends XInput<string, XInputTextProps> {
             <div className="field grid">
                 {label !== undefined ? <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{label}</label> : null}
                 <InputText id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} maxLength={this.xField.length} size={size} style={this.props.inputStyle}
-                           {...this.getClassNameTooltip()} onBlur={this.onBlur}/>
+                           {...this.getClassNameTooltip()} onBlur={this.onBlur} placeholder={this.props.placeholder}/>
             </div>
         );
     }

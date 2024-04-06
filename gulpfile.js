@@ -13,10 +13,12 @@ function generateApi(cb) {
     const fs = require('fs');
 
     const apiFileList = [
-        "./lib/administration/XUserBrowse",
-        "./lib/administration/XUserForm",
         "./lib/administration/XBrowseMetaBrowse",
         "./lib/administration/XBrowseMetaForm",
+        "./lib/administration/XParamBrowse",
+        "./lib/administration/XParamForm",
+        "./lib/administration/XUserBrowse",
+        "./lib/administration/XUserForm",
 
         "./lib/components/XFormRowCol/XFormCol",
         "./lib/components/XFormRowCol/XFormInlineRow",

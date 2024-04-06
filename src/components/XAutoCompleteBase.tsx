@@ -14,9 +14,9 @@ import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 // type of suggestions load from DB:
 // suggestions - custom suggestions from parent component - no DB load used
-// eager - in this.componentDidMount(), before user starts searching
-// onSerachStart (default) - suggestions are being loaded when user starts typing or when user clicks on dropdown button (only one request is invoked)
-// lazy - suggestions are being loaded always when user types some character but only if the count of suggestions is less or equal then threshold (prop lazyLoadMaxRows, default is 10)
+// eager - in this.componentDidMount(), before user starts searching (this type can save some requests to DB during user typing (usually several ms))
+// onSerachStart (default) - suggestions are being loaded (always) when user starts typing or when user clicks on dropdown button (only one request is invoked in compare to lazy load)
+// lazy - suggestions are being loaded always when user types some character (at least "minLength" characters must be typed), only first "lazyLoadMaxRows" rows are loaded, if there is more rows then special row ... is added, (default for "lazyLoadMaxRows" is 10)
 //      -> this options must be used in the case if large amount of suggestions can be loaded
 export type XSuggestionsLoadProp = "eager" | "onSearchStart" | "lazy";
 export type XSuggestionsLoadType = "suggestions" | XSuggestionsLoadProp;
@@ -587,28 +587,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
     }
 
     computeDefaultDisplayValue(suggestion: any): string {
-        let displayValue: string = "";
+        let displayValue: string;
         if (XAutoCompleteBase.isMoreSuggestions(suggestion)) {
             displayValue = suggestion;
         }
         else {
-            for (const field of this.getFields()) {
-                // TODO - konverzie na spravny typ/string
-                const [prefix, fieldOnly]: [string | null, string] = XUtilsCommon.getPrefixAndField(field);
-                const value: any = XUtilsCommon.getValueByPath(suggestion, fieldOnly);
-                if (value !== null && value !== undefined) {
-                    const valueStr: string = value.toString(); // TODO - spravnu konverziu
-                    if (valueStr !== "") {
-                        if (displayValue !== "") {
-                            displayValue += " ";
-                        }
-                        if (prefix) {
-                            displayValue += prefix;
-                        }
-                        displayValue += valueStr;
-                    }
-                }
-            }
+            displayValue = XUtilsCommon.createDisplayValue(suggestion, this.getFields());
         }
         return displayValue;
     }
