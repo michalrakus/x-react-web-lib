@@ -16,6 +16,7 @@
     "expRowCount": "Row count",
     "expExportType": "Export type",
     "expCreateHeaderLine": "Create header line",
+    "expDetailRowsExport": "Detail rows export",
     "expCsvSeparator": "Csv separator",
     "expDecimalFormat": "Decimal format",
     "expEncoding": "Encoding",

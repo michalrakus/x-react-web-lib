@@ -18,7 +18,7 @@ export const XParamBrowse = (props: XBrowseProps & {customFilter?: XCustomFilter
     }
 
     return (
-        <XLazyDataTable entity="XParam" sortField="id" rows={30} customFilter={props.customFilter}
+        <XLazyDataTable entity="XParam" label="Parameters" sortField="id" rows={30} customFilter={props.customFilter}
                         onAddRow={onAddRow} onEdit={onEdit} removeRow={true} displayed={props.displayed}>
             <XLazyColumn field="id" header="ID" width="8rem"/>
             <XLazyColumn field="code" header="Code" width="16rem"/>

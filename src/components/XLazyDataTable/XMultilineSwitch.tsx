@@ -25,6 +25,6 @@ export const XMultilineSwitch = (props: {
 
     return (
         <SelectButton value={props.value} onChange={(e: SelectButtonChangeEvent) => props.onChange(e.value)}
-                      options={options} optionValue="value" itemTemplate={itemTemplate} className={props.className}/>
+                      options={options} optionValue="value" itemTemplate={itemTemplate} allowEmpty={false} className={props.className}/>
     );
 }

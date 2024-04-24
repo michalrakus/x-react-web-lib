@@ -11,6 +11,7 @@ import {XEnvVar, XReactAppAuth} from "../components/XEnvVars";
 import {XFormBaseModif} from "../components/XFormBaseModif";
 import {XInputDate} from "../components/XInputDate";
 import {XObject} from "../components/XObject";
+import {XFormHeader} from "../components/XFormHeader";
 
 @Form("XUser")
 export class XUserForm extends XFormBaseModif {
@@ -39,7 +40,7 @@ export class XUserForm extends XFormBaseModif {
 
     async onClickSave(): Promise<void> {
 
-        if (!this.validateSave()) {
+        if (!await this.validateSave()) {
             return;
         }
 
@@ -109,6 +110,7 @@ export class XUserForm extends XFormBaseModif {
 
         return (
             <div>
+                <XFormHeader label="User"/>
                 <div className="x-form-row">
                     <div className="x-form-col">
                         <XInputDecimal form={this} field="id" label="ID" readOnly={true} labelStyle={{width:'14rem'}}/>

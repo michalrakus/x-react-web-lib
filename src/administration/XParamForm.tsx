@@ -6,6 +6,7 @@ import {XInputDecimal} from "../components/XInputDecimal";
 import {XInputDate} from "../components/XInputDate";
 import {XInputText} from "../components/XInputText";
 import {XFormFooter} from "../components/XFormFooter";
+import {XFormHeader} from "../components/XFormHeader";
 
 @Form("XParam")
 export class XParamForm extends XFormBaseModif {
@@ -17,6 +18,7 @@ export class XParamForm extends XFormBaseModif {
     render() {
         return (
             <div>
+                <XFormHeader label="Parameter"/>
                 <div className="x-form-row">
                     <div className="x-form-col">
                         <XInputDecimal form={this} field="id" label="ID" readOnly={true}/>

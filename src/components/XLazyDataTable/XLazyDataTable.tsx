@@ -28,7 +28,7 @@ import {XButtonIconSmall} from "../XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../../serverApi/XUtilsCommon";
 import {LazyDataTableQueryParam} from "../../serverApi/ExportImportParam";
-import {XExportParams, XExportRowsDialog} from "./XExportRowsDialog";
+import {XExportParams, XExportRowsDialog, XExportRowsDialogState} from "./XExportRowsDialog";
 import {FilterMatchMode, FilterOperator} from "primereact/api";
 import {XOnSaveOrCancelProp} from "../XFormBase";
 import {XCalendar} from "../XCalendar";
@@ -42,7 +42,6 @@ import {Editor} from "primereact/editor";
 import {XMultilineSwitch} from "./XMultilineSwitch";
 import {XMultilineRenderer} from "./XMultilineRenderer";
 import {XHtmlRenderer} from "./XHtmlRenderer";
-import {Dropdown} from "primereact/dropdown";
 import {XOcfDropdown} from "./XOcfDropdown";
 
 export type XBetweenFilterProp = "row" | "column" | undefined;
@@ -89,6 +88,7 @@ export interface XSearchBrowseProps {
 
 export interface XLazyDataTableProps {
     entity: string;
+    label?: string;
     dataKey?: string;
     paginator: boolean;
     rows: number;
@@ -234,8 +234,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[] | undefined>(XUtils.createMultiSortMeta(props.sortField));
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
-    const [exportRowsDialogOpened, setExportRowsDialogOpened] = useState<boolean>(false);
-    const [exportRowsDialogRowCount, setExportRowsDialogRowCount] = useState<number>(); // param pre dialog
+    const [exportRowsDialogState, setExportRowsDialogState] = useState<XExportRowsDialogState>({dialogOpened: false});
+    //const [exportRowsDialogRowCount, setExportRowsDialogRowCount] = useState<number>(); // param pre dialog
     const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<DataTableFilterMeta>(filtersInit); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
     const [ftsInputValueAfterFiltering, setFtsInputValueAfterFiltering] = useState<XFtsInputValue | undefined>(initFtsInputValue); // tak isto ako filtersAfterFiltering
     const [optionalCustomFilterAfterFiltering, setOptionalCustomFilterAfterFiltering] = useState<XOptionalCustomFilter | undefined>(undefined); // tak isto ako filtersAfterFiltering
@@ -410,6 +410,17 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return headers;
     }
 
+    const getWidths = (): string[] => {
+        // vrati sirky stlpcov napr. ['7.75rem', '20rem', '8.5rem', '8.5rem', '6rem']
+        // nevracia aktualne sirky stlpcov (po manualnom rozsireni) ale tie ktore boli nastavene/vypocitane v kode
+        let widths = [];
+        let columns = dataTableEl.current.props.children;
+        for (let column of columns) {
+            widths.push(column.props.headerStyle?.width);
+        }
+        return widths;
+    }
+
     const hasContentTypeHtml = (): boolean => {
 
         let columns: XLazyColumnType[] = props.children as XLazyColumnType[];
@@ -510,6 +521,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
         // exportujeme zaznamy zodpovedajuce filtru
         // najprv zistime pocet zaznamov
+        const fields: string[] = getFields(false);
         const findParam: FindParam = {
             resultType: ResultType.OnlyRowCount,
             first: first,
@@ -519,33 +531,40 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             customFilterItems: createXCustomFilterItems(customFilterItems, optionalCustomFilterAfterFiltering),
             multiSortMeta: multiSortMeta,
             entity: props.entity,
-            fields: getFields(false),
+            fields: fields,
             aggregateItems: aggregateItems
         };
         //setLoading(true); - iba co preblikuje, netreba nam
         const findResult = await findByFilter(findParam);
         //setLoading(false);
 
-        setExportRowsDialogRowCount(findResult.totalRecords); // param pre dialog
-        setExportRowsDialogOpened(true);
+        const exportParams: XExportParams = createExportParams(fields, findResult.totalRecords!);
+        setExportRowsDialogState({dialogOpened: true, exportParams: exportParams});
     }
 
-    const createExportParams = (): XExportParams => {
+    const createExportParams = (fields: string[], rowCount: number): XExportParams => {
         const queryParam: LazyDataTableQueryParam = {
             filters: filtersAfterFiltering,
             fullTextSearch: createXFullTextSearch(ftsInputValueAfterFiltering),
             customFilterItems: createXCustomFilterItems(customFilterItems, optionalCustomFilterAfterFiltering),
             multiSortMeta: multiSortMeta,
             entity: props.entity,
-            fields: getFields(false),
-            fieldsToDuplicateValues: props.exportFieldsToDuplicateValues
+            fields: fields
         };
         return {
-            path: "x-lazy-data-table-export",
+            rowCount: rowCount,
+            existsToManyAssoc: existsToManyAssoc(fields),
             queryParam: queryParam,
             headers: getHeaders(),
+            widths: getWidths(),
+            fieldsToDuplicateValues: props.exportFieldsToDuplicateValues,
             fileName: `${props.entity}`
         };
+    }
+
+    const existsToManyAssoc = (fields: string[]): boolean => {
+        const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(props.entity);
+        return fields.some((value: string) => XUtilsMetadataCommon.hasPathToManyAssoc(xEntity, value));
     }
 
     const onClickChoose = () => {
@@ -862,13 +881,13 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                         // display: 'flex' umiestni XCalendar elementy vedla seba
                         filterElement =
                             <div style={betweenFilter === "row" ? {display: 'flex'} : undefined}>
-                                <XCalendar value={getFilterValue1(childColumn.props.field)} onChange={(value: Date | null) => setFilterValue1(childColumn.props.field, value)} datetime={xField.type === "datetime"}/>
-                                <XCalendar value={getFilterValue2(childColumn.props.field)} onChange={(value: Date | null) => setFilterValue2(childColumn.props.field, value)} datetime={xField.type === "datetime"}/>
+                                <XCalendar value={getFilterValue1(childColumn.props.field)} onChange={(value: Date | null) => setFilterValue1(childColumn.props.field, value)} scale={xField.scale} datetime={xField.type === "datetime"}/>
+                                <XCalendar value={getFilterValue2(childColumn.props.field)} onChange={(value: Date | null) => setFilterValue2(childColumn.props.field, value)} scale={xField.scale} datetime={xField.type === "datetime"}/>
                             </div>;
                     }
                     else {
                         const dateValue: Date | null = getFilterValue(childColumn.props.field);
-                        filterElement = <XCalendar value={dateValue} onChange={(value: Date | null) => setFilterValue(childColumn.props.field, value)} datetime={xField.type === "datetime"}/>
+                        filterElement = <XCalendar value={dateValue} onChange={(value: Date | null) => setFilterValue(childColumn.props.field, value)} scale={xField.scale} datetime={xField.type === "datetime"}/>
                     }
                 }
                 else if (xField.type === "decimal" || xField.type === "number") {
@@ -977,14 +996,17 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     );
 
     // align-items-center centruje vertikalne (posuva smerom dolu do stredu)
+    // x-lazy-datatable-label-right-compensation - vyvazuje label, aby item-y v strede isli aspon priblizne do stredu
     return (
         <div>
             <div className="flex justify-content-center align-items-center">
+                {props.label ? <div className="x-lazy-datatable-label">{props.label}</div> : null}
                 {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)}/> : null}
                 <XButton key="filter" label={xLocaleOption('filter')} onClick={onClickFilter} />
                 <XButton key="clearFilter" label={xLocaleOption('clearFilter')} onClick={onClickClearFilter} />
                 {props.optionalCustomFilters ? <XOcfDropdown optionalCustomFilters={props.optionalCustomFilters} value={optionalCustomFilter} onChange={(value: XOptionalCustomFilter | undefined) => setOptionalCustomFilter(value)} className="m-1"/> : null}
                 {props.multilineSwitch ? <XMultilineSwitch value={multilineSwitchValue} onChange={(value: XMultilineRenderType) => setMultilineSwitchValue(value)} className="m-1"/> : null}
+                {props.label ? <div className="x-lazy-datatable-label-right-compensation"/> : null}
             </div>
             <div className="flex justify-content-center">
                 <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator}
@@ -1008,8 +1030,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {props.appButtonsForRow ? props.appButtonsForRow.map((xAppButton: XAppButtonForRow) => <XButton key={xAppButton.key} icon={xAppButton.icon} label={xAppButton.label} onClick={() => onClickAppButtonForRow(xAppButton.onClick)}/>) : null}
                 {props.appButtons}
                 {props.searchBrowseParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
-                {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogOpened={exportRowsDialogOpened} hideDialog={() => setExportRowsDialogOpened(false)}
-                                                 rowCount={exportRowsDialogRowCount} exportParams={createExportParams}/> : null}
+                {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogState={exportRowsDialogState} hideDialog={() => setExportRowsDialogState({dialogOpened: false})}/> : null}
             </div>
             {hasContentTypeHtml() ? <Editor style={{display: 'none'}} showHeader={false}/> : null /* we want to import css if needed (<style type="text/css" data-primereact-style-id="editor">) */}
         </div>
@@ -1052,7 +1073,7 @@ export interface XLazyColumnProps {
     showFilterMenu?: boolean;
     betweenFilter?: XBetweenFilterProp | "noBetween"; // creates 2 inputs from to, only for type date/datetime/decimal/number implemented, "row"/"column" - position of inputs from to
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
-    contentType?: XContentType; // multiLine (output from InputTextarea) - wraps the content; html (output from Editor) - for rendering raw html
+    contentType?: XContentType; // multiline (output from InputTextarea) - wraps the content; html (output from Editor) - for rendering raw html
     aggregateType?: XAggregateType;
     columnViewStatus: XViewStatusOrBoolean; // aby sme mohli mat Hidden stlpec (nedarilo sa mi priamo v kode "o-if-ovat" stlpec), zatial netreba funkciu, vola sa columnViewStatus lebo napr. v Edit tabulke moze byt viewStatus na row urovni
     filterElement?: XFilterElementProp;

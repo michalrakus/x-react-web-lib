@@ -25,7 +25,7 @@ export class XInputDateDT extends XInputDT<XInputDateDTProps> {
     render() {
         return (
             <XCalendar id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} error={this.getError()}
-                   datetime={this.xField.type === 'datetime'}/>
+                       scale={this.xField.scale} datetime={this.xField.type === 'datetime'}/>
         );
     }
 }

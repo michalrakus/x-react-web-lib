@@ -2,7 +2,13 @@ import {XToken} from "./XToken";
 import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
-import {CsvDecimalFormat, CsvEncoding, CsvSeparator, ExportType} from "../serverApi/ExportImportParam";
+import {
+    CsvDecimalFormat,
+    CsvEncoding,
+    CsvSeparator,
+    ExportType,
+    XMultilineExportType
+} from "../serverApi/ExportImportParam";
 import {XResponseError} from "./XResponseError";
 import React from "react";
 import {XEnvVar} from "./XEnvVars";
@@ -56,7 +62,10 @@ export class XUtils {
     // nacachovane metadata (setuju sa v App.fetchAndSetXMetadata)
     private static appFormMap: {[name: string]: any;} = {};
 
-    static exportTypeOptions = [ExportType.Csv, ExportType.Json];
+    static exportTypeOptions = [ExportType.Excel, ExportType.Csv, ExportType.Json];
+
+    // moznost Off zatial nie je implementovana
+    static multilineExportTypeOptions = [XMultilineExportType.Multiline, XMultilineExportType.Singleline/*, XMultilineExportType.Off*/];
 
     static csvSeparatorOptions = [CsvSeparator.Semicolon, CsvSeparator.Comma];
 
@@ -232,6 +241,31 @@ export class XUtils {
 
     static post(path: string, value: any): Promise<Response> {
         return XUtils.fetchBasicJson(path, value);
+    }
+
+    static async openExcelReport(apiPath: string, requestPayload: any, fileName?: string): Promise<boolean> {
+
+        let response;
+        try {
+            response = await XUtils.fetchBasicJson(apiPath, requestPayload);
+        }
+        catch (e) {
+            XUtils.showErrorMessage(`Nepodarilo sa vytvoriť/stiahnuť xlsx súbor.`, e); // dalsie info (apiPath, payload) by mali byt v "e"
+            return false;
+        }
+
+        const fileNameExt = `${fileName ?? apiPath}.xlsx`; // TODO - krajsie poriesit
+        // let respJson = await response.json(); - konvertuje do json objektu
+        let respBlob = await response.blob();
+
+        // download blob-u (download by mal fungovat asynchronne a "stream-ovo" v spolupraci so serverom)
+        let url = window.URL.createObjectURL(respBlob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = fileNameExt;
+        a.click();
+
+        return true;
     }
 
     static fetchBasicJson(path: string, value: any, usePublicToken?: boolean | XToken): Promise<Response> {

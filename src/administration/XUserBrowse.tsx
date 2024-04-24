@@ -38,7 +38,7 @@ export const XUserBrowse = (props: XBrowseProps) => {
     }
 
     return (
-        <XLazyDataTable entity="XUser" rows={10} onAddRow={onAddRow} onEdit={onEdit} removeRow={onRemoveRow} displayed={props.displayed}>
+        <XLazyDataTable entity="XUser" label="Users" rows={10} onAddRow={onAddRow} onEdit={onEdit} removeRow={onRemoveRow} displayed={props.displayed}>
             <XLazyColumn field="id" header="ID"/>
             <XLazyColumn field="username" header="Username" width="17rem"/>
             <XLazyColumn field="name" header="Name" width="17rem"/>

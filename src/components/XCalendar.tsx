@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 import {Calendar, CalendarSelectEvent} from "primereact/calendar";
-import {dateFormatCalendar, dateFromModel, dateFromUI} from "../serverApi/XUtilsConversions";
+import {dateFormatCalendar, dateFromModel, dateFromUI, XDateScale} from "../serverApi/XUtilsConversions";
 import {XUtils} from "./XUtils";
 import {FormEvent} from "primereact/ts-helpers";
 
@@ -12,6 +12,7 @@ export const XCalendar = (props: {
     onChange: (value: Date | null) => void;
     readOnly?: boolean;
     error?: string; // chybova hlaska, ak chceme field oznacit za nevalidny
+    scale: XDateScale;
     datetime?: boolean;
 }) => {
 
@@ -44,7 +45,7 @@ export const XCalendar = (props: {
     const onBlur = (e: React.FocusEvent<HTMLInputElement>) => {
         if (inputChanged) {
             // poznamka: e.target.value aj inputValueState obsahuju tu istu string hodnotu
-            const value: Date | null | undefined = dateFromUI(e.target.value);
+            const value: Date | null | undefined = dateFromUI(e.target.value, props.scale);
             props.onChange(value ?? null); // nekorektnu hodnotu reprezentovanu cez undefined budeme riesit akokeby user zadal null (field sa vyprazdni)
             setInputChanged(false);
             setInputValueState(undefined); // pre poriadok
@@ -62,14 +63,35 @@ export const XCalendar = (props: {
         return inputValue;
     }
 
+    const getView = (dateScale: XDateScale): "date" | "month" | "year" => {
+        let view: "date" | "month" | "year";
+        if (dateScale === XDateScale.Date) {
+            view = "date";
+        }
+        else if (dateScale === XDateScale.Month) {
+            view = "month";
+        }
+        else if (dateScale === XDateScale.Year) {
+            view = "year";
+        }
+        else {
+            throw "Unimplemented dateScale = " + dateScale;
+        }
+        return view;
+    }
+
     const datetime: boolean = props.datetime ?? false;
 
     // poznamka: parseDateTime nerobi ziadny parse, nechceme aby Calendar "rusil" uzivatela pri typovani datumu
     // konverzia (a volanie props.onChange) sa robi az pri onBlur
     return (
         <Calendar id={props.id} value={getInputValue()} onChange={onChange} disabled={props.readOnly} showIcon={true} showOnFocus={false}
-                  dateFormat={dateFormatCalendar()} keepInvalid={true} parseDateTime={(text: string) => text as any}
+                  view={getView(props.scale)} dateFormat={dateFormatCalendar(props.scale)} keepInvalid={true} parseDateTime={(text: string) => text as any}
                   showTime={datetime} showSeconds={datetime} inputClassName={datetime ? 'x-input-datetime' : 'x-input-date'}
                   onSelect={onSelect} onBlur={onBlur} {...XUtils.createErrorProps(props.error)}/>
     );
 }
+
+XCalendar.defaultProps = {
+    scale: XDateScale.Date
+};

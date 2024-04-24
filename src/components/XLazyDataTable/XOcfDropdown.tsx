@@ -2,6 +2,7 @@ import React from "react";
 import {Dropdown, DropdownChangeEvent} from "primereact/dropdown";
 import {XOptionalCustomFilter} from "./XLazyDataTable";
 
+// dropdown for optional custom filter (ocf)
 export const XOcfDropdown = (props: {
     optionalCustomFilters: XOptionalCustomFilter[];
     value: XOptionalCustomFilter | undefined;
