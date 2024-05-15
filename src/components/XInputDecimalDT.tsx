@@ -47,7 +47,7 @@ export class XInputDecimalDT extends XInputDT<XInputDecimalDTProps> {
         return (
             <InputNumber id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} mode="decimal" locale="de-DE"
                          useGrouping={useGrouping} minFractionDigits={fractionDigits} maxFractionDigits={fractionDigits} min={min} max={max}
-                         onBlur={this.onBlur} {...XUtils.addClassName(XUtils.createErrorProps(this.getError()), "x-input-to-resize")}/>
+                         onBlur={this.onBlur} {...XUtils.addClassName(XUtils.createTooltipOrErrorProps(this.getError()), "x-input-to-resize")}/>
         );
     }
 }

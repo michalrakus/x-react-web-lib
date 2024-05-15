@@ -3,6 +3,6 @@
 export interface XToken {
     username?: string; // pouziva sa pri starej autentifikacii - TODO - zrusit
     password?: string; // pouziva sa pri starej autentifikacii - TODO - zrusit
-    accessToken?: string; // pouziva sa pri Auth0 autentifikacii
+    accessToken?: string | (() => Promise<string>); // pouziva sa pri Auth0/MSEntraID autentifikacii
     xUser?: any; // XUser - aktualny user, nastavuje sa po logine, pouziva sa napr. na nastavenie atributu vytvoril/modifikoval
 }

@@ -23,6 +23,7 @@ export interface XFormComponentProps<T> {
     label?: string;
     tooltip?: string;
     placeholder?: string;
+    desc?: string; // specialny prop pouzivany ako placeholder a tooltip pre label naraz (aby sme nemuseli duplikovat label a tooltip) - vytvoreny pre depaul
     readOnly?: XReadOnlyProp;
     labelStyle?: React.CSSProperties;
     inline?: boolean;

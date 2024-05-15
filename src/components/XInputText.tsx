@@ -2,6 +2,8 @@ import React from "react";
 import {stringAsUI, stringFromUI} from "../serverApi/XUtilsConversions";
 import {InputText} from "primereact/inputtext";
 import {XInput, XInputProps} from "./XInput";
+import {XUtils} from "./XUtils";
+import {Tooltip} from "primereact/tooltip";
 
 export interface XInputTextProps extends XInputProps<string> {
     size?: number;
@@ -34,15 +36,27 @@ export class XInputText extends XInput<string, XInputTextProps> {
     }
 
     render() {
+
+        const value: string | null = this.getValue();
+        let labelTooltip: string | undefined = undefined;
+        let labelElemId: string | undefined = undefined;
+        if (value) {
+            // nevidno placeholder, tak zobrazime desc ako label tooltip
+            labelTooltip = this.props.desc;
+            labelElemId = `${this.props.field}_label_id`;
+        }
+
         const size = this.props.size ?? this.xField.length;
 
         // note: style overrides size (width of the input according to character count)
         const label: string | undefined = this.getLabel();
         return (
             <div className="field grid">
-                {label !== undefined ? <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{label}</label> : null}
-                <InputText id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} maxLength={this.xField.length} size={size} style={this.props.inputStyle}
-                           {...this.getClassNameTooltip()} onBlur={this.onBlur} placeholder={this.props.placeholder}/>
+                {label !== undefined ? <label id={labelElemId} htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{label}</label> : null}
+                {labelTooltip ? <Tooltip target={`#${labelElemId}`} content={labelTooltip}/> : null}
+                <InputText id={this.props.field} value={value} onChange={this.onValueChange} onBlur={this.onBlur}
+                           readOnly={this.isReadOnly()} maxLength={this.xField.length} size={size} style={this.props.inputStyle}
+                           {...XUtils.createTooltipOrErrorProps(this.getError(), this.props.tooltip)} placeholder={this.props.placeholder ?? this.props.desc}/>
             </div>
         );
     }

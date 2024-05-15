@@ -88,7 +88,7 @@ export const XCalendar = (props: {
         <Calendar id={props.id} value={getInputValue()} onChange={onChange} disabled={props.readOnly} showIcon={true} showOnFocus={false}
                   view={getView(props.scale)} dateFormat={dateFormatCalendar(props.scale)} keepInvalid={true} parseDateTime={(text: string) => text as any}
                   showTime={datetime} showSeconds={datetime} inputClassName={datetime ? 'x-input-datetime' : 'x-input-date'}
-                  onSelect={onSelect} onBlur={onBlur} {...XUtils.createErrorProps(props.error)}/>
+                  onSelect={onSelect} onBlur={onBlur} {...XUtils.createTooltipOrErrorProps(props.error)}/>
     );
 }
 

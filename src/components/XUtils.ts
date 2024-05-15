@@ -18,7 +18,6 @@ import {DataTableSortMeta} from "primereact/datatable";
 import {XObject} from "./XObject";
 import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
-import {XFilterOrFunction} from "./XAutoCompleteBase";
 
 export enum OperationType {
     None,
@@ -46,6 +45,17 @@ export interface IPostgresInterval {
     minutes?: number;
     seconds?: number;
     milliseconds?: number;
+}
+
+// XQuery zatial docasne sem - ale je to globalny objekt - parametre pre XUtils.fetchRows, taky jednoduchsi FindParam (este sem mozme pridat fullTextSearch ak bude treba)
+
+export type XFilterOrFunction = XCustomFilter | (() => XCustomFilter | undefined);
+
+export interface XQuery {
+    entity: string;
+    filter?: XFilterOrFunction;
+    sortField?: string | DataTableSortMeta[];
+    fields?: string[];
 }
 
 export class XUtils {
@@ -319,21 +329,9 @@ export class XUtils {
     }
 
     static async fetchBasic(path: string, headers: any, body: any, usePublicToken?: boolean | XToken): Promise<Response> {
-        let xToken: XToken | null;
-        if (typeof usePublicToken === 'object') {
-            xToken = usePublicToken;
-        }
-        else if (usePublicToken) {
-            xToken = XUtils.xTokenPublic; // public token vzdy
-        }
-        else {
-            xToken = XUtils.getXToken();
-            if (xToken === null) {
-                xToken = XUtils.xTokenPublic; // ak nikto nie je prihlaseny, posleme public token
-            }
-        }
+        let accessToken: string = await XUtils.getAccessToken();
         headers = {...headers,
-            'Authorization': `Bearer ${xToken.accessToken}`
+            'Authorization': `Bearer ${accessToken}`
         };
         const response = await fetch(XUtils.getXBackendUrl() + path, {
                                     method: 'POST',
@@ -357,6 +355,24 @@ export class XUtils {
 
     static getXToken(): XToken | null {
         return XUtils.xToken;
+    }
+
+    static async getAccessToken(): Promise<string> {
+        const xToken: XToken | null = XUtils.getXToken();
+        if (xToken === null) {
+            throw "Unexpected error - XUtils.xToken is null (no user signed in)";
+        }
+        let accessToken: string;
+        if (typeof xToken.accessToken === 'function') {
+            accessToken = await xToken.accessToken(); // ziskame access token volanim getAccessTokenSilently (pripadne podobnym)
+        }
+        else if (xToken.accessToken !== undefined) {
+            accessToken = xToken.accessToken; // mame rovno access token
+        }
+        else {
+            throw "Unexpected error - XUtils.xToken.accessToken is undefined";
+        }
+        return accessToken;
     }
 
     static getUsername(): string | undefined {
@@ -544,8 +560,10 @@ export class XUtils {
     }
 
     // pouziva sa hlavne na inputy
-    static createErrorProps(error: string | undefined): {} {
-        return error ? {className: "p-invalid", tooltip: error, tooltipOptions: { className: 'pink-tooltip', position: 'bottom' }} : {};
+    static createTooltipOrErrorProps(error: string | undefined, tooltip?: string | undefined): object {
+        // error ma prednost, ak nemame error, dame tooltip ak mame
+        return error ? {className: "p-invalid", tooltip: error, tooltipOptions: { className: 'pink-tooltip', position: 'bottom' }}
+                        : (tooltip ? {tooltip: tooltip, tooltipOptions: {position: 'bottom'}} : {});
     }
 
     // pomocna metodka - prida className do props, ak uz className v props existuje tak len pripoji dalsiu hodnotu

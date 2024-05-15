@@ -75,7 +75,7 @@ export class XDropdownForEntity extends Component<XDropdownForEntityProps> {
         return (
             <Dropdown id={this.props.id} options={this.state.options} optionLabel={this.props.displayField} dataKey={this.idField}
                       value={this.props.value} onChange={this.onChange}
-                      readOnly={this.props.readOnly} disabled={this.props.readOnly} {...XUtils.createErrorProps(this.props.error)}/>
+                      readOnly={this.props.readOnly} disabled={this.props.readOnly} {...XUtils.createTooltipOrErrorProps(this.props.error)}/>
         );
     }
 }

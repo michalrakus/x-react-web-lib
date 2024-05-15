@@ -48,6 +48,6 @@ export const XEditorBase = (props: {
 
     return (
         <Editor id={props.id} value={getValue()} onTextChange={onTextChange} onBlur={onBlur} readOnly={props.readOnly}
-                style={props.style} {...XUtils.createErrorProps(props.error)}/>
+                style={props.style} {...XUtils.createTooltipOrErrorProps(props.error)}/>
     );
 }

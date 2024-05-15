@@ -2,7 +2,7 @@ import React, {Component} from "react";
 import {AutoComplete, AutoCompleteChangeEvent} from "primereact/autocomplete";
 import {SplitButton} from "primereact/splitbutton";
 import {Dialog} from "primereact/dialog";
-import {OperationType, XUtils} from "./XUtils";
+import {OperationType, XQuery, XUtils} from "./XUtils";
 import {Button} from "primereact/button";
 import {MenuItem} from "primereact/menuitem";
 import {XSearchBrowseParams} from "./XSearchBrowseParams";
@@ -21,17 +21,6 @@ import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 export type XSuggestionsLoadProp = "eager" | "onSearchStart" | "lazy";
 export type XSuggestionsLoadType = "suggestions" | XSuggestionsLoadProp;
 
-// XQuery zatial docasne sem - ale je to globalny objekt - parametre pre XUtils.fetchRows, taky jednoduchsi FindParam (este sem mozme pridat fullTextSearch ak bude treba)
-
-export type XFilterOrFunction = XCustomFilter | (() => XCustomFilter | undefined);
-
-export interface XQuery {
-    entity: string;
-    filter?: XFilterOrFunction;
-    sortField?: string | DataTableSortMeta[];
-    fields?: string[];
-}
-
 export interface XAutoCompleteBaseProps {
     value: any;
     onChange: (object: any, objectChange: OperationType) => void; // odovzda vybraty objekt, ak bol vybraty objekt zmeneny cez dialog (aj v DB), tak vrati objectChange !== OperationType.None
@@ -45,6 +34,7 @@ export interface XAutoCompleteBaseProps {
     searchBrowse?: JSX.Element; // ak je zadany, moze uzivatel vyhladavat objekt podobne ako pri XSearchButton (obchadza tym suggestions)
     valueForm?: JSX.Element; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
+    onAddRow?: (inputValue: string) => void; // override handlera zaveseneho na "plus" buttone (otazka je ci nejakym sposobom nestrkat vytvoreny/ziskany row do tohto autocomplete - zatial nie)
     minLength?: number; // Minimum number of characters to initiate a search (default 1)
     width?: string;
     scrollHeight?: string; // Maximum height of the suggestions panel.
@@ -446,23 +436,36 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         }
     }
 
-    createInsertUpdateItems(splitButtonItems: MenuItem[]) {
+    createInsertItem(splitButtonItems: MenuItem[]) {
 
         splitButtonItems.push(
             {
                 icon: 'pi pi-plus',
                 command: (e: any) => {
-                    // otvorime dialog na insert
-                    this.formDialogObjectId = undefined;
-                    this.formDialogInitValuesForInsert = {};
-                    // ak mame nevalidnu hodnotu, tak ju predplnime (snaha o user friendly)
-                    if (this.state.inputChanged) {
-                        this.formDialogInitValuesForInsert[this.getFirstField()] = this.state.inputValueState;
+                    if (this.props.onAddRow) {
+                        // mame custom handler pre "plus" button
+                        // ak mame nevalidnu hodnotu, tak ju odovzdame (snaha o user friendly) - TODO - ak nie sme v nevalidnom stave
+                        let inputValue: string = "";
+                        if (this.state.inputChanged) {
+                            inputValue = this.state.inputValueState!;
+                        }
+                        this.props.onAddRow(inputValue);
                     }
-                    this.setState({formDialogOpened: true});
+                    else {
+                        // otvorime dialog na insert
+                        this.formDialogObjectId = undefined;
+                        this.formDialogInitValuesForInsert = {};
+                        // ak mame nevalidnu hodnotu, tak ju predplnime (snaha o user friendly)
+                        if (this.state.inputChanged) {
+                            this.formDialogInitValuesForInsert[this.getFirstField()] = this.state.inputValueState;
+                        }
+                        this.setState({formDialogOpened: true});
+                    }
                 }
             });
+    }
 
+    createUpdateItem(splitButtonItems: MenuItem[]) {
         splitButtonItems.push(
             {
                 icon: 'pi pi-pencil',
@@ -617,12 +620,16 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
         let dropdownButton: JSX.Element;
         if (!readOnly) {
-            if (this.props.searchBrowse || this.props.valueForm) {
+            if (this.props.searchBrowse || this.props.valueForm || this.props.onAddRow) {
                 // mame searchBrowse alebo CRUD operacie, potrebujeme SplitButton
                 const splitButtonItems: MenuItem[] = [];
 
+                if (this.props.valueForm || this.props.onAddRow) {
+                    this.createInsertItem(splitButtonItems);
+                }
+
                 if (this.props.valueForm) {
-                    this.createInsertUpdateItems(splitButtonItems);
+                    this.createUpdateItem(splitButtonItems);
                 }
 
                 if (this.props.searchBrowse && !readOnly) {
@@ -670,7 +677,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             <div className="x-auto-complete-base" style={{width: this.props.width}}>
                 <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} itemTemplate={this.itemTemplate}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} minLength={this.props.minLength} scrollHeight={this.props.scrollHeight}
-                              ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createErrorProps(error)} inputClassName={this.props.inputClassName}/>
+                              ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createTooltipOrErrorProps(error)} inputClassName={this.props.inputClassName}/>
                 {dropdownButton}
                 {this.props.valueForm != undefined ?
                     <Dialog visible={this.state.formDialogOpened} onHide={this.formDialogOnHide} header={this.formDialogObjectId ? 'Modification' : 'New row'}>

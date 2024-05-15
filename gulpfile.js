@@ -68,6 +68,8 @@ function generateApi(cb) {
         "./lib/components/XLocale",
         "./lib/components/XLoginDialog",
         "./lib/components/XLoginForm",
+        "./lib/components/XMultiSelect",
+        "./lib/components/XMultiSelectBase",
         "./lib/components/XObject",
         "./lib/components/XSearchButton",
         "./lib/components/XToken",

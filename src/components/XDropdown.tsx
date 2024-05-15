@@ -1,5 +1,4 @@
 import React from "react";
-import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XFilterProp, XFormComponent, XFormComponentProps} from "./XFormComponent";
 import {XAssoc} from "../serverApi/XEntityMetadata";
 import {XObject} from "./XObject";
@@ -7,7 +6,7 @@ import {XDropdownForEntity} from "./XDropdownForEntity";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export interface XDropdownProps extends XFormComponentProps<XObject> {
-    assocField: string;
+    assocField: string; // can be also path (e.g. <assoc1>.<assoc2> - dropdown will run on <assoc2>)
     displayField: string;
     sortField?: string;
     filter?: XFilterProp;
@@ -20,7 +19,7 @@ export class XDropdown extends XFormComponent<XObject, XDropdownProps> {
     constructor(props: XDropdownProps) {
         super(props);
 
-        this.xAssoc = XUtilsMetadataCommon.getXAssocToOne(XUtilsMetadataCommon.getXEntity(props.form.getEntity()), props.assocField);
+        this.xAssoc = XUtilsMetadataCommon.getXAssocToOneByPath(XUtilsMetadataCommon.getXEntity(props.form.getEntity()), props.assocField);
 
         props.form.addField(props.assocField + '.' + props.displayField);
     }

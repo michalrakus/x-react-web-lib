@@ -1,6 +1,6 @@
 // parametre ktore odovzdavame z XSearchButton do search table a dalej do XLazyDataTable/XDataTable
 import {DataTableFilterMetaData} from "primereact/datatable";
-import {XFilterOrFunction} from "./XAutoCompleteBase";
+import {XFilterOrFunction} from "./XUtils";
 
 export interface XFieldFilter {
     field: string;

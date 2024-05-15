@@ -54,6 +54,6 @@ export const XInputIntervalBase = (props: {
     // remark - width:'3.5rem' is default, can be overriden by value from props.style, if needed
     return (
         <InputText id={props.id} value={getInputValue()} onChange={onChange} onBlur={onBlur}
-                   readOnly={props.readOnly} {...XUtils.createErrorProps(props.error)} style={{width:'3.5rem', ...props.style}}/>
+                   readOnly={props.readOnly} {...XUtils.createTooltipOrErrorProps(props.error)} style={{width:'3.5rem', ...props.style}}/>
     );
 }

@@ -16,6 +16,8 @@ export const XInputTextareaBase = (props: {
     error?: string;
     style?: React.CSSProperties;
     maxLength?: number;
+    tooltip?: string;
+    placeholder?: string;
 }) => {
 
     // true, ak uzivatel typuje hodnotu
@@ -53,6 +55,6 @@ export const XInputTextareaBase = (props: {
     return (
         <InputTextarea id={props.id} value={getInputValue()} onChange={onChange} onBlur={onBlur} readOnly={props.readOnly}
                        maxLength={props.maxLength} style={props.style} rows={props.rows} cols={props.cols}
-                       autoResize={props.autoResize} {...XUtils.createErrorProps(props.error)}/>
+                       autoResize={props.autoResize} {...XUtils.createTooltipOrErrorProps(props.error, props.tooltip)} placeholder={props.placeholder}/>
     );
 }
