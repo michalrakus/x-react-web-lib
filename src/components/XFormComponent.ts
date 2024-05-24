@@ -26,7 +26,7 @@ export interface XFormComponentProps<T> {
     desc?: string; // specialny prop pouzivany ako placeholder a tooltip pre label naraz (aby sme nemuseli duplikovat label a tooltip) - vytvoreny pre depaul
     readOnly?: XReadOnlyProp;
     labelStyle?: React.CSSProperties;
-    inline?: boolean;
+    inline?: boolean; // poznamka: nenasiel som pouzitie v skch-finance a depaul (pouziva sa <div className="x-form-inline-row">), asi je to zombie
     onChange?: XFieldOnChange;
     onlyInput?: boolean; // ak true, tak vyrenderuje len input element (nerenderuje <div className="field grid"> ani label)
 }

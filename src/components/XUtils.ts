@@ -18,6 +18,7 @@ import {DataTableSortMeta} from "primereact/datatable";
 import {XObject} from "./XObject";
 import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import {SelectItem} from "primereact/selectitem";
 
 export enum OperationType {
     None,
@@ -711,5 +712,10 @@ export class XUtils {
             xViewStatus = xViewStatusOrBoolean;
         }
         return xViewStatus;
+    }
+
+    // plain string does not work in Dropdown, bug in Primereact?
+    static options(valueStringList: string[]): SelectItem[] {
+        return valueStringList.map<SelectItem>((valueString: string) => {return {value: valueString, label: valueString};});
     }
 }

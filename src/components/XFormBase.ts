@@ -143,6 +143,11 @@ export abstract class XFormBase extends Component<XFormProps> {
         return this.props.id === undefined;
     }
 
+    // helper method
+    isInDialog(): boolean {
+        return this.props.onSaveOrCancel !== undefined;
+    }
+
     onFieldChange(field: string, value: any, error?: string | undefined, onChange?: XFieldOnChange, assocObjectChange?: OperationType) {
 
         // field moze byt aj na asociovanom objekte (field length > 1, napr.: <assocX>.<fieldY>)

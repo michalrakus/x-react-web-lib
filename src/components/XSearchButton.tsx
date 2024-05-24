@@ -193,7 +193,7 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
                                {...this.getClassNameTooltip()}/>
                     <Button icon="pi pi-search" onClick={onClickSearch}/>
                 </div>
-                <Dialog visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>
+                <Dialog className="x-dialog-without-header" visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>
                     {/* klonovanim elementu pridame atribut searchBrowseParams */}
                     {React.cloneElement(props.searchBrowse, {searchBrowseParams: createSearchBrowseParams()}/*, props.searchBrowse.children*/)}
                 </Dialog>

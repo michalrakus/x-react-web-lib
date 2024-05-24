@@ -680,7 +680,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                               ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createTooltipOrErrorProps(error)} inputClassName={this.props.inputClassName}/>
                 {dropdownButton}
                 {this.props.valueForm != undefined ?
-                    <Dialog visible={this.state.formDialogOpened} onHide={this.formDialogOnHide} header={this.formDialogObjectId ? 'Modification' : 'New row'}>
+                    <Dialog className="x-dialog-without-header" visible={this.state.formDialogOpened} onHide={this.formDialogOnHide}>
                         {/* klonovanim elementu pridame atributy id, initValues, onSaveOrCancel */}
                         {React.cloneElement(this.props.valueForm, {
                             id: this.formDialogObjectId, initValues: this.formDialogInitValuesForInsert, onSaveOrCancel: this.formDialogOnSaveOrCancel
@@ -688,7 +688,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     </Dialog>
                     : undefined}
                 {this.props.searchBrowse != undefined && !readOnly ?
-                    <Dialog visible={this.state.searchDialogOpened} onHide={this.searchDialogOnHide}>
+                    <Dialog className="x-dialog-without-header" visible={this.state.searchDialogOpened} onHide={this.searchDialogOnHide}>
                         {/* klonovanim elementu pridame atribut searchBrowseParams */}
                         {React.cloneElement(this.props.searchBrowse, {searchBrowseParams: this.createSearchBrowseParams()}/*, props.searchBrowse.children*/)}
                     </Dialog>

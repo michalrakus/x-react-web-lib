@@ -11,6 +11,7 @@
     "pleaseSelectRow": "Please select the row.",
     "removeRowConfirm": "Are you sure to remove the selected row?",
     "removeRowFailed": "Remove row failed.",
+    "newRow": "new row",
     "save": "Save",
     "cancel": "Cancel",
     "expRowCount": "Row count",

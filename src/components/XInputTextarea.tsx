@@ -38,13 +38,28 @@ export class XInputTextarea extends XInput<string, XInputTextareaProps> {
 
     render() {
 
+        let fieldStyle: React.CSSProperties | undefined = undefined;
+        const labelStyle: React.CSSProperties = this.getLabelStyle();
         let inputStyle: React.CSSProperties = this.props.inputStyle ?? {};
         let cols: number | undefined;
         if (this.props.cols === "full") {
             cols = undefined;
             // pridame width:100%
-            // ak nemame labelOnTop=true, musime odratat sirku labelu, inac sa label dostane nad input (koli flex-wrap: wrap)
-            const widthValue: string = this.props.labelOnTop ? '100%' : `calc(100% - ${XUtils.FIELD_LABEL_WIDTH})`;
+            //fieldStyle = {width: '100%'};
+            let widthValue: string;
+            if (this.props.labelOnTop) {
+                widthValue = '100%';
+            }
+            else {
+                // ak nemame labelOnTop=true, musime odratat sirku labelu, inac sa label dostane nad input (koli flex-wrap: wrap)
+                const labelStyleWidth: string | number | undefined = labelStyle.width;
+                if (labelStyleWidth) {
+                    widthValue = `calc(100% - ${labelStyleWidth})`;
+                }
+                else {
+                    widthValue = '100%';
+                }
+            }
             XUtils.addCssPropIfNotExists(inputStyle, {width: widthValue});
         }
         else {
@@ -65,8 +80,8 @@ export class XInputTextarea extends XInput<string, XInputTextareaProps> {
 
         // InputTextarea renderujeme az ked mame nacitany object, lebo inac pri autoResize sa nam nenastavi spravna velkost (hodnota nie je k dispozicii pri prvom renderingu)
         return (
-            <div className={!this.props.labelOnTop ? 'field grid' : 'field grid x-inputtextarea-label-on-top'}>
-                <label id={labelElemId} htmlFor={this.props.field} className={!this.props.labelOnTop ? 'col-fixed' : undefined} style={this.getLabelStyle()}>{this.getLabel()}</label>
+            <div className={!this.props.labelOnTop ? 'field grid' : 'field grid x-inputtextarea-label-on-top'} style={fieldStyle}>
+                <label id={labelElemId} htmlFor={this.props.field} className={!this.props.labelOnTop ? 'col-fixed' : undefined} style={labelStyle}>{this.getLabel()}</label>
                 {labelTooltip ? <Tooltip target={`#${labelElemId}`} content={labelTooltip}/> : null}
                 {this.props.form.state.object ?
                     <XInputTextareaBase id={this.props.field} value={value} onChange={this.onValueChange} readOnly={this.isReadOnly()}

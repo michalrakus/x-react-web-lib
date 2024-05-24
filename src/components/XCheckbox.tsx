@@ -44,7 +44,7 @@ export class XCheckbox extends XInput<boolean, XInputProps<boolean>> {
             : <TriStateCheckbox id={this.props.field} value={this.getValue()} onChange={this.triStateCheckboxOnValueChange} disabled={this.isReadOnly()} style={this.props.inputStyle} tooltip={this.props.tooltip}/>;
 
         if (!this.props.onlyInput) {
-            const label: string | undefined = this.getLabel();
+            const label: string | undefined = this.props.label; // nepridavame * ani ak je atribut not null (kedze sa pouziva jednoduchy checkbox, nie je mozne zadat null hodnotu)
             element =   <div className="field grid">
                             {label !== undefined ? <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{label}</label> : null}
                             {element}

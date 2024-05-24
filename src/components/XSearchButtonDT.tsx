@@ -118,7 +118,7 @@ export const XSearchButtonDT = (props: {form: XFormBase; entity: string; assocFi
                 <InputText id={props.assocField} value={inputValue} onChange={onInputValueChange} onBlur={onInputBlur} readOnly={readOnly} ref={inputTextRef}/>
                 <Button icon="pi pi-search" onClick={onClickSearch} />
             </div>
-            <Dialog visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>
+            <Dialog className="x-dialog-without-header" visible={dialogOpened} /*style={{ width: '50vw' }}*/ onHide={onHide}>
                 {/* klonovanim elementu pridame atribut searchBrowseParams */}
                 {React.cloneElement(props.searchBrowse,
                     {

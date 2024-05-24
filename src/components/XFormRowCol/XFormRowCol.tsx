@@ -1,5 +1,6 @@
 import React from "react";
 import {XFormBase} from "../XFormBase";
+import {XUtils} from "../XUtils";
 
 // the purpose of XFormRow/Col:
 // 1a. ak sa jedna o "row", uklada elementy pod seba do riadku (pouziva flex a jeho defaultny flex-direction: row)
@@ -9,6 +10,7 @@ import {XFormBase} from "../XFormBase";
 export interface XFormRowColProps {
     className: "x-form-row" | "x-form-inline-row" | "x-form-col";
     form?: XFormBase; // toto sa zatial neda pouzit, lebo form je povinny atribut na komponentoch a pouziva sa uz v konstruktore, ktovie ci by to vobec zafungovalo
+    width?: string | "full"; // nastavi css property {width: <props.width>} na div (full nastavuje 100%)
     labelStyle?: React.CSSProperties;
     style?: React.CSSProperties; // prenesie sa na div
     children: JSX.Element | JSX.Element[];
@@ -41,6 +43,13 @@ export const XFormRowCol = (props: XFormRowColProps) => {
         childElemList = props.children; // netreba klonovat - viac menej koli performance
     }
 
-    return <div className={props.className} style={props.style}>{childElemList}</div>;
+    let style: React.CSSProperties | undefined = props.style;
+    if (props.width) {
+        style = style ?? {};
+        const width: string = (props.width === 'full' ? '100%' : props.width);
+        XUtils.addCssPropIfNotExists(style, {width: width}); // props.style ma vyssiu prioritu ako props.width
+    }
+
+    return <div className={props.className} style={style}>{childElemList}</div>;
 }
 
