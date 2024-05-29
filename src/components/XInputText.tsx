@@ -37,26 +37,35 @@ export class XInputText extends XInput<string, XInputTextProps> {
 
     render() {
 
+        const label: string | undefined = this.getLabel();
         const value: string | null = this.getValue();
         let labelTooltip: string | undefined = undefined;
         let labelElemId: string | undefined = undefined;
+        let inputTooltip: string | undefined = this.props.tooltip;
         if (value) {
-            // nevidno placeholder, tak zobrazime desc ako label tooltip
-            labelTooltip = this.props.desc;
-            labelElemId = `${this.props.field}_label_id`;
+            // nevidno placeholder, tak zobrazime desc ako label tooltip (ak mam label)
+            if (label !== undefined) {
+                labelTooltip = this.props.desc;
+                labelElemId = `${this.props.field}_label_id`;
+            }
+            else {
+                // nemame label, dame pripadny desc ako tooltip na input
+                if (inputTooltip === undefined) {
+                    inputTooltip = this.props.desc;
+                }
+            }
         }
 
         const size = this.props.size ?? this.xField.length;
 
         // note: style overrides size (width of the input according to character count)
-        const label: string | undefined = this.getLabel();
         return (
             <div className="field grid">
                 {label !== undefined ? <label id={labelElemId} htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{label}</label> : null}
                 {labelTooltip ? <Tooltip target={`#${labelElemId}`} content={labelTooltip}/> : null}
                 <InputText id={this.props.field} value={value} onChange={this.onValueChange} onBlur={this.onBlur}
                            readOnly={this.isReadOnly()} maxLength={this.xField.length} size={size} style={this.props.inputStyle}
-                           {...XUtils.createTooltipOrErrorProps(this.getError(), this.props.tooltip)} placeholder={this.props.placeholder ?? this.props.desc}/>
+                           {...XUtils.createTooltipOrErrorProps(this.getError(), inputTooltip)} placeholder={this.props.placeholder ?? this.props.desc}/>
             </div>
         );
     }

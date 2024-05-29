@@ -2,10 +2,11 @@ import React from "react";
 import {XCalendar} from "./XCalendar";
 import {XFormComponentProps} from "./XFormComponent";
 import {XInput} from "./XInput";
-import {dateFromModel} from "../serverApi/XUtilsConversions";
+import {dateFromModel, XDateScale} from "../serverApi/XUtilsConversions";
 
 export interface XInputDateProps extends XFormComponentProps<number> {
     field: string;
+    scale?: XDateScale;
 }
 
 export class XInputDate extends XInput<Date, XInputDateProps> {
@@ -32,7 +33,7 @@ export class XInputDate extends XInput<Date, XInputDateProps> {
             <div className="field grid">
                 <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <XCalendar id={this.props.field} value={this.getValue()} onChange={this.onValueChange} readOnly={this.isReadOnly()} error={this.getError()}
-                           scale={this.xField.scale} datetime={this.xField.type === 'datetime'}/>
+                           scale={this.props.scale ?? this.xField.scale} datetime={this.xField.type === 'datetime'}/>
             </div>
         );
     }

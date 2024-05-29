@@ -9,6 +9,7 @@ export interface XInputTextareaProps extends XInputProps<string> {
     cols?: number | "full"; // full - maximalna sirka (width:100%)
     labelOnTop?: boolean;
     autoResize?: boolean;
+    fieldStyle?: React.CSSProperties; // zatial sem, mozno v buducnosti posunieme do superclass
 }
 
 export class XInputTextarea extends XInput<string, XInputTextareaProps> {
@@ -38,7 +39,7 @@ export class XInputTextarea extends XInput<string, XInputTextareaProps> {
 
     render() {
 
-        let fieldStyle: React.CSSProperties | undefined = undefined;
+        let fieldStyle: React.CSSProperties | undefined = this.props.fieldStyle;
         const labelStyle: React.CSSProperties = this.getLabelStyle();
         let inputStyle: React.CSSProperties = this.props.inputStyle ?? {};
         let cols: number | undefined;
