@@ -4,13 +4,22 @@ import {SplitButton} from "primereact/splitbutton";
 import {Dialog} from "primereact/dialog";
 import {OperationType, XQuery, XUtils} from "./XUtils";
 import {Button} from "primereact/button";
-import {MenuItem} from "primereact/menuitem";
+import {MenuItem, MenuItemCommandEvent} from "primereact/menuitem";
 import {XSearchBrowseParams} from "./XSearchBrowseParams";
 import {XCustomFilter, XLazyAutoCompleteSuggestionsRequest} from "../serverApi/FindParam";
 import {DataTableSortMeta} from "primereact/datatable";
 import { XFormProps } from "./XFormBase"; /* DO NOT REMOVE - IS USED EVEN IF IT IS MARKED AS NOT USED */
 import {FindResult} from "../serverApi/FindResult";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XEntity} from "../serverApi/XEntityMetadata";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+
+// helper
+interface XButtonItem {
+    icon: any | undefined;
+    tooltip?: string;
+    command(event: MenuItemCommandEvent): void;
+}
 
 // type of suggestions load from DB:
 // suggestions - custom suggestions from parent component - no DB load used
@@ -25,6 +34,7 @@ export interface XAutoCompleteBaseProps {
     value: any;
     onChange: (object: any, objectChange: OperationType) => void; // odovzda vybraty objekt, ak bol vybraty objekt zmeneny cez dialog (aj v DB), tak vrati objectChange !== OperationType.None
     suggestions?: any[]; // ak su priamo zadane suggestions, nepouziva sa suggestionsLoad a suggestionsQuery (vynimka je ak mame aj searchBrowse, vtedy do searchBrowse posleme filter (aj sortField?))
+    suggestionsEntity?: string; // ak su priamo zadane suggestions, nepouziva sa suggestionsLoad a suggestionsQuery a entity mozme zadat tu - entity je potrebna na vyhladanie XField-ov (tie su potrebne na konverziu hodnoty atributu "field" do string-u); ak entitu nezadame, tak sa napr. zle skonvertuju datumy (iba cez toString)
     suggestionsLoad?: XSuggestionsLoadProp; // ak nemame suggestions, pouzijeme suggestionsLoad (resp. jeho default) a suggestionsQuery (ten musi byt zadany)
     suggestionsQuery?: XQuery; // musi byt zadany ak nie su zadane suggestions (poznamka: filter (a sortField?) sa posielaju do searchBrowse)
     lazyLoadMaxRows: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
@@ -35,7 +45,11 @@ export interface XAutoCompleteBaseProps {
     valueForm?: JSX.Element; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
     onAddRow?: (inputValue: string) => void; // override handlera zaveseneho na "plus" buttone (otazka je ci nejakym sposobom nestrkat vytvoreny/ziskany row do tohto autocomplete - zatial nie)
+    insertButtonTooltip?: string;
+    updateButtonTooltip?: string;
+    searchButtonTooltip?: string;
     minLength?: number; // Minimum number of characters to initiate a search (default 1)
+    buttonsLayout: "splitButton" | "buttons";
     width?: string;
     scrollHeight?: string; // Maximum height of the suggestions panel.
     inputClassName?: string;
@@ -53,6 +67,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         lazyLoadMaxRows: 10,
         splitQueryValue: true,
         minLength: 1,
+        buttonsLayout: "buttons",
         scrollHeight: '15rem'   // primereact has 200px
     };
 
@@ -76,6 +91,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                                 // - raz z onBlur - ak uzivatel typovanim "vybral" prave jeden zaznam do suggestions dropdown-u
                                 // a druhy raz z onSelect ked uzivatel klikol na tento jeden "vybraty" zaznam
 
+    xEntity: XEntity | undefined;
+
     // parametre pre form dialog (vzdy aspon jeden musi byt undefined)
     formDialogObjectId: number | undefined;
     formDialogInitValuesForInsert: any | undefined;
@@ -97,6 +114,21 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
         this.suggestionsLoadedForOSS = false;
         this.wasOnChangeCalled = false;
+
+        let entity: string | undefined;
+        if (this.getXSuggestionsLoadType() === "suggestions") {
+            // if (this.props.suggestionsEntity === undefined) {
+            //     throw "If prop suggestions is used, then also prop suggestionsEntity must be defined.";
+            // }
+            entity = this.props.suggestionsEntity;
+        }
+        else {
+            if (this.props.suggestionsQuery === undefined) {
+                throw "prop suggestionsQuery must be defined. (prop suggestions is not used)";
+            }
+            entity = this.props.suggestionsQuery.entity;
+        }
+        this.xEntity = entity ? XUtilsMetadataCommon.getXEntity(entity) : undefined;
 
         this.completeMethod = this.completeMethod.bind(this);
         this.onChange = this.onChange.bind(this);
@@ -436,11 +468,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         }
     }
 
-    createInsertItem(splitButtonItems: MenuItem[]) {
+    createInsertItem(buttonItems: XButtonItem[]) {
 
-        splitButtonItems.push(
+        buttonItems.push(
             {
                 icon: 'pi pi-plus',
+                tooltip: this.props.insertButtonTooltip,
                 command: (e: any) => {
                     if (this.props.onAddRow) {
                         // mame custom handler pre "plus" button
@@ -465,10 +498,11 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             });
     }
 
-    createUpdateItem(splitButtonItems: MenuItem[]) {
-        splitButtonItems.push(
+    createUpdateItem(buttonItems: XButtonItem[]) {
+        buttonItems.push(
             {
                 icon: 'pi pi-pencil',
+                tooltip: this.props.updateButtonTooltip,
                 command: (e: any) => {
                     if (this.state.inputChanged) {
                         alert(`Value "${this.state.inputValueState}" was not found among valid values, please enter some valid value.`);
@@ -491,20 +525,21 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         // },
     }
 
-    createSearchItem(splitButtonItems: MenuItem[]) {
+    createSearchItem(buttonItems: XButtonItem[]) {
 
-        splitButtonItems.push(
+        buttonItems.push(
             {
                 icon: 'pi pi-search',
+                tooltip: this.props.searchButtonTooltip,
                 command: (e: any) => {
                         this.setState({searchDialogOpened: true});
                 }
             });
     }
 
-    createDropdownItem(splitButtonItems: MenuItem[]) {
+    createDropdownItem(buttonItems: XButtonItem[]) {
 
-        splitButtonItems.push(
+        buttonItems.push(
             {
                 icon: 'pi pi-chevron-down',
                 command: (e: any) => {
@@ -595,7 +630,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             displayValue = suggestion;
         }
         else {
-            displayValue = XUtilsCommon.createDisplayValue(suggestion, this.getFields());
+            displayValue = XUtilsCommon.createDisplayValue(suggestion, this.xEntity, this.getFields());
         }
         return displayValue;
     }
@@ -618,42 +653,52 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
         const readOnly: boolean = this.props.readOnly ?? false;
 
-        let dropdownButton: JSX.Element;
+        let buttons: JSX.Element[];
         if (!readOnly) {
             if (this.props.searchBrowse || this.props.valueForm || this.props.onAddRow) {
-                // mame searchBrowse alebo CRUD operacie, potrebujeme SplitButton
-                const splitButtonItems: MenuItem[] = [];
+                // mame searchBrowse alebo CRUD operacie, potrebujeme viac buttonov alebo SplitButton
+                const buttonItems: XButtonItem[] = [];
 
                 if (this.props.valueForm || this.props.onAddRow) {
-                    this.createInsertItem(splitButtonItems);
+                    this.createInsertItem(buttonItems);
                 }
 
                 if (this.props.valueForm) {
-                    this.createUpdateItem(splitButtonItems);
+                    this.createUpdateItem(buttonItems);
                 }
 
                 if (this.props.searchBrowse && !readOnly) {
-                    this.createSearchItem(splitButtonItems);
+                    this.createSearchItem(buttonItems);
                 }
 
-                this.createDropdownItem(splitButtonItems);
+                this.createDropdownItem(buttonItems);
 
-                dropdownButton = <SplitButton model={splitButtonItems} className={'x-splitbutton-only-dropdown' + XUtils.mobileCssSuffix()} menuClassName={'x-splitbutton-only-dropdown-menu' + XUtils.mobileCssSuffix()} disabled={readOnly}/>;
+                if (this.props.buttonsLayout === "buttons") {
+                    buttons = buttonItems.map((value: XButtonItem) => <Button icon={value.icon} tooltip={value.tooltip} tooltipOptions={{position: 'top'}}
+                                                                              onClick={(e: any) => value.command!(e)} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>);
+                }
+                else {
+                    // buttonsLayout === "splitButton"
+                    // tooltip-y by trebalo pridat...
+                    const splitButtonItems: MenuItem[] = buttonItems.map<MenuItem>((value: XButtonItem) => {return {icon: value.icon, command: value.command}});
+                    buttons = [<SplitButton model={splitButtonItems} className={'x-splitbutton-only-dropdown' + XUtils.mobileCssSuffix()} menuClassName={'x-splitbutton-only-dropdown-menu' + XUtils.mobileCssSuffix()} disabled={readOnly}/>];
+                }
             }
             else {
                 // mame len 1 operaciu - dame jednoduchy button
-                dropdownButton = <Button icon="pi pi-chevron-down" onClick={(e: any) => this.onOpenDropdown(e)} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>;
+                buttons = [<Button icon="pi pi-chevron-down" onClick={(e: any) => this.onOpenDropdown(e)} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>];
             }
         }
         else {
             // readOnly
             // ak mame valueForm a mame asociovany objekt, umoznime editovat asociovany objekt
             if (this.props.valueForm && this.props.value !== null) {
-                dropdownButton = <Button icon="pi pi-pencil" onClick={(e: any) => this.onEditAssocValue()} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>;
+                buttons = [<Button icon="pi pi-pencil" tooltip={this.props.updateButtonTooltip} tooltipOptions={{position: 'top'}}
+                                   onClick={(e: any) => this.onEditAssocValue()} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>];
             }
             else {
                 // dame disablovany button (z estetickych dovodov, zachovame sirku)
-                dropdownButton = <Button icon="pi pi-chevron-down" className={'x-dropdownbutton' + XUtils.mobileCssSuffix()} disabled={true}/>;
+                buttons = [<Button icon="pi pi-chevron-down" className={'x-dropdownbutton' + XUtils.mobileCssSuffix()} disabled={true}/>];
             }
         }
 
@@ -677,8 +722,9 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             <div className="x-auto-complete-base" style={{width: this.props.width}}>
                 <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} itemTemplate={this.itemTemplate}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} minLength={this.props.minLength} scrollHeight={this.props.scrollHeight}
-                              ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createTooltipOrErrorProps(error)} inputClassName={this.props.inputClassName}/>
-                {dropdownButton}
+                              ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createTooltipOrErrorProps(error)} inputClassName={this.props.inputClassName}
+                              showEmptyMessage={true}/>
+                {buttons}
                 {this.props.valueForm != undefined ?
                     <Dialog className="x-dialog-without-header" visible={this.state.formDialogOpened} onHide={this.formDialogOnHide}>
                         {/* klonovanim elementu pridame atributy id, initValues, onSaveOrCancel */}
