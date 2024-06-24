@@ -28,9 +28,9 @@ export enum OperationType {
 }
 
 export enum XViewStatus {
-    ReadWrite,
-    ReadOnly,
-    Hidden
+    ReadWrite = "readWrite",
+    ReadOnly = "readOnly",
+    Hidden = "hidden"
 }
 
 // special type - purpose is to simply use true/false (instead of XViewStatus.ReadWrite/XViewStatus.Hidden)
@@ -541,8 +541,12 @@ export class XUtils {
     static showErrorMessage(message: string, e: unknown) {
         let msg = message + XUtilsCommon.newLine;
         if (e instanceof XResponseError) {
-            // better error message for optimistic locking
-            if (e.xResponseErrorBody.exceptionName === 'OptimisticLockVersionMismatchError') {
+            if (e.xResponseErrorBody.exceptionName === 'XAppError') {
+                // app error from backend, we show only the error message
+                msg += e.xResponseErrorBody.message;
+            }
+            else if (e.xResponseErrorBody.exceptionName === 'OptimisticLockVersionMismatchError') {
+                // better error message for optimistic locking
                 msg += "The optimistic lock failed, someone else has changed the row during the editation. Sorry, you have to cancel the editation and start the editation again.";
             }
             else {

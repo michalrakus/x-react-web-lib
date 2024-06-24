@@ -44,6 +44,7 @@ export interface XAutoCompleteBaseProps {
     searchBrowse?: JSX.Element; // ak je zadany, moze uzivatel vyhladavat objekt podobne ako pri XSearchButton (obchadza tym suggestions)
     valueForm?: JSX.Element; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
+    addRowEnabled: boolean; // ak dame false, tak nezobrazi insert button ani ked mame k dispozicii "valueForm" (default je true)
     onAddRow?: (inputValue: string) => void; // override handlera zaveseneho na "plus" buttone (otazka je ci nejakym sposobom nestrkat vytvoreny/ziskany row do tohto autocomplete - zatial nie)
     insertButtonTooltip?: string;
     updateButtonTooltip?: string;
@@ -51,6 +52,7 @@ export interface XAutoCompleteBaseProps {
     minLength?: number; // Minimum number of characters to initiate a search (default 1)
     buttonsLayout: "splitButton" | "buttons";
     width?: string;
+    maxWidth?: string;
     scrollHeight?: string; // Maximum height of the suggestions panel.
     inputClassName?: string;
     readOnly?: boolean;
@@ -66,6 +68,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
     public static defaultProps = {
         lazyLoadMaxRows: 10,
         splitQueryValue: true,
+        addRowEnabled: true,
         minLength: 1,
         buttonsLayout: "buttons",
         scrollHeight: '15rem'   // primereact has 200px
@@ -655,11 +658,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
         let buttons: JSX.Element[];
         if (!readOnly) {
-            if (this.props.searchBrowse || this.props.valueForm || this.props.onAddRow) {
+            const createInsertItem: boolean = (this.props.addRowEnabled && (this.props.valueForm !== undefined || this.props.onAddRow !== undefined));
+            if (createInsertItem || this.props.valueForm || this.props.searchBrowse) {
                 // mame searchBrowse alebo CRUD operacie, potrebujeme viac buttonov alebo SplitButton
                 const buttonItems: XButtonItem[] = [];
 
-                if (this.props.valueForm || this.props.onAddRow) {
+                if (createInsertItem) {
                     this.createInsertItem(buttonItems);
                 }
 
@@ -667,7 +671,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     this.createUpdateItem(buttonItems);
                 }
 
-                if (this.props.searchBrowse && !readOnly) {
+                if (this.props.searchBrowse) {
                     this.createSearchItem(buttonItems);
                 }
 
@@ -719,7 +723,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 
         // formgroup-inline lepi SplitButton na autocomplete a zarovna jeho vysku
         return (
-            <div className="x-auto-complete-base" style={{width: this.props.width}}>
+            <div className="x-auto-complete-base" style={{width: this.props.width, maxWidth: this.props.maxWidth}}>
                 <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} itemTemplate={this.itemTemplate}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} minLength={this.props.minLength} scrollHeight={this.props.scrollHeight}
                               ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createTooltipOrErrorProps(error)} inputClassName={this.props.inputClassName}
