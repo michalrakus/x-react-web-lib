@@ -26,12 +26,12 @@ export class XUtilsMetadata {
     // docasne sem, kym nemame jednotny XInputDecimal/XInputDecimalDT
     static getParamsForInputNumber(xField: XField): {useGrouping: boolean; fractionDigits?: number; min?: number; max?: number; size?: number} {
         let useGrouping: boolean = true;
-        let fractionDigits: number | undefined = undefined;
+        let scale: number | undefined = undefined;
         let precision: number | undefined = undefined; // total number of digits (before + after decimal point (scale))
         let size: number | undefined = undefined;
         if (xField.type === "decimal") {
             useGrouping = true;
-            fractionDigits = xField.scale;
+            scale = xField.scale;
             precision = xField.precision;
             if (precision !== undefined) {
                 size = precision + Math.floor(precision/3); // approximatly for 123.456.789,12
@@ -39,7 +39,7 @@ export class XUtilsMetadata {
         }
         else if (xField.type === "number") {
             useGrouping = false;
-            fractionDigits = 0;
+            scale = 0;
             precision = xField.width; // number pouziva width
             if (precision === undefined) {
                 precision = xField.precision; // nech to aj takto zafunguje...
@@ -49,15 +49,25 @@ export class XUtilsMetadata {
         else {
             throw `XInputDecimal: field ${xField.name} has unsupported type ${xField.type}. Supported types are decimal and number.`;
         }
+
+        return XUtilsMetadata.getParamsForInputNumberBase(useGrouping, scale, precision, size);
+    }
+
+    static getParamsForInputNumberBase(
+        useGrouping: boolean,
+        scale: number | undefined,
+        precision: number | undefined,  // total number of digits (before + after decimal point (scale))
+        size: number | undefined
+    ): {useGrouping: boolean; fractionDigits?: number; min?: number; max?: number; size?: number} {
         let min: number | undefined = undefined;
         let max: number | undefined = undefined;
-        if (precision !== undefined && fractionDigits !== undefined) {
-            const digits = precision - fractionDigits;
+        if (precision !== undefined && scale !== undefined) {
+            const digits = precision - scale;
             min = -(Math.pow(10, digits) - 1);
             max = Math.pow(10, digits) - 1;
         }
 
-        return {useGrouping: useGrouping, fractionDigits: fractionDigits, min: min, max: max, size: size};
+        return {useGrouping: useGrouping, fractionDigits: scale, min: min, max: max, size: size};
     }
 
     //static CHAR_SIZE: number = 0.57; // 0.57rem (8px)
