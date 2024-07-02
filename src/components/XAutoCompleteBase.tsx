@@ -678,7 +678,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                 this.createDropdownItem(buttonItems);
 
                 if (this.props.buttonsLayout === "buttons") {
-                    buttons = buttonItems.map((value: XButtonItem) => <Button icon={value.icon} tooltip={value.tooltip} tooltipOptions={{position: 'top'}}
+                    buttons = buttonItems.map((value: XButtonItem, index: number) => <Button key={`button${index}`} icon={value.icon} tooltip={value.tooltip} tooltipOptions={{position: 'top'}}
                                                                               onClick={(e: any) => value.command!(e)} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>);
                 }
                 else {
@@ -724,13 +724,13 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         // formgroup-inline lepi SplitButton na autocomplete a zarovna jeho vysku
         return (
             <div className="x-auto-complete-base" style={{width: this.props.width, maxWidth: this.props.maxWidth}}>
-                <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} itemTemplate={this.itemTemplate}
+                <AutoComplete key="autoComplete" value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} itemTemplate={this.itemTemplate}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} minLength={this.props.minLength} scrollHeight={this.props.scrollHeight}
                               ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createTooltipOrErrorProps(error)} inputClassName={this.props.inputClassName}
                               showEmptyMessage={true}/>
                 {buttons}
                 {this.props.valueForm != undefined ?
-                    <Dialog className="x-dialog-without-header" visible={this.state.formDialogOpened} onHide={this.formDialogOnHide}>
+                    <Dialog key="dialogForm" className="x-dialog-without-header" visible={this.state.formDialogOpened} onHide={this.formDialogOnHide}>
                         {/* klonovanim elementu pridame atributy id, initValues, onSaveOrCancel */}
                         {React.cloneElement(this.props.valueForm, {
                             id: this.formDialogObjectId, initValues: this.formDialogInitValuesForInsert, onSaveOrCancel: this.formDialogOnSaveOrCancel
@@ -738,7 +738,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     </Dialog>
                     : undefined}
                 {this.props.searchBrowse != undefined && !readOnly ?
-                    <Dialog className="x-dialog-without-header" visible={this.state.searchDialogOpened} onHide={this.searchDialogOnHide}>
+                    <Dialog key="dialogBrowse" className="x-dialog-without-header" visible={this.state.searchDialogOpened} onHide={this.searchDialogOnHide}>
                         {/* klonovanim elementu pridame atribut searchBrowseParams */}
                         {React.cloneElement(this.props.searchBrowse, {searchBrowseParams: this.createSearchBrowseParams()}/*, props.searchBrowse.children*/)}
                     </Dialog>

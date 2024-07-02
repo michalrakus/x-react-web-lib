@@ -118,7 +118,7 @@ export abstract class XFormBase extends Component<XFormProps> {
         }
         this.preInitForm(object, operationType);
         //console.log("volany XFormBase.componentDidMount() - ideme setnut object");
-        this.setState({object: object}/*, () => console.log("volany XFormBase.componentDidMount() - callback setState")*/);
+        this.setState({object: object}/*, () => console.log("************** volany XFormBase.componentDidMount() - callback setState")*/);
     }
 
     getEntity(): string {
@@ -199,17 +199,16 @@ export abstract class XFormBase extends Component<XFormProps> {
             onChange({object: object, tableRow: row, assocObjectChange: undefined});
         }
 
-        // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
         this.setState({object: object});
     }
 
     // lepsi nazov ako onObjectDataChange
     // ak niekto zmenil this.state.object alebo this.state.errorMap, zmena sa prejavi vo formulari
     // pouzivame napr. po zavolani onChange na XInputText
-    setStateXForm() {
+    // callback je zavolany, ked dobehne update formulara (mozme pouzit na dalsi update formulara, ktory potrebuje aby boli vsetky komponenty vytvorene)
+    setStateXForm(callback?: () => void) {
         // TODO - je to ok ze object menime takto?
-        // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
-        this.setState({object: this.state.object, errorMap: this.state.errorMap});
+        this.setState({object: this.state.object, errorMap: this.state.errorMap}, callback);
     }
 
     onTableAddRow(assocField: string, newRow: any, dataKey?: string, selectedRow?: {}) {
