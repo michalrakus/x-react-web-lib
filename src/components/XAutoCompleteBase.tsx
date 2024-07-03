@@ -724,13 +724,13 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         // formgroup-inline lepi SplitButton na autocomplete a zarovna jeho vysku
         return (
             <div className="x-auto-complete-base" style={{width: this.props.width, maxWidth: this.props.maxWidth}}>
-                <AutoComplete key="autoComplete" value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} itemTemplate={this.itemTemplate}
+                <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} itemTemplate={this.itemTemplate}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} minLength={this.props.minLength} scrollHeight={this.props.scrollHeight}
                               ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createTooltipOrErrorProps(error)} inputClassName={this.props.inputClassName}
                               showEmptyMessage={true}/>
-                {buttons}
+                {...buttons}{/* ked tu bolo len {buttons} bez ..., tak vypisoval hlasku Warning: Each child in a list should have a unique "key" prop. */}
                 {this.props.valueForm != undefined ?
-                    <Dialog key="dialogForm" className="x-dialog-without-header" visible={this.state.formDialogOpened} onHide={this.formDialogOnHide}>
+                    <Dialog key="dialog-form" className="x-dialog-without-header" visible={this.state.formDialogOpened} onHide={this.formDialogOnHide}>
                         {/* klonovanim elementu pridame atributy id, initValues, onSaveOrCancel */}
                         {React.cloneElement(this.props.valueForm, {
                             id: this.formDialogObjectId, initValues: this.formDialogInitValuesForInsert, onSaveOrCancel: this.formDialogOnSaveOrCancel
@@ -738,7 +738,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     </Dialog>
                     : undefined}
                 {this.props.searchBrowse != undefined && !readOnly ?
-                    <Dialog key="dialogBrowse" className="x-dialog-without-header" visible={this.state.searchDialogOpened} onHide={this.searchDialogOnHide}>
+                    <Dialog key="dialog-browse" className="x-dialog-without-header" visible={this.state.searchDialogOpened} onHide={this.searchDialogOnHide}>
                         {/* klonovanim elementu pridame atribut searchBrowseParams */}
                         {React.cloneElement(this.props.searchBrowse, {searchBrowseParams: this.createSearchBrowseParams()}/*, props.searchBrowse.children*/)}
                     </Dialog>
