@@ -10,6 +10,7 @@ import {XObject} from "./XObject";
 import {XCustomFilter} from "../serverApi/FindParam";
 import {XSearchBrowseParams} from "./XSearchBrowseParams";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 export interface XSearchButtonProps extends XFormComponentProps<XObject> {
     assocField: string;
@@ -113,7 +114,7 @@ export class XSearchButton extends XFormComponent<XObject, XSearchButtonProps> {
                     // });
                     const displayFieldFilter: XCustomFilter = {where: `[${props.displayField}] LIKE :xDisplayFieldValue`, params: {"xDisplayFieldValue": `${e.target.value}%`}};
                     const customFilter: XCustomFilter | undefined = this.getFilterBase(this.props.filter);
-                    const rows: any[] = await XUtils.fetchRows(this.xAssoc.entityName, XUtils.filterAnd(displayFieldFilter, customFilter));
+                    const rows: any[] = await XUtils.fetchRows(this.xAssoc.entityName, XUtilsCommon.filterAnd(displayFieldFilter, customFilter));
                     if (rows.length === 0) {
                         // POVODNY KOD
                         //overlayPanelEl.current.toggle(e);

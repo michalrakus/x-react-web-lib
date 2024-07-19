@@ -205,7 +205,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     // premenne platne pre cely component (obdoba member premennych v class-e)
     const dataTableEl = useRef<any>(null);
-    let customFilterItems: XCustomFilterItem[] | undefined = XUtils.createCustomFilterItems(props.customFilter);
+    let customFilterItems: XCustomFilterItem[] | undefined = XUtilsCommon.createCustomFilterItems(props.customFilter);
     let aggregateItems: XAggregateItem[] = createAggregateItems();
 
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0, aggregateValues: []});
@@ -223,7 +223,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
         // ak mame props.searchBrowseParams.customFilterFunction, pridame filter
         if (props.searchBrowseParams.customFilter) {
-            customFilterItems = XUtils.filterAnd(customFilterItems, XUtils.evalFilter(props.searchBrowseParams.customFilter));
+            customFilterItems = XUtilsCommon.filterAnd(customFilterItems, XUtils.evalFilter(props.searchBrowseParams.customFilter));
         }
     }
     const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
@@ -231,7 +231,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [ftsInputValue, setFtsInputValue] = useState<XFtsInputValue | undefined>(initFtsInputValue);
     const [optionalCustomFilter, setOptionalCustomFilter] = useState<XOptionalCustomFilter | undefined>(undefined);
     const [multilineSwitchValue, setMultilineSwitchValue] = useState<XMultilineRenderType>(props.multilineSwitchInitValue);
-    const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[] | undefined>(XUtils.createMultiSortMeta(props.sortField));
+    const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[] | undefined>(XUtilsCommon.createMultiSortMeta(props.sortField));
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
     const [exportRowsDialogState, setExportRowsDialogState] = useState<XExportRowsDialogState>({dialogOpened: false});
@@ -375,7 +375,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     }
 
     const createXCustomFilterItems = (customFilterItems: XCustomFilterItem[] | undefined, optionalCustomFilter: XOptionalCustomFilter | undefined): XCustomFilterItem[] | undefined => {
-        return XUtils.filterAnd(customFilterItems, optionalCustomFilter?.filter);
+        return XUtilsCommon.filterAnd(customFilterItems, optionalCustomFilter?.filter);
     }
 
     const getFields = (addPropsFields: boolean): string[] => {

@@ -224,14 +224,14 @@ export class XUtils {
 
     // pomocna metodka pouzivajuca lazyDataTable service
     static async fetchRows(entity: string, customFilter?: XCustomFilter | undefined, sortField?: string | DataTableSortMeta[] | undefined, fields?: string[]): Promise<any[]> {
-        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilterItems: XUtils.createCustomFilterItems(customFilter), multiSortMeta: XUtils.createMultiSortMeta(sortField), fields: fields};
+        const findParam: FindParam = {resultType: ResultType.AllRows, entity: entity, customFilterItems: XUtilsCommon.createCustomFilterItems(customFilter), multiSortMeta: XUtilsCommon.createMultiSortMeta(sortField), fields: fields};
         const {rowList}: {rowList: any[];} = await XUtils.fetchOne('lazyDataTableFindRows', findParam);
         return rowList;
     }
 
     // pomocna metodka pouzivajuca lazyDataTable service
     static async fetchRowCount(entity: string, customFilter?: XCustomFilter | undefined): Promise<number> {
-        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, entity: entity, customFilterItems: XUtils.createCustomFilterItems(customFilter)};
+        const findParam: FindParam = {resultType: ResultType.OnlyRowCount, entity: entity, customFilterItems: XUtilsCommon.createCustomFilterItems(customFilter)};
         const {totalRecords}: {totalRecords: number;} = await XUtils.fetchOne('lazyDataTableFindRows', findParam);
         return totalRecords;
     }
@@ -411,83 +411,6 @@ export class XUtils {
         await XUtils.post('removeRow', {entity: entity, id: id});
     }
 
-    // TODO - prehodit do XUtilsCommon
-    static arrayMoveElement(array: any[], position: number, offset: number) {
-        const element = array[position];
-        array.splice(position, 1);
-        let positionNew = position + offset;
-        if (positionNew > array.length) {
-            positionNew = positionNew - array.length - 1; // element goes to the begin
-        }
-        else if (positionNew < 0) {
-            positionNew = array.length + positionNew + 1; // element goes to the end
-        }
-        if (positionNew >= 0 && positionNew <= array.length) {
-            array.splice(positionNew, 0, element);
-        }
-    }
-
-    // TODO - prehodit do XUtilsCommon
-    static arraySort(array: any[], fieldOrStringFunction: string | ((item: any) => string)): any[] {
-
-        let stringFunction: ((item: any) => string);
-        if (typeof fieldOrStringFunction === 'string') {
-            stringFunction = (item: any) => item[fieldOrStringFunction];
-        }
-        else {
-            stringFunction = fieldOrStringFunction;
-        }
-
-        return array.sort((suggestion1: any, suggestion2: any) => {
-            const value1 = stringFunction(suggestion1);
-            const value2 = stringFunction(suggestion2);
-
-            if (value1 > value2) {
-                return 1;
-            }
-            else if (value1 < value2) {
-                return -1;
-            }
-            else {
-                return 0;
-            }
-        });
-    }
-
-    // TODO - prehodit do XUtilsCommon
-    /**
-     * returns true, if param item is member of the array
-     * remark: null/undefined items in array are ignored, item = null/undefined is ignored
-     *
-     * @param array
-     * @param item
-     * @param idField
-     */
-    static arrayIncludes<T>(array: T[], item: T, idField: string): boolean {
-        return item && array.some((arrayItem: T) => arrayItem && (arrayItem as any)[idField] === (item as any)[idField]);
-    }
-
-    // TODO - prehodit do XUtilsCommon
-    /**
-     * returns intersection of 2 row lists
-     * remark: null/undefined items in both array1 and array2 are ignored
-     *
-     * @param array1
-     * @param array2
-     * @param idField
-     */
-    static arrayIntersect<T>(array1: T[], array2: T[], idField: string): T[] {
-
-        const array2IdSet = new Set<any>();
-        for (const item of array2) {
-            if (item) {
-                array2IdSet.add((item as any)[idField]);
-            }
-        }
-
-        return array1.filter((item: T) => item && array2IdSet.has((item as any)[idField]));
-    }
-
     // helper
     static isReadOnly(path: string, readOnlyInit?: boolean): boolean {
         // ak mame path dlzky 2 a viac, field je vzdy readOnly
@@ -630,63 +553,6 @@ export class XUtils {
             value = value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         }
         return value;
-    }
-
-    // pomocna metodka - konvertuje XCustomFilter -> XCustomFilterItem[]
-    static createCustomFilterItems(customFilter: XCustomFilter | undefined): XCustomFilterItem[] | undefined {
-        let customFilterItems: XCustomFilterItem[] | undefined = undefined;
-        if (customFilter) {
-            if (Array.isArray(customFilter)) {
-                customFilterItems = customFilter;
-            } else {
-                customFilterItems = [customFilter];
-            }
-        }
-        return customFilterItems;
-    }
-
-    // pomocna metodka - konvertuje sortField -> DataTableSortMeta[]
-    static createMultiSortMeta(sortField: string | DataTableSortMeta[] | undefined): DataTableSortMeta[] | undefined {
-        let multiSortMeta: DataTableSortMeta[] | undefined = undefined;
-        if (sortField) {
-            if (Array.isArray(sortField)) {
-                multiSortMeta = sortField;
-            }
-            else {
-                // default order is asc, supported is also value in form "<column name> desc"
-                let order: 1 | -1 = 1;
-                const fieldAndOrder: string[] = sortField.split(' ');
-                if (fieldAndOrder.length === 2) {
-                    sortField = fieldAndOrder[0];
-                    if (fieldAndOrder[1].toLowerCase() === "desc") {
-                        order = -1;
-                    }
-                }
-                multiSortMeta = [{field: sortField, order: order}];
-            }
-        }
-        return multiSortMeta;
-    }
-
-    // pomocna metodka
-    static filterAnd(...filters: (XCustomFilter | undefined)[]): XCustomFilterItem[] | undefined {
-        let customFilterItemsResult: XCustomFilterItem[] | undefined = undefined;
-        if (filters.length > 0) {
-            customFilterItemsResult = [];
-            for (const filter of filters) {
-                const customFilterItems: XCustomFilterItem[] | undefined = XUtils.createCustomFilterItems(filter);
-                if (customFilterItems) {
-                    customFilterItemsResult.push(...customFilterItems);
-                }
-            }
-        }
-        return customFilterItemsResult;
-    }
-
-    // pomocna metodka
-    // ak je idList prazdny, vytvori podmienku id IN (0) a nevrati ziadne zaznamy
-    static filterIdIn(idField: string, idList: number[]): XCustomFilter {
-        return {where: `[${idField}] IN (:...idList)`, params: {"idList": idList.length > 0 ? idList : [0]}};
     }
 
     // pomocna metodka

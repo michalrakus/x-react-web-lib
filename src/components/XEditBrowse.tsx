@@ -8,6 +8,7 @@ import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtils} from "./XUtils";
 import {XEditModeHandlers, XLazyColumn, XLazyDataTable} from "./XLazyDataTable/XLazyDataTable";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 
 export interface XEditBrowseProps {
     entity: string;
@@ -173,7 +174,7 @@ export class XEditBrowse extends Component<XEditBrowseProps> {
         const index = this.getIndexForColumn(field);
         if (index !== undefined) {
             const xBrowseMeta = this.state.xBrowseMeta;
-            XUtils.arrayMoveElement(xBrowseMeta.columnMetaList, index, offset);
+            XUtilsCommon.arrayMoveElement(xBrowseMeta.columnMetaList, index, offset);
             // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
             this.setState({xBrowseMeta: xBrowseMeta});
         }

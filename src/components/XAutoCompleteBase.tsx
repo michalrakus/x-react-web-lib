@@ -292,8 +292,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                 maxRows: this.props.lazyLoadMaxRows + 1,
                 fullTextSearch: {fields: this.getFields(), value: event.query.trim(), splitValue: this.props.splitQueryValue, matchMode: "contains"},
                 entity: this.props.suggestionsQuery.entity,
-                filterItems: XUtils.createCustomFilterItems(filter),
-                multiSortMeta: XUtils.createMultiSortMeta(this.getSortField()),
+                filterItems: XUtilsCommon.createCustomFilterItems(filter),
+                multiSortMeta: XUtilsCommon.createMultiSortMeta(this.getSortField()),
                 fields: this.props.suggestionsQuery.fields
             };
             const findResult: FindResult = await XUtils.fetchOne('x-lazy-auto-complete-suggestions', suggestionsRequest);
@@ -301,7 +301,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             // ak sme nesortovali v DB (co je draha operacia) tak zosortujeme teraz
             // (itemTemplateString sa vola duplicitne ale pre tych cca 20 zaznamov je to ok)
             if (this.props.suggestionsQuery.sortField === undefined) {
-                filteredSuggestions = XUtils.arraySort(filteredSuggestions, this.itemTemplateString);
+                filteredSuggestions = XUtilsCommon.arraySort(filteredSuggestions, this.itemTemplateString);
             }
             // ak mame o 1 zaznam viac ako je lazyLoadMaxRows, zmenime posledny zaznam na ...
             // TODO - lepsie by bolo posledny zaznam vyhodit a popisok ... zobrazit do footer-a (odpadnu problemy z pripadnou selekciou pseudozaznamu ...)

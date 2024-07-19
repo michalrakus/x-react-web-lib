@@ -90,7 +90,7 @@ export abstract class XFormBase extends Component<XFormProps> {
             for (const assocToSort of this.assocToSortList) {
                 const assocRowList: any[] = object[assocToSort.assoc];
                 if (assocRowList) {
-                    object[assocToSort.assoc] = XUtils.arraySort(assocRowList, assocToSort.sortField);
+                    object[assocToSort.assoc] = XUtilsCommon.arraySort(assocRowList, assocToSort.sortField);
                 }
             }
 
