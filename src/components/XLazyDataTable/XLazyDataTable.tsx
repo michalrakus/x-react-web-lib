@@ -18,8 +18,8 @@ import {FindResult} from "../../serverApi/FindResult";
 import {
     FindParam,
     ResultType,
-    XAggregateItem,
-    XAggregateType,
+    XSimpleAggregateItem,
+    XAggregateFunction,
     XCustomFilter,
     XCustomFilterItem,
     XFullTextSearch
@@ -133,15 +133,15 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     // must be here, is used in createInitFilters()
     const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(props.entity);
 
-    const createAggregateItems = (): XAggregateItem[] => {
+    const createAggregateItems = (): XSimpleAggregateItem[] => {
 
-        let aggregateItems: XAggregateItem[] = [];
+        let aggregateItems: XSimpleAggregateItem[] = [];
 
         let columns = props.children;
         for (let column of columns) {
             const xLazyColumn = column as {props: XLazyColumnProps}; // nevedel som to krajsie...
             if (xLazyColumn.props.aggregateType) {
-                aggregateItems.push({field: xLazyColumn.props.field, aggregateType: xLazyColumn.props.aggregateType});
+                aggregateItems.push({field: xLazyColumn.props.field, aggregateFunction: xLazyColumn.props.aggregateType});
             }
         }
 
@@ -206,7 +206,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     // premenne platne pre cely component (obdoba member premennych v class-e)
     const dataTableEl = useRef<any>(null);
     let customFilterItems: XCustomFilterItem[] | undefined = XUtilsCommon.createCustomFilterItems(props.customFilter);
-    let aggregateItems: XAggregateItem[] = createAggregateItems();
+    let aggregateItems: XSimpleAggregateItem[] = createAggregateItems();
 
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0, aggregateValues: []});
     const [loading, setLoading] = useState(false);
@@ -1074,7 +1074,7 @@ export interface XLazyColumnProps {
     betweenFilter?: XBetweenFilterProp | "noBetween"; // creates 2 inputs from to, only for type date/datetime/decimal/number implemented, "row"/"column" - position of inputs from to
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
     contentType?: XContentType; // multiline (output from InputTextarea) - wraps the content; html (output from Editor) - for rendering raw html
-    aggregateType?: XAggregateType;
+    aggregateType?: XAggregateFunction;
     columnViewStatus: XViewStatusOrBoolean; // aby sme mohli mat Hidden stlpec (nedarilo sa mi priamo v kode "o-if-ovat" stlpec), zatial netreba funkciu, vola sa columnViewStatus lebo napr. v Edit tabulke moze byt viewStatus na row urovni
     filterElement?: XFilterElementProp;
     body?: React.ReactNode | ((data: any, options: ColumnBodyOptions) => React.ReactNode); // the same type as type of property Column.body

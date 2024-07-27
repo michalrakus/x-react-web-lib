@@ -63,7 +63,7 @@ export interface XFormDataTableProps {
     rows?: number;
     filterDisplay: "menu" | "row" | "none";
     sortable: boolean;
-    sortField?: string;
+    sortField: string;
     scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
     scrollWidth?: string; // default 100%, hodnota "none" vypne horizontalne scrollovanie
     scrollHeight?: string; // default '200vh', hodnota "none" vypne vertikalne scrollovanie (ale lepsie je nechat '200vh')
@@ -87,6 +87,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
     public static defaultProps = {
         filterDisplay: "none",
         sortable: false,
+        sortField: "idFieldOnUpdate",
         scrollable: true,
         scrollWidth: '100%', // hodnota '100%' zapne horizontalne scrollovanie, ak je tabulka sirsia ako parent element (a ten by mal byt max 100vw) (hodnota 'auto' (podobna ako '100%') nefunguje dobre)
         scrollHeight: '200vh', // ak by sme dali 'none' (do DataTable by islo undefined), tak nam nezarovnava header a body (v body chyba disablovany vertikalny scrollbar),
@@ -431,7 +432,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
-            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchBrowse={columnPropsAutoComplete.searchBrowse} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
+            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchBrowse={columnPropsAutoComplete.searchBrowse} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} fields={columnPropsAutoComplete.fields} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
@@ -553,8 +554,14 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             }
         }
         const filterDisplay: "menu" | "row" | undefined = this.props.filterDisplay !== "none" ? this.props.filterDisplay : undefined;
-        // default sortovanie - ak mame insert tak nesortujeme (drzime poradie v akom user zaznam vytvoril), ak mame update tak podla id zosortujeme (nech je to zobrazene vzdy rovnako)
-        const sortField: string | undefined = this.props.sortField ?? (this.props.form.isAddRow() ? undefined : xEntity.idField);
+        let sortField: string | undefined = this.props.sortField;
+        if (sortField === "idFieldOnUpdate") {
+            // default sortovanie - ak mame insert tak nesortujeme (drzime poradie v akom user zaznam vytvoril), ak mame update tak podla id zosortujeme (nech je to zobrazene vzdy rovnako)
+            sortField = (this.props.form.isAddRow() ? undefined : xEntity.idField);
+        }
+        else if (sortField === "none") {
+            sortField = undefined;
+        }
         const label = this.props.label !== undefined ? this.props.label : this.props.assocField;
         const readOnly = this.isReadOnly();
 
@@ -797,6 +804,7 @@ export interface XFormAutoCompleteColumnProps extends XFormColumnBaseProps {
     searchBrowse?: JSX.Element;
     assocForm?: JSX.Element; // na insert/update
     filter?: XTableFieldFilterProp;
+    fields?: string[]; // ak chceme pri citani suggestions nacitat aj asociovane objekty
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
 }
 
