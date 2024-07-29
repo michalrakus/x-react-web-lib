@@ -28,8 +28,12 @@
     "fieldSetSaveEditConfirm": "Are you sure to save the form?",
     "fieldSetCancelEditConfirm": "Are you sure to cancel editing? All changes will be lost.",
     "fieldSetRemoveFieldConfirm": "Are you sure to remove the field?",
+    "runStatisticMissingDateField": "Warning:\nThe following statistic fields have date field not filled in:\n\"{fieldsWithoutDate}\".\nNo condition for date will be applied for these statistic fields.",
     "upload": "Upload",
     "yes": "yes",
-    "no": "no"
+    "no": "no",
+    "dateFrom": "Date from",
+    "dateTo": "Date to",
+    "year": "Year"
   }
 }
