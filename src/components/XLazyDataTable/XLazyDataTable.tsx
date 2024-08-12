@@ -43,6 +43,12 @@ import {XMultilineSwitch} from "./XMultilineSwitch";
 import {XMultilineRenderer} from "./XMultilineRenderer";
 import {XHtmlRenderer} from "./XHtmlRenderer";
 import {XOcfDropdown} from "./XOcfDropdown";
+import {XFieldSetBase, XFieldSetMeta, XFieldXFieldMetaMap} from "../XFieldSet/XFieldSetBase";
+
+// typ pouzivany len v XLazyDataTable
+interface XFieldSetMaps {
+    [field: string]: XFieldXFieldMetaMap;
+}
 
 export type XBetweenFilterProp = "row" | "column" | undefined;
 export type XMultilineRenderType = "singleLine" | "fewLines" | "allLines";
@@ -168,7 +174,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     const getFilterMatchMode = (xField: XField) : FilterMatchMode => {
         let filterMatchMode: FilterMatchMode;
-        if (xField.type === "string") {
+        if (xField.type === "string" || xField.type === "jsonb") {
             filterMatchMode = FilterMatchMode.CONTAINS;
         }
         // zatial vsetky ostatne EQUALS
@@ -207,6 +213,11 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const dataTableEl = useRef<any>(null);
     let customFilterItems: XCustomFilterItem[] | undefined = XUtilsCommon.createCustomFilterItems(props.customFilter);
     let aggregateItems: XSimpleAggregateItem[] = createAggregateItems();
+
+    // ak mame fieldSet stlpce (stlpce ktore maju zadany fieldSetId a zobrazuju hodnoty podla fieldSet-u),
+    // tak sem nacitame mapy umoznujuce ziskanie labelov zakliknutych field-ov
+    // poznamka: uz by sa zislo mat vytvorene objekty (instancie) pre stlpce a do nich zapisovat pripadny XFieldSetMap, filter (teraz je vo "filters")
+    const [xFieldSetMaps, setXFieldSetMaps] = useState<XFieldSetMaps>({});
 
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0, aggregateValues: []});
     const [loading, setLoading] = useState(false);
@@ -322,8 +333,10 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
     };
 
-    const loadData = () => {
-        loadDataBase(createFindParam());
+    const loadData = async () => {
+        // pre poriadok zaserializujeme obidve operacie (aj ked teoreticky by to malo fungovat aj bez serializovania)
+        await loadXFieldSetMaps();
+        await loadDataBase(createFindParam());
     }
 
     const createFindParam = (): FindParam => {
@@ -339,6 +352,24 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             fields: getFields(true),
             aggregateItems: aggregateItems
         };
+    }
+
+    const loadXFieldSetMaps = async () => {
+        const fieldSetIds: string[] = getFieldSetIds();
+        if (fieldSetIds.length > 0) {
+            // in the future - take from some cache, not from DB
+            const xFieldSetMetaList: XFieldSetMeta[] = await XUtils.fetchRows('XFieldSetMeta', {where: "[fieldSetId] IN (:...fieldSetIdList)", params: {fieldSetIdList: fieldSetIds}});
+            // check
+            if (xFieldSetMetaList.length !== fieldSetIds.length) {
+                throw `One or more of fieldSetIds "${fieldSetIds.join(", ")}" was not found in DB in the table for Entity XFieldSetMeta`;
+            }
+            const xFieldSetMapsLocal: XFieldSetMaps = {};
+            for (const xFieldSetMeta of xFieldSetMetaList) {
+                xFieldSetMapsLocal[xFieldSetMeta.fieldSetId] = XFieldSetBase.createXFieldXFieldMetaMap(xFieldSetMeta);
+            }
+            // save created structures
+            setXFieldSetMaps(xFieldSetMapsLocal);
+        }
     }
 
     const loadDataBase = async (findParam: FindParam) => {
@@ -421,9 +452,21 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return widths;
     }
 
+    const getFieldSetIds = (): string[] => {
+        const fieldSetIds = [];
+        // warning note: props.children are used to get props of XLazyColumn whereas dataTableEl.current.props.children are used to get props of Primereact DataTable
+        const columns: XLazyColumnType[] = props.children as XLazyColumnType[];
+        for (let column of columns) {
+            if (column.props.fieldSetId) {
+                fieldSetIds.push(column.props.fieldSetId);
+            }
+        }
+        return fieldSetIds;
+    }
+
     const hasContentTypeHtml = (): boolean => {
 
-        let columns: XLazyColumnType[] = props.children as XLazyColumnType[];
+        const columns: XLazyColumnType[] = props.children as XLazyColumnType[];
         return columns.some((column: XLazyColumnType) => column.props.contentType === "html");
     }
 
@@ -685,11 +728,16 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return betweenFilter;
     }
 
-    const valueAsUI = (value: any, xField: XField, contentType?: XContentType): React.ReactNode => {
+    const valueAsUI = (value: any, xField: XField, contentType: XContentType | undefined, fieldSetId: string | undefined): React.ReactNode => {
         let valueResult: React.ReactNode;
         if (xField.type === "boolean") {
             // TODO - efektivnejsie by bolo renderovat len prislusne ikonky
             valueResult = <TriStateCheckbox value={value} disabled={true}/>
+        }
+        else if (xField.type === "jsonb" && fieldSetId) {
+            // zatial sem dame; este by sme mohli dat hlbsie do convertValue/convertValueBase (aby fungovalo aj pre excel) ale tam je problem ze nemame k dispozicii "xFieldSetMaps"
+            // poznamka: krajsie by bolo brat fieldSetId z xField ale to by sme museli vytvorit decorator na backend-e...
+            valueResult = XFieldSetBase.xFieldSetValuesAsUI(value, xFieldSetMaps[fieldSetId]);
         }
         else {
             if (contentType === "html") {
@@ -716,11 +764,11 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         let bodyValue: React.ReactNode;
         const rowDataValue: any | any[] = XUtilsCommon.getValueOrValueListByPath(rowData, columnProps.field);
         if (Array.isArray(rowDataValue)) {
-            const elemList: React.ReactNode[] = rowDataValue.map((value: any) => valueAsUI(value, xField, columnProps.contentType));
+            const elemList: React.ReactNode[] = rowDataValue.map((value: any) => valueAsUI(value, xField, columnProps.contentType, columnProps.fieldSetId));
             bodyValue = <XMultilineRenderer valueList={elemList} renderType={multilineSwitchValue} fewLinesCount={props.multilineSwitchFewLinesCount}/>;
         }
         else {
-            bodyValue = valueAsUI(rowDataValue, xField, columnProps.contentType);
+            bodyValue = valueAsUI(rowDataValue, xField, columnProps.contentType, columnProps.fieldSetId);
         }
         return bodyValue;
     }
@@ -1074,6 +1122,8 @@ export interface XLazyColumnProps {
     betweenFilter?: XBetweenFilterProp | "noBetween"; // creates 2 inputs from to, only for type date/datetime/decimal/number implemented, "row"/"column" - position of inputs from to
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
     contentType?: XContentType; // multiline (output from InputTextarea) - wraps the content; html (output from Editor) - for rendering raw html
+    fieldSetId?: string; // in case that we render json attribute (output from XFieldSet), here is id of XFieldSet (saved in x_field_set_meta), fieldSet metadata is needed to get labels of field set attributes
+                        // note: better solution would be take fieldSetId from json attribute from model, but we would have to create decorator for this purpose...
     aggregateType?: XAggregateFunction;
     columnViewStatus: XViewStatusOrBoolean; // aby sme mohli mat Hidden stlpec (nedarilo sa mi priamo v kode "o-if-ovat" stlpec), zatial netreba funkciu, vola sa columnViewStatus lebo napr. v Edit tabulke moze byt viewStatus na row urovni
     filterElement?: XFilterElementProp;

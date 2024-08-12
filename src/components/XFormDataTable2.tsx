@@ -6,7 +6,7 @@ import {
     DataTable,
     DataTableFilterMeta,
     DataTableFilterMetaData,
-    DataTableOperatorFilterMetaData
+    DataTableOperatorFilterMetaData, DataTableSortMeta
 } from "primereact/datatable";
 import {Column, ColumnBodyOptions} from "primereact/column";
 import {XButton} from "./XButton";
@@ -293,7 +293,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
     getFilterMatchMode(xField: XField): FilterMatchMode {
         let filterMatchMode: FilterMatchMode;
-        if (xField.type === "string") {
+        if (xField.type === "string" || xField.type === "jsonb") {
             filterMatchMode = FilterMatchMode.CONTAINS;
         }
         // zatial vsetky ostatne EQUALS
@@ -432,7 +432,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
-            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchBrowse={columnPropsAutoComplete.searchBrowse} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} fields={columnPropsAutoComplete.fields} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
+            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchBrowse={columnPropsAutoComplete.searchBrowse} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} sortField={columnPropsAutoComplete.sortField} fields={columnPropsAutoComplete.fields} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
@@ -804,6 +804,7 @@ export interface XFormAutoCompleteColumnProps extends XFormColumnBaseProps {
     searchBrowse?: JSX.Element;
     assocForm?: JSX.Element; // na insert/update
     filter?: XTableFieldFilterProp;
+    sortField?: string | DataTableSortMeta[];
     fields?: string[]; // ak chceme pri citani suggestions nacitat aj asociovane objekty
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
 }
