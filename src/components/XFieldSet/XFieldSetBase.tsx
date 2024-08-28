@@ -115,10 +115,12 @@ export type XFieldXFieldMetaMap = Map<string, XFieldMeta>;
 export class XFieldSetBase {
 
     // api metoda na vytvorenie Map instancie, ktora sluzi na rychle najdenie prislusneho XFieldMeta podla nazvu fieldu
-    static createXFieldXFieldMetaMap(xFieldSetMeta: XFieldSetMeta): XFieldXFieldMetaMap {
+    // ak je zadany filterFromParent, tak vracia len children/subchildren/... fieldu s field = filterFromParent
+    // (filterFromParent je casto groupField)
+    static createXFieldXFieldMetaMap(xFieldSetMeta: XFieldSetMeta, filterFromParent?: string): XFieldXFieldMetaMap {
 
         const xFieldXFieldMetaMap: XFieldXFieldMetaMap = new Map<string, XFieldMeta>();
-        XFieldSetBase.createMapForXFieldMeta(xFieldSetMeta.xFieldMetaRoot, xFieldXFieldMetaMap);
+        XFieldSetBase.createMapForXFieldMeta(xFieldSetMeta.xFieldMetaRoot, filterFromParent, xFieldXFieldMetaMap);
         return xFieldXFieldMetaMap;
     }
 
@@ -153,13 +155,20 @@ export class XFieldSetBase {
         return valueUIList.join(", ");
     }
 
-    private static createMapForXFieldMeta(xFieldMeta: XFieldMeta, xFieldXFieldMetaMap: XFieldXFieldMetaMap) {
+    private static createMapForXFieldMeta(xFieldMeta: XFieldMeta, filterFromParent: string | undefined, xFieldXFieldMetaMap: XFieldXFieldMetaMap) {
 
-        xFieldXFieldMetaMap.set(xFieldMeta.field, xFieldMeta);
+        if (filterFromParent === undefined) {
+            // no filter is used
+            xFieldXFieldMetaMap.set(xFieldMeta.field, xFieldMeta);
+        }
+        else if (filterFromParent === xFieldMeta.field) {
+            // the searched parent field has been found, all his children/subchildren/... will be added to the list (we remove the filter)
+            filterFromParent = undefined;
+        }
 
         if (xFieldMeta.xFieldMetaList) {
             for (const insideXFieldMeta of xFieldMeta.xFieldMetaList) {
-                XFieldSetBase.createMapForXFieldMeta(insideXFieldMeta, xFieldXFieldMetaMap);
+                XFieldSetBase.createMapForXFieldMeta(insideXFieldMeta, filterFromParent, xFieldXFieldMetaMap);
             }
         }
     }

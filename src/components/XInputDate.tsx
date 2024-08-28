@@ -28,7 +28,6 @@ export class XInputDate extends XInput<Date, XInputDateProps> {
     }
 
     render() {
-        // note: style overrides size (width of the input according to character count)
         return (
             <div className="field grid">
                 <label htmlFor={this.props.field} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>

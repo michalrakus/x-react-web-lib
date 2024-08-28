@@ -2,9 +2,11 @@ import {XField} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XFormComponentDT, XFormComponentDTProps} from "./XFormComponentDT";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import React from "react";
 
 export interface XInputDTProps extends XFormComponentDTProps {
     field: string;
+    inputStyle?: React.CSSProperties; // pridane koli label/desc funkcionalite ale mozno sa zide aj pri DT sposobe (pouziva sa v subclasses, napr. XInputTextareaRow)
 }
 
 // spolocna nadtrieda pre jednoduche inputy (nie asociacne)

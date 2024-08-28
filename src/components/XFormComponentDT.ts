@@ -1,5 +1,5 @@
 import {XFormBase} from "./XFormBase";
-import {Component} from "react";
+import React, {Component} from "react";
 import {XObject} from "./XObject";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {OperationType, XUtils} from "./XUtils";
@@ -13,6 +13,13 @@ export interface XFormComponentDTProps {
     rowData: any;
     readOnly?: XTableFieldReadOnlyProp;
     onChange?: XTableFieldOnChange;
+    placeholder?: string; // poznamka: placeholder moze byt nastavovany aj cez property desc (ak pouzivame napr. XFormPanelList)
+
+    // props pouzivane ak vytvarame component s label-om (nie sme v XFormDataTable, ale pouzivame napr. XFormPanelList)
+    label?: string;
+    tooltip?: string;
+    desc?: string; // specialny prop pouzivany ako placeholder a tooltip pre label naraz (aby sme nemuseli duplikovat placeholder a tooltip pre label) - vytvoreny pre depaul
+    labelStyle?: React.CSSProperties;
 }
 
 export abstract class XFormComponentDT<P extends XFormComponentDTProps> extends Component<P> {
@@ -92,6 +99,27 @@ export abstract class XFormComponentDT<P extends XFormComponentDTProps> extends 
         }
 
         return readOnly;
+    }
+
+    // *********** label support - len pre ne-DT componenty pouzivany ************
+
+    // ak je label undefined, label element sa nevykresli
+    getLabel(): string | undefined {
+        let label: string | undefined = this.props.label;
+        if (label !== undefined) {
+            // test na readOnly je tu hlavne koli tomu aby sme nemali * pri ID atribute, ktory sa pri inserte generuje az pri zapise do DB
+            if (this.isNotNull() && !this.isReadOnly()) {
+                label = XUtils.markNotNull(label);
+            }
+        }
+        return label;
+    }
+
+    getLabelStyle(): React.CSSProperties {
+        let labelStyle: React.CSSProperties = this.props.labelStyle ?? {};
+        // this.props.inline nepouzivame, lebo je to asi zombie
+        XUtils.addCssPropIfNotExists(labelStyle, {width: XUtils.FIELD_LABEL_WIDTH});
+        return labelStyle;
     }
 
     // *********** validation support ************

@@ -15,6 +15,7 @@
     "ok": "Ok",
     "save": "Save",
     "cancel": "Cancel",
+    "formRemoveRowConfirm": "Are you sure to remove the row?",
     "expRowCount": "Row count",
     "expExportType": "Export type",
     "expCreateHeaderLine": "Create header line",
