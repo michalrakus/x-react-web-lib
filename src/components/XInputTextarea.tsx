@@ -19,8 +19,12 @@ export class XInputTextarea extends XInput<string, XInputTextareaProps> {
         labelOnTop: false
     };
 
+    xInputTextareaBaseRef: any;
+
     constructor(props: XInputTextareaProps) {
         super(props);
+
+        this.xInputTextareaBaseRef = React.createRef();
 
         this.onValueChange = this.onValueChange.bind(this);
     }
@@ -35,6 +39,13 @@ export class XInputTextarea extends XInput<string, XInputTextareaProps> {
 
     getLabelStyle(): React.CSSProperties {
         return this.props.labelOnTop ? (this.props.labelStyle ?? {}) : super.getLabelStyle();
+    }
+
+    // api method - can be called through "ref" from parent if needed to adjust the height of the input textarea according to the (changed) content
+    autoResize() {
+        if (this.xInputTextareaBaseRef.current) {
+            this.xInputTextareaBaseRef.current.autoResize();
+        }
     }
 
     render() {
@@ -85,7 +96,7 @@ export class XInputTextarea extends XInput<string, XInputTextareaProps> {
                 <label id={labelElemId} htmlFor={this.props.field} className={!this.props.labelOnTop ? 'col-fixed' : undefined} style={labelStyle}>{this.getLabel()}</label>
                 {labelTooltip ? <Tooltip target={`#${labelElemId}`} content={labelTooltip}/> : null}
                 {this.props.form.state.object ?
-                    <XInputTextareaBase id={this.props.field} value={value} onChange={this.onValueChange} readOnly={this.isReadOnly()}
+                    <XInputTextareaBase ref={this.xInputTextareaBaseRef} id={this.props.field} value={value} onChange={this.onValueChange} readOnly={this.isReadOnly()}
                                maxLength={this.xField.length} style={inputStyle} rows={this.props.rows} cols={cols}
                                autoResize={this.props.autoResize} error={this.getError()} tooltip={this.props.tooltip} placeholder={this.props.placeholder ?? this.props.desc}/>
                     : null
