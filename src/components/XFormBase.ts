@@ -5,6 +5,8 @@ import {XFieldOnChange, XFormComponent} from "./XFormComponent";
 import {XTableFieldOnChange, XFormDataTable2, XRowTechData} from "./XFormDataTable2";
 import {XErrorMap, XErrors} from "./XErrors";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
+import {XEntity} from "../serverApi/XEntityMetadata";
+import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
 export type XOnSaveOrCancelProp = (object: XObject | null, objectChange: OperationType) => void;
 
@@ -33,6 +35,7 @@ export function Form(entity: string) {
 export abstract class XFormBase extends Component<XFormProps> {
 
     entity?: string; // typ objektu, napr. Car, pouziva sa pri citani objektu z DB
+    xEntity: XEntity | undefined; // zistene podla this.entity
     fields: Set<string>; // zoznam zobrazovanych fieldov (vcetne asoc. objektov) - potrebujeme koli nacitavaniu root objektu
     state: {object: XObject | null; errorMap: XErrorMap} | any; // poznamka: mohli by sme sem dat aj typ any...
     // poznamka 2: " | any" sme pridali aby sme mohli do state zapisovat aj neperzistentne atributy typu "this.state.passwordNew"
@@ -78,6 +81,8 @@ export abstract class XFormBase extends Component<XFormProps> {
         if (this.entity === undefined) {
             throw "XFormBase: Property entity is not defined - use decorator @Form.";
         }
+        this.xEntity = XUtilsMetadataCommon.getXEntity(this.entity);
+
         let object: XObject;
         let operationType: OperationType.Insert | OperationType.Update;
         if (this.props.id !== undefined) {
@@ -139,8 +144,15 @@ export abstract class XFormBase extends Component<XFormProps> {
         return this.getXObject() as any;
     }
 
-    isAddRow(): any {
-        return this.props.id === undefined;
+    isAddRow(): boolean {
+        // povodny kod
+        //return this.props.id === undefined;
+        // aby sme mohli zmenit insert na update (napr. ak po kontrole id fieldov zistime ze zaznam existuje), tak zistujeme id-cko z this.state.object
+        let isAddRow: boolean = false; // default
+        if (this.state.object && this.xEntity) {
+            isAddRow = this.state.object[this.xEntity.idField] === undefined;
+        }
+        return isAddRow;
     }
 
     // helper method
