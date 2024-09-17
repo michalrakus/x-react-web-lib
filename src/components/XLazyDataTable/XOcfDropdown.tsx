@@ -12,8 +12,8 @@ export const XOcfDropdown = (props: {
 
     const onChange = (e: DropdownChangeEvent) => {
         let value: any | undefined;
-        // specialna null polozka nema ziadne atributy
-        if (Object.keys(e.value).length === 0) {
+        // specialna null polozka ma label === ""
+        if (e.value.label === "") {
             value = undefined;
         }
         else {
@@ -25,7 +25,7 @@ export const XOcfDropdown = (props: {
     // pridame prazdnu polozku
     // polozku pridavame do kopie zoznamu, lebo inac sa nam "polozka" v props.optionalCustomFilters "mnozi"
     let options: any[] = [...props.optionalCustomFilters];
-    options.splice(0, 0, {});
+    options.splice(0, 0, {label: ""});
 
     return (
         <Dropdown options={options} optionLabel="label" value={props.value} onChange={onChange} className={props.className}/>

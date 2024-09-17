@@ -1,6 +1,6 @@
 {
   "name": "@michalrakus/x-react-web-lib",
-  "version": "1.31.1",
+  "version": "1.31.2",
   "description": "",
   "scripts": {
     "clean": "rimraf lib",

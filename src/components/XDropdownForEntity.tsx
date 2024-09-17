@@ -53,15 +53,15 @@ export class XDropdownForEntity extends Component<XDropdownForEntityProps> {
         let options: any[] = await XUtils.fetchRows(this.props.entity, this.props.filter, this.props.sortField ?? this.props.displayField);
         if (this.props.isNotNull === undefined || !this.props.isNotNull) {
             // pridame prazdnu polozku
-            options.splice(0, 0, {}); // null polozka
+            options.splice(0, 0, {[this.idField]: null, [this.props.displayField]: ""}); // null polozka
         }
         this.setState({options: options});
     }
 
     onChange(e: DropdownChangeEvent) {
         let value: any | null;
-        // specialna null polozka nema ziadne atributy
-        if (Object.keys(e.value).length === 0) {
+        // specialna null polozka id field null
+        if (e.value[this.idField] === null) {
             value = null;
         } else {
             value = e.value;

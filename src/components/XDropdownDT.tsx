@@ -52,7 +52,7 @@ export const XDropdownDT = (props: {
             //options = await XUtils.fetchMany('findRowsForAssoc', {entity: props.entity, assocField: props.assocField});
             options = await XUtils.fetchRows(xAssoc.entityName, props.filter, props.sortField ?? props.displayField);
 
-            options.splice(0, 0, {}); // null polozka (nepridavat pre not null atributy)
+            options.splice(0, 0, {[idField]: null, [props.displayField]: ""}); // null polozka (nepridavat pre not null atributy)
             props.dropdownOptionsMap[props.assocField] = options;
             //console.log("XDropdownDT - findOptions - citali sme options pre field = " + props.assocField);
             //console.log(props.dropdownOptionsMap);
@@ -64,8 +64,8 @@ export const XDropdownDT = (props: {
 
         // zmenime hodnotu v modeli (odtial sa hodnota cita)
         let newValueOrNull: any;
-        // specialna null polozka nema ziadne atributy
-        if (Object.keys(newValue).length === 0) {
+        // specialna null polozka ma id === null
+        if (newValue[idField] === null) {
             newValueOrNull = null;
         }
         else {
