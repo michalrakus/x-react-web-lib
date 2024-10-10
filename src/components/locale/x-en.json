@@ -35,6 +35,7 @@
     "no": "no",
     "dateFrom": "Date from",
     "dateTo": "Date to",
-    "year": "Year"
+    "year": "Year",
+    "yearForAgeCalculation": "Year for age calculation"
   }
 }

@@ -432,7 +432,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
-            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchBrowse={columnPropsAutoComplete.searchBrowse} assocForm={columnPropsAutoComplete.assocForm} filter={columnPropsAutoComplete.filter} sortField={columnPropsAutoComplete.sortField} fields={columnPropsAutoComplete.fields} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
+            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchBrowse={columnPropsAutoComplete.searchBrowse} assocForm={columnPropsAutoComplete.assocForm} addRowEnabled={columnPropsAutoComplete.addRowEnabled} filter={columnPropsAutoComplete.filter} sortField={columnPropsAutoComplete.sortField} fields={columnPropsAutoComplete.fields} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
@@ -803,6 +803,7 @@ export interface XFormAutoCompleteColumnProps extends XFormColumnBaseProps {
     displayField: string;
     searchBrowse?: JSX.Element;
     assocForm?: JSX.Element; // na insert/update
+    addRowEnabled: boolean; // ak dame false, tak nezobrazi insert button ani ked mame k dispozicii "valueForm" (default je true)
     filter?: XTableFieldFilterProp;
     sortField?: string | DataTableSortMeta[];
     fields?: string[]; // ak chceme pri citani suggestions nacitat aj asociovane objekty
@@ -854,7 +855,8 @@ export const XFormAutoCompleteColumn = (props: XFormAutoCompleteColumnProps) => 
 
 XFormAutoCompleteColumn.defaultProps = {
     ...XFormColumnBase_defaultProps,
-    type: "autoComplete"
+    type: "autoComplete",
+    addRowEnabled: true
 };
 
 export const XFormSearchButtonColumn = (props: XFormSearchButtonColumnProps) => {
