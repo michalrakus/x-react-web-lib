@@ -16,6 +16,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "formRemoveRowConfirm": "Are you sure to remove the row?",
+    "xAutoComplete": "Autocomplete",
     "expRowCount": "Row count",
     "expExportType": "Export type",
     "expCreateHeaderLine": "Create header line",

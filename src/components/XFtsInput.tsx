@@ -1,6 +1,5 @@
-import {InputText} from "primereact/inputtext";
 import React from "react";
-import {stringAsUI, stringFromUI} from "../serverApi/XUtilsConversions";
+import {XInputTextBase} from "./XInputTextBase";
 
 // typ XFtsInputValue reprezentuje hodnoty ktore sa daju menit touto komponentou
 // tento typ ciastocne zodpoveda typu XFullTextSearch pouzivanom v api
@@ -11,14 +10,14 @@ export interface XFtsInputValue {
 
 export const XFtsInput = (props: {value: XFtsInputValue; onChange: (value: XFtsInputValue) => void;}) => {
 
-    const onChange = (e: any) => {
-        const value: string | null = stringFromUI(e.target.value);
+    const onChange = (value: string | null) => {
         props.value.value = value;
         props.onChange({...props.value}); // vyklonujeme aby react zaregistroval, ze sme urobili zmenu
     }
 
     // TODO - pridat input na zmenu matchMode
+    // we use XInputTextBase - we save onChange calls
     return (
-        <InputText value={stringAsUI(props.value.value)} onChange={onChange} style={{height: '2.5rem', width: '17rem'}} className="m-1"/>
+        <XInputTextBase value={props.value.value} onChange={onChange} style={{height: '2.5rem', width: '17rem'}} className="m-1"/>
     );
 }

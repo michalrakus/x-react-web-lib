@@ -1,4 +1,4 @@
-import PrimeReact, {localeOptions, updateLocaleOption} from "primereact/api";
+import PrimeReact, {localeOption, localeOptions, updateLocaleOption} from "primereact/api";
 // using json-loader module we import x-en.json file into variable xEnJsonObject
 import xEnJsonObject from "./locale/x-en.json";
 
@@ -58,6 +58,12 @@ export function xLocaleOption(xOptionKey: string, options?: any[string]) {
     } catch (error) {
         throw new Error(`The ${xOptionKey} option is not found in the current x-locale('${_locale}').`);
     }
+}
+
+// localeOption of primereact without locale param (helper)
+export function prLocaleOption(key: string) {
+    const _locale: string = PrimeReact.locale || 'en';
+    return localeOption(key, _locale);
 }
 
 // add en locale into PrimeReact locale (global variable "locales" declared in file Locale.js)

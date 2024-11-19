@@ -6,13 +6,19 @@ import {
     DataTableOperatorFilterMetaData,
     DataTableSortMeta
 } from 'primereact/datatable';
-import {Column, ColumnBodyOptions, ColumnFilterElementTemplateOptions} from 'primereact/column';
+import {
+    Column,
+    ColumnBodyOptions,
+    ColumnFilterElementTemplateOptions,
+    ColumnFilterMatchModeChangeEvent,
+    ColumnFilterMatchModeOptions
+} from 'primereact/column';
 import {XButton} from "../XButton";
 import {OperationType, XUtils, XViewStatus, XViewStatusOrBoolean} from "../XUtils";
 import {XFieldFilter, XSearchBrowseParams} from "../XSearchBrowseParams";
 import {XUtilsMetadata} from "../XUtilsMetadata";
 import {XDropdownDTFilter} from "../XDropdownDTFilter";
-import {XEntity, XField} from "../../serverApi/XEntityMetadata";
+import {XAssoc, XEntity, XField} from "../../serverApi/XEntityMetadata";
 import {AsUIType, convertValue, numberAsUI, numberFromModel} from "../../serverApi/XUtilsConversions";
 import {FindResult} from "../../serverApi/FindResult";
 import {
@@ -22,18 +28,18 @@ import {
     XAggregateFunction,
     XCustomFilter,
     XCustomFilterItem,
-    XFullTextSearch
+    XFullTextSearch, XDataTableFilterMetaData, XFilterMatchMode
 } from "../../serverApi/FindParam";
 import {XButtonIconSmall} from "../XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../../serverApi/XUtilsCommon";
 import {LazyDataTableQueryParam} from "../../serverApi/ExportImportParam";
 import {XExportParams, XExportRowsDialog, XExportRowsDialogState} from "./XExportRowsDialog";
-import {FilterMatchMode, FilterOperator} from "primereact/api";
+import PrimeReact, {APIOptions, FilterMatchMode, FilterOperator, PrimeReactContext} from "primereact/api";
 import {XOnSaveOrCancelProp} from "../XFormBase";
 import {XCalendar} from "../XCalendar";
 import {XInputDecimalBase} from "../XInputDecimalBase";
-import {xLocaleOption} from "../XLocale";
+import {prLocaleOption, xLocaleOption} from "../XLocale";
 import {XFtsInput, XFtsInputValue} from "../XFtsInput";
 import {XUtilsMetadataCommon} from "../../serverApi/XUtilsMetadataCommon";
 import {IconType} from "primereact/utils";
@@ -44,6 +50,8 @@ import {XMultilineRenderer} from "./XMultilineRenderer";
 import {XHtmlRenderer} from "./XHtmlRenderer";
 import {XOcfDropdown} from "./XOcfDropdown";
 import {XFieldSetBase, XFieldSetMeta, XFieldXFieldMetaMap} from "../XFieldSet/XFieldSetBase";
+import {XAutoCompleteBase} from "../XAutoCompleteBase";
+import {XInputTextBase} from "../XInputTextBase";
 
 // typ pouzivany len v XLazyDataTable
 interface XFieldSetMaps {
@@ -165,16 +173,19 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             const field: string = xLazyColumn.props.field;
             const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
             // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
-            const filterMatchMode: FilterMatchMode = getFilterMatchMode(xField);
+            const filterMatchMode: FilterMatchMode = getInitFilterMatchMode(xLazyColumn.props, xField);
             initFilters[field] = createFilterItem(props.filterDisplay, {value: null, matchMode: filterMatchMode});
         }
 
         return initFilters;
     }
 
-    const getFilterMatchMode = (xField: XField) : FilterMatchMode => {
+    const getInitFilterMatchMode = (xLazyColumnProps: XLazyColumnProps, xField: XField) : FilterMatchMode => {
         let filterMatchMode: FilterMatchMode;
-        if (xField.type === "string" || xField.type === "jsonb") {
+        if (isAutoCompleteInFilterEnabled(xLazyColumnProps)) {
+            filterMatchMode = XFilterMatchMode.X_AUTO_COMPLETE as unknown as FilterMatchMode; // little hack
+        }
+        else if (xField.type === "string" || xField.type === "jsonb") {
             filterMatchMode = FilterMatchMode.CONTAINS;
         }
         // zatial vsetky ostatne EQUALS
@@ -188,6 +199,41 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return filterMatchMode;
     }
 
+    const isAutoCompleteInFilterEnabled = (xLazyColumnProps: XLazyColumnProps): boolean => {
+        return xLazyColumnProps.autoComplete !== undefined;
+    }
+
+/*  old version - created for automatical use of autocomplete on every *toOne assoc with string attribute
+                - extra property was used: autoCompleteEnabled: true | false | "forStringOnly"
+    const isAutoCompleteInFilterEnabled = (xLazyColumnProps: XLazyColumnProps, xField: XField): boolean => {
+        let autoCompleteEnabled: boolean = false; // default
+        // condition1: field has to have the length >= 2
+        if (!XUtilsCommon.isSingleField(xLazyColumnProps.field)) {
+            // condition2: used assoc must be *toOne
+            let assocField: string;
+            if (xLazyColumnProps.autoComplete?.assocField) {
+                assocField = xLazyColumnProps.autoComplete?.assocField;
+            }
+            else {
+                const [assocFieldTemp, displayFieldTemp] = XUtilsCommon.getPathToAssocAndField(xLazyColumnProps.field);
+                assocField = assocFieldTemp!;
+            }
+            const xAssoc: XAssoc = XUtilsMetadataCommon.getXAssocToOneByPath(xEntity, assocField);
+            if (xAssoc.relationType === "many-to-one" || xAssoc.relationType === "one-to-one") {
+                if (xLazyColumnProps.autoCompleteEnabled === true) {
+                    autoCompleteEnabled = true; // explicit enabled - works for all types (usually has not big sense)
+                }
+                else if (xLazyColumnProps.autoCompleteEnabled === "forStringOnly") {
+                    // default usecase - the last attribute must be of type string
+                    if (xField.type === "string") {
+                        autoCompleteEnabled = true;
+                    }
+                }
+            }
+        }
+        return autoCompleteEnabled;
+    }
+*/
     const createFilterItem = (filterDisplay: "menu" | "row", constraint: DataTableFilterMetaData): DataTableFilterMetaData | DataTableOperatorFilterMetaData => {
         let filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData;
         if (filterDisplay === "menu") {
@@ -210,6 +256,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     }
 
     // premenne platne pre cely component (obdoba member premennych v class-e)
+    const primeReactContext: APIOptions = React.useContext(PrimeReactContext); // probably does not work and deprecated PrimeReact.filterMatchModeOptions is used
     const dataTableEl = useRef<any>(null);
     let customFilterItems: XCustomFilterItem[] | undefined = XUtilsCommon.createCustomFilterItems(props.customFilter);
     let aggregateItems: XSimpleAggregateItem[] = createAggregateItems();
@@ -654,13 +701,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     // vseobecna metodka - nastavi hodnotu do filtra
     // ak je matchMode === undefined, tak zachova povodnu hodnotu matchMode
-    const setFilterValue = (field: string, value: any | null, matchMode?: any) => {
+    const setFilterValue = (field: string, value: any | null, matchMode?: any, customFilterItems?: XCustomFilterItem[]) => {
 
-        const filterValue: DataTableFilterMetaData = filters[field] as DataTableFilterMetaData; // funguje len pre filterDisplay="row"
+        const filterValue: XDataTableFilterMetaData = filters[field] as XDataTableFilterMetaData; // funguje len pre filterDisplay="row"
         filterValue.value = value;
         if (matchMode !== undefined) {
             filterValue.matchMode = matchMode;
         }
+        filterValue.customFilterItems = customFilterItems;
         // treba klonovat, inac react nezobrazi zmenenu hodnotu
         const filtersCloned: DataTableFilterMeta = {...filters};
         setFilters(filtersCloned);
@@ -670,6 +718,12 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const getFilterValue = (field: string) : any | null => {
         const filterValue: DataTableFilterMetaData = filters[field] as DataTableFilterMetaData; // funguje len pre filterDisplay="row"
         return filterValue.value;
+    }
+
+    // vseobecna metodka - vrati nastaveny match mode
+    const getFilterMatchMode = (field: string) : any => {
+        const filterValue: DataTableFilterMetaData = filters[field] as DataTableFilterMetaData; // funguje len pre filterDisplay="row"
+        return filterValue.matchMode;
     }
 
     // ****** vseobecne metodky pre set/get do/z filtra - pre betweenFilter ********
@@ -727,6 +781,24 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
         return betweenFilter;
     }
+
+    // after change from match mode xAutoComplete input displays [object Object] - trying resolving this hug does not work - I have no idea why
+/*
+    const onFilterMatchModeChange = (e: ColumnFilterMatchModeChangeEvent): void => {
+        console.log(e.matchMode);
+        console.log(e.field);
+        console.log(getFilterValue(e.field));
+        console.log(typeof (getFilterValue(e.field)));
+        if (e.matchMode !== XFilterMatchMode.X_AUTO_COMPLETE) {
+            const filterValue: any | null = getFilterValue(e.field);
+            if (filterValue !== null && typeof filterValue === 'object') {
+                console.log("idem volat setFilterValue");
+                setFilterValue(e.field, null);
+                console.log(getFilterValue(e.field));
+            }
+        }
+    }
+*/
 
     const valueAsUI = (value: any, xField: XField, contentType: XContentType | undefined, fieldSetId: string | undefined): React.ReactNode => {
         let valueResult: React.ReactNode;
@@ -914,6 +986,49 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                                     return childColumn.props.filterElement!({getFilterItem: getFilterItem, setFilterItem: setFilterItem, options: options});
                                 };
             }
+            else if (getFilterMatchMode(childColumn.props.field) === XFilterMatchMode.X_AUTO_COMPLETE) {
+                let assocField: string | undefined = undefined; // path to manyToOne assoc
+                let displayField: string | string[] | undefined = undefined; // field/fields displayed in autocomplete (can be path)
+                // if childColumn.props.autoComplete = true, then autoComplete = undefined and default autocomlete is created
+                const autoComplete: XAutoCompleteInFilterProps | undefined = (typeof childColumn.props.autoComplete === 'object' ? childColumn.props.autoComplete : undefined);
+                if (autoComplete) {
+                    if (autoComplete.field) {
+                        displayField = autoComplete.field;
+                    }
+
+                    if (autoComplete.assocField) {
+                        // check - autoComplete.assocField must be prefix (part) of childColumn.props.field
+                        if (!childColumn.props.field.startsWith(autoComplete.assocField + ".")) {
+                            throw `XLazyColumn with field "${childColumn.props.field}": autoComplete.assocField "${autoComplete.assocField}" is not prefix of the field`;
+                        }
+                        assocField = autoComplete.assocField;
+                        if (displayField === undefined) {
+                            // take displayField from childColumn.props.field (rest of the path)
+                            displayField = childColumn.props.field.substring(autoComplete.assocField.length + 1);
+                        }
+                    }
+                }
+                if (assocField === undefined) {
+                    // default - take assocField/displayField from childColumn.props.field
+                    const [assocFieldTemp, displayFieldTemp] = XUtilsCommon.getPathToAssocAndField(childColumn.props.field);
+                    if (assocFieldTemp === null) {
+                        throw `XLazyColumn with field "${childColumn.props.field}": unexpected error - path of length >= 2 expected`;
+                    }
+                    assocField = assocFieldTemp;
+                    if (displayField === undefined) {
+                        displayField = displayFieldTemp;
+                    }
+                }
+                const xAssoc: XAssoc = XUtilsMetadataCommon.getXAssocToOneByPath(xEntity, assocField);
+                const object: any | null = getFilterValue(childColumn.props.field);
+                filterElement = <XAutoCompleteBase value={object} onChange={(object: any, objectChange: OperationType) => setFilterValue(childColumn.props.field, object, undefined, object !== null ? [{where: `[${assocField}] = ${object['id']}`, params: {}}] : undefined)}
+                                                   error={undefined} onErrorChange={(error: string | undefined) => {}} idField="id"
+                                                   field={displayField!}
+                                                   suggestionsQuery={{entity: xAssoc.entityName, filter: autoComplete?.filter, sortField: autoComplete?.sortField}}
+                                                   searchBrowse={autoComplete?.searchBrowse} valueForm={autoComplete?.valueForm} addRowEnabled={false}
+                                                   width="100%" scrollHeight={autoComplete?.scrollHeight}
+                                                   suggestionsLoad="lazy" lazyLoadMaxRows={autoComplete?.lazyLoadMaxRows} minLength={autoComplete?.minLength}/>
+            }
             else {
                 if (xField.type === "boolean") {
                     const checkboxValue: boolean | null = getFilterValue(childColumn.props.field);
@@ -922,6 +1037,10 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 else if (childColumn.props.dropdownInFilter) {
                     const dropdownValue = getDropdownFilterValue(childColumn.props.field);
                     filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field} value={dropdownValue} onValueChange={onDropdownFilterChange} filter={childColumn.props.dropdownFilter} sortField={childColumn.props.dropdownSortField}/>
+                }
+                else if (xField.type === "string") {
+                    const stringValue: string | null = getFilterValue(childColumn.props.field);
+                    filterElement = <XInputTextBase value={stringValue} onChange={(value: string | null) => setFilterValue(childColumn.props.field, value)}/>
                 }
                 else if (xField.type === "date" || xField.type === "datetime") {
                     betweenFilter = getBetweenFilter(childColumn.props.betweenFilter, props.betweenFilter);
@@ -958,7 +1077,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
             // ************** dataType **************
             // depending on the dataType of the column, suitable match modes are displayed in filter
-            let dataType: "text" | "numeric" | "date" | undefined = undefined;
+            let dataType: "text" | "numeric" | "date" = "text";
             if (xField.type === "decimal" || xField.type === "number") {
                 dataType = "numeric";
             }
@@ -977,6 +1096,20 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                     if (xField.type === "boolean" || childColumn.props.dropdownInFilter || betweenFilter !== undefined) {
                         showFilterMenu = false;
                     }
+                }
+            }
+
+            // *********** filterMatchModeOptions ***********
+            // we use the same match mode lists like the default lists in primereact, but in case of ManyToOne assoc we add match mode for autocomplete
+            let filterMatchModeOptions: ColumnFilterMatchModeOptions[] | undefined = undefined;
+            if (showFilterMenu) {
+                // copy of primereact code (ColumnFilter.js)
+                //filterMatchModeOptions = primeReactContext.filterMatchModeOptions![dataType].map((key) => ({ label: prLocaleOption(key), value: key }));
+                filterMatchModeOptions = (primeReactContext && primeReactContext.filterMatchModeOptions![dataType].map((key) => ({ label: prLocaleOption(key), value: key }))) ||
+                                            PrimeReact.filterMatchModeOptions![dataType].map((key) => ({ label: prLocaleOption(key), value: key }));
+
+                if (isAutoCompleteInFilterEnabled(childColumn.props)) {
+                    filterMatchModeOptions.push({label: xLocaleOption('xAutoComplete'), value: XFilterMatchMode.X_AUTO_COMPLETE});
                 }
             }
 
@@ -1038,7 +1171,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             }
 
             return <Column field={childColumn.props.field} header={header} footer={footer} filter={true} sortable={true}
-                           filterElement={filterElement} dataType={dataType} showFilterMenu={showFilterMenu} showClearButton={showClearButton}
+                           filterElement={filterElement} dataType={dataType} showFilterMenu={showFilterMenu}
+                           filterMatchModeOptions={filterMatchModeOptions} showClearButton={showClearButton} onFilterMatchModeChange={undefined /*onFilterMatchModeChange*/}
                            body={body} headerStyle={headerStyle} align={align}/>;
         }
     );
@@ -1109,6 +1243,21 @@ export type XGetFilterItem = (field: string) => DataTableFilterMetaData | DataTa
 export type XSetFilterItem = (field: string, filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData) => void;
 export type XFilterElementParams = {getFilterItem: XGetFilterItem; setFilterItem: XSetFilterItem; options: ColumnFilterElementTemplateOptions;};
 export type XFilterElementProp = (params: XFilterElementParams) => React.ReactNode;
+
+export type XAutoCompleteInFilterProps = {
+    // copy of some props in XAutoComplete
+    assocField?: string; // overrides default splitting of field prop (example: if field is "assocA.assocB.attrC", default assocField is "assocA.assocB", using this prop we can set assocField="assocA")
+    filter?: XCustomFilter;
+    sortField?: string | DataTableSortMeta[];
+    // copy of some props in XAutoCompleteBase
+    lazyLoadMaxRows?: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
+    field?: string | string[]; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
+    searchBrowse?: JSX.Element; // ak je zadany, moze uzivatel vyhladavat objekt podobne ako pri XSearchButton (obchadza tym suggestions)
+    valueForm?: JSX.Element; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
+    minLength?: number; // Minimum number of characters to initiate a search (default 1)
+    scrollHeight?: string; // Maximum height of the suggestions panel.
+};
+
 export type XContentType = "multiline" | "html" | undefined;
 
 export interface XLazyColumnProps {
@@ -1118,6 +1267,8 @@ export interface XLazyColumnProps {
     dropdownInFilter?: boolean;
     dropdownFilter?: XCustomFilter;
     dropdownSortField?: string;
+    autoComplete?: XAutoCompleteInFilterProps | true; // if autoComplete = true, the autocomplete is created automatically according to "field"
+    //autoCompleteEnabled: true | false | "forStringOnly"; // default is "forStringOnly" (autocomplete enabled only on attributes of string type)
     showFilterMenu?: boolean;
     betweenFilter?: XBetweenFilterProp | "noBetween"; // creates 2 inputs from to, only for type date/datetime/decimal/number implemented, "row"/"column" - position of inputs from to
     width?: string; // for example 150px or 10rem or 10% (value 10 means 10rem)
@@ -1139,5 +1290,6 @@ export const XLazyColumn = (props: XLazyColumnProps) => {
 }
 
 XLazyColumn.defaultProps = {
+    //autoCompleteEnabled: "forStringOnly",
     columnViewStatus: true  // XViewStatus.ReadWrite
 };
