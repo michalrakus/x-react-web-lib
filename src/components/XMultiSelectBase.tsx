@@ -2,7 +2,6 @@ import React, {Component} from "react";
 import {XQuery, XUtils} from "./XUtils";
 import {DataTableSortMeta} from "primereact/datatable";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
-import {XDropdownForEntityProps} from "./XDropdownForEntity";
 import {MultiSelect, MultiSelectChangeEvent} from "primereact/multiselect";
 
 // Base komponent pre MultiSelect - podobna uroven ako XAutoCompleteBase, resp. XDropdownForEntity
@@ -33,7 +32,7 @@ export class XMultiSelectBase extends Component<XMultiSelectBaseProps> {
         options: any[];
     };
 
-    constructor(props: XDropdownForEntityProps) {
+    constructor(props: XMultiSelectBaseProps) {
         super(props);
 
         if (!this.props.optionsQuery) {

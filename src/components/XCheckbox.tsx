@@ -3,13 +3,23 @@ import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XInput, XInputProps} from "./XInput";
 import {Checkbox, CheckboxChangeEvent} from "primereact/checkbox";
 
-export class XCheckbox extends XInput<boolean, XInputProps<boolean>> {
+export interface XCheckboxProps extends XInputProps<boolean> {
+    // aby sme vedeli zobrazit dvojstavovy checkbox aj ked v DB mame null stlpec
+    // zatial len sem mozno v buducnosti dame na vsetky komponenty
+    isNotNull?: boolean;
+}
 
-    constructor(props: XInputProps<boolean>) {
+export class XCheckbox extends XInput<boolean, XCheckboxProps> {
+
+    constructor(props: XCheckboxProps) {
         super(props);
 
         this.checkboxOnValueChange = this.checkboxOnValueChange.bind(this);
         this.triStateCheckboxOnValueChange = this.triStateCheckboxOnValueChange.bind(this);
+    }
+
+    isNotNull(): boolean {
+        return this.props.isNotNull || super.isNotNull();
     }
 
     getValue(): boolean | null {
