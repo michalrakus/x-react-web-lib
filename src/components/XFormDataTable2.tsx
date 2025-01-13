@@ -562,7 +562,6 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         else if (sortField === "none") {
             sortField = undefined;
         }
-        const label = this.props.label !== undefined ? this.props.label : this.props.assocField;
         const readOnly = this.isReadOnly();
 
         // v bloku function (child) nejde pouzit priamo this, thisLocal uz ide pouzit
@@ -732,10 +731,13 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
 
         return (
             <div>
-                <div className="flex justify-content-center">
-                    <label>{label}</label>
-                    {/*<XButton label="Filter" onClick={onClickFilter} />*/}
-                </div>
+                {this.props.label !== undefined ?
+                    <div className="flex justify-content-center">
+                        <label>{this.props.label}</label>
+                        {/*<XButton label="Filter" onClick={onClickFilter} />*/}
+                    </div>
+                    : undefined
+                }
                 <div className="flex justify-content-center">
                     <DataTable ref={(el) => this.dt = el} value={valueList} dataKey={this.dataKey} paginator={paginator} rows={rows}
                                totalRecords={valueList.length}
