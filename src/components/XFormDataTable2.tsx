@@ -89,7 +89,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         sortable: false,
         sortField: "idFieldOnUpdate",
         scrollable: true,
-        scrollWidth: '100%', // hodnota '100%' zapne horizontalne scrollovanie, ak je tabulka sirsia ako parent element (a ten by mal byt max 100vw) (hodnota 'auto' (podobna ako '100%') nefunguje dobre)
+        //scrollWidth: '100%', // nefungovalo dobre - hodnota '100%' zapne horizontalne scrollovanie, ak je tabulka sirsia ako parent element (a ten by mal byt max 100vw) (hodnota 'auto' (podobna ako '100%') nefunguje dobre)
+        scrollWidth: 'viewport', // zapne horizontalne scrollovanie, ak je tabulka sirsia ako display (dolezite pre mobil)
         scrollHeight: '200vh', // ak by sme dali 'none' (do DataTable by islo undefined), tak nam nezarovnava header a body (v body chyba disablovany vertikalny scrollbar),
                                 // tym ze pouzivame 200vh (max-height pre body), tak realne scrollovanie sa zapne az pri velmi vela riadkoch
         shrinkWidth: true,
@@ -576,6 +577,9 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         if (this.props.scrollable) {
             if (this.props.scrollWidth !== "none") {
                 scrollWidth = this.props.scrollWidth;
+                if (scrollWidth === "viewport") {
+                    scrollWidth = `calc(100vw - ${XUtils.isMobile() ? 1.2 : 2.2}rem)`; // desktop - povodne bolo 1.4rem (20px okraje) namiesto 2.2 ale pri vela stlpcoch vznikal horizontalny scrollbar
+                }
             }
             if (this.props.scrollHeight !== "none") {
                 scrollHeight = this.props.scrollHeight;

@@ -28,7 +28,7 @@ import {
     XAggregateFunction,
     XCustomFilter,
     XCustomFilterItem,
-    XFullTextSearch, XDataTableFilterMetaData, XFilterMatchMode
+    XFullTextSearch, XDataTableFilterMetaData, XFilterMatchMode, XDataTableFilterMeta
 } from "../../serverApi/FindParam";
 import {XButtonIconSmall} from "../XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
@@ -107,7 +107,10 @@ export interface XLazyDataTableProps {
     paginator: boolean;
     rows: number;
     filterDisplay: "menu" | "row";
-    betweenFilter?: XBetweenFilterProp, // umiestnenie inputov od do: "row" - vedla seba, "column" - pod sebou; plati pre vsetky stlpce typu date/datetime/decimal/number ak nemaju definovany svoj betweenFilter
+    betweenFilter?: XBetweenFilterProp; // umiestnenie inputov od do: "row" - vedla seba, "column" - pod sebou; plati pre vsetky stlpce typu date/datetime/decimal/number ak nemaju definovany svoj betweenFilter
+    autoFilter: boolean; // if true, filtering starts immediately after setting filter value (button Filter is not used/rendered) (default false)
+    showFilterButtons: boolean; // if true, Filter/Clear filter buttons are rendered (default true)
+    showExportRows?: boolean; // true - export button rendered, false - export button not rendered, undefined (default) - Export button rendered only on desktop (not on mobile)
     scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
     scrollWidth: string; // hodnota "none" vypne horizontalne scrollovanie
     scrollHeight: string; // hodnota "none" vypne vertikalne scrollovanie
@@ -341,11 +344,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     const onFilter = (event: any) => {
 
+        // pozor! tato metoda sa nevola, odkedy vzdy pouzivame filterElement na elemente Column (mame vo filtri vlastne komponenty ktore priamo volaju setFilters(...))
+
         //console.log("zavolany onFilter - this.state.filters = " + JSON.stringify(filters));
         //console.log("zavolany onFilter - event.filters = " + JSON.stringify(event.filters));
 
         // tymto zavolanim sa zapise znak zapisany klavesnicou do inputu filtra (ak prikaz zakomentujeme, input filtra zostane prazdny)
         setFilters(event.filters);
+        loadDataBaseIfAutoFilter(event.filters);
     }
 
     const onSort = (event: any) => {
@@ -357,6 +363,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         const findParam: FindParam = createFindParam();
         findParam.multiSortMeta = event.multiSortMeta; // prepiseme multiSortMeta, lebo je tam stara hodnota (volanie setMultiSortMeta nezmeni multiSortMeta hned)
         loadDataBase(findParam);
+    }
+
+    const loadDataBaseIfAutoFilter = (filters: XDataTableFilterMeta) => {
+        if (props.autoFilter) {
+            const findParam: FindParam = createFindParam();
+            findParam.filters = filters; // prepiseme filters, lebo je tam stara hodnota
+            loadDataBase(findParam);
+        }
     }
 
     const onClickFilter = () => {
@@ -692,6 +706,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         // neskusal som, ci treba aj toto klonovat ale pravdepodobne hej
         const filtersCloned: DataTableFilterMeta = {...filters};
         setFilters(filtersCloned);
+        loadDataBaseIfAutoFilter(filtersCloned);
     }
 
     // vseobecna specialna metodka pouzvana pri custom filtri (XLazyColumn.filterElement)
@@ -712,6 +727,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         // treba klonovat, inac react nezobrazi zmenenu hodnotu
         const filtersCloned: DataTableFilterMeta = {...filters};
         setFilters(filtersCloned);
+        loadDataBaseIfAutoFilter(filtersCloned);
     }
 
     // vseobecna metodka - precita hodnotu z filtra (vrati napr. typ Date | null)
@@ -847,6 +863,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     // ak mame scrollWidth/scrollHeight = viewport (default), vyratame scrollWidth/scrollHeight tak aby tabulka "sadla" do okna (viewport-u)
 
+    const isMobile: boolean = XUtils.isMobile();
+
     let scrollWidth: string | undefined = undefined; // vypnute horizontalne scrollovanie
     let scrollHeight: string | undefined = undefined; // vypnute vertikalne scrollovanie
 
@@ -854,7 +872,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         if (props.scrollWidth !== "none") {
             scrollWidth = props.scrollWidth;
             if (scrollWidth === "viewport") {
-                scrollWidth = 'calc(100vw - 2.2rem)'; // povodne bolo 1.4rem (20px okraje) ale pri vela stlpcoch vznikal horizontalny scrollbar
+                scrollWidth = `calc(100vw - ${isMobile ? 1.2 : 2.2}rem)`; // desktop - povodne bolo 1.4rem (20px okraje) namiesto 2.2 ale pri vela stlpcoch vznikal horizontalny scrollbar
             }
         }
 
@@ -880,7 +898,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 }
                 else {
                     // sme v dialogu
-                    if (XUtils.isMobile()) {
+                    if (isMobile) {
                         viewHeight = '98vh'; // .p-dialog pre mobil ma max-height: 98%
                         headerFooterHeight = XUtils.toPX0('12.03rem'); // rucne zratane
                     }
@@ -928,23 +946,46 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     // pouzivame paginatorLeft aj paginatorRight (aj prazdny) pouzivame, aby bol default paginator v strede (bez paginatorLeft je default paginator presunuty dolava a naopak)
     // sirku div-ov este nastavujeme v css na 10rem
-    let paginatorLeft = <div>{xLocaleOption('totalRecords')}: {value.totalRecords}</div>;
-    let paginatorRight = <div/>;
-    if (props.editMode === true) {
-        paginatorRight = <div>
-                            <XButtonIconSmall icon="pi pi-save" onClick={() => props.editModeHandlers?.onSave()} tooltip="Save form"/>
-                            <XButtonIconSmall icon="pi pi-times" onClick={() => props.editModeHandlers?.onCancel()} tooltip="Cancel editing"/>
-                         </div>;
+    let paginatorLeft: JSX.Element;
+    let paginatorRight: JSX.Element | undefined;
+    let pageLinkSize: number;
+    if (!isMobile) {
+        paginatorLeft = <div>{xLocaleOption('totalRecords')}: {value.totalRecords}</div>;
+        paginatorRight = <div/>;
+        pageLinkSize = 5; // default
+        if (props.editMode === true) {
+            paginatorRight = <div>
+                <XButtonIconSmall icon="pi pi-save" onClick={() => props.editModeHandlers?.onSave()} tooltip="Save form"/>
+                <XButtonIconSmall icon="pi pi-times" onClick={() => props.editModeHandlers?.onCancel()} tooltip="Cancel editing"/>
+            </div>;
+        }
+        else if (props.editMode === false) {
+            paginatorRight = <div>
+                <XButtonIconSmall icon="pi pi-pencil" onClick={() => props.editModeHandlers?.onStart()} tooltip="Edit form"/>
+            </div>;
+        }
+        // else - editMode is undefined - browse is not editable
     }
-    else if (props.editMode === false) {
-        paginatorRight = <div>
-                            <XButtonIconSmall icon="pi pi-pencil" onClick={() => props.editModeHandlers?.onStart()} tooltip="Edit form"/>
-                         </div>;
+    else {
+        // na mobile setrime miesto
+        paginatorLeft = <div style={{minWidth: '3rem'}}>{value.totalRecords}</div>;
+        paginatorRight = <div style={{minWidth: '3rem'}}/>;
+        pageLinkSize = 3;
     }
-    // else - editMode is undefined - browse is not editable
 
-    // export pre search button-y zatial vypneme
-    const exportRows: boolean = (props.searchBrowseParams === undefined);
+    let exportRows: boolean;
+    if (props.searchBrowseParams !== undefined) {
+        // export pre search button-y zatial vypneme
+        exportRows = false;
+    }
+    else if (props.showExportRows !== undefined) {
+        // mame explicitne definovane ci ano alebo nie
+        exportRows = props.showExportRows;
+    }
+    else {
+        // len na desktope zobrazime
+        exportRows = !isMobile;
+    }
 
     // pre lepsiu citatelnost vytvarame stlpce uz tu
     const columnElemList: JSX.Element[] = React.Children.map(
@@ -1184,14 +1225,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             <div className="flex justify-content-center align-items-center">
                 {props.label ? <div className="x-lazy-datatable-label">{props.label}</div> : null}
                 {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)}/> : null}
-                <XButton key="filter" label={xLocaleOption('filter')} onClick={onClickFilter} />
-                <XButton key="clearFilter" label={xLocaleOption('clearFilter')} onClick={onClickClearFilter} />
+                {props.showFilterButtons ? <XButton key="filter" icon={isMobile ? "pi pi-search" : undefined} label={!isMobile ? xLocaleOption('filter') : undefined} onClick={onClickFilter} /> : null}
+                {props.showFilterButtons ? <XButton key="clearFilter" icon={isMobile ? "pi pi-ban" : undefined} label={!isMobile ? xLocaleOption('clearFilter') : undefined} onClick={onClickClearFilter} /> : null}
                 {props.optionalCustomFilters ? <XOcfDropdown optionalCustomFilters={props.optionalCustomFilters} value={optionalCustomFilter} onChange={(value: XOptionalCustomFilter | undefined) => setOptionalCustomFilter(value)} className="m-1"/> : null}
                 {props.multilineSwitch ? <XMultilineSwitch value={multilineSwitchValue} onChange={(value: XMultilineRenderType) => setMultilineSwitchValue(value)} className="m-1"/> : null}
-                {props.label ? <div className="x-lazy-datatable-label-right-compensation"/> : null}
+                {props.label && !isMobile ? <div className="x-lazy-datatable-label-right-compensation"/> : null}
             </div>
             <div className="flex justify-content-center">
-                <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator}
+                <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator} pageLinkSize={pageLinkSize}
                            rows={rows} totalRecords={value.totalRecords}
                            lazy={true} first={first} onPage={onPage} loading={loading}
                            filterDisplay={props.filterDisplay} filters={filters} onFilter={onFilter}
@@ -1223,6 +1264,8 @@ XLazyDataTable.defaultProps = {
     paginator: true,
     rows: 10,
     filterDisplay: "row",
+    autoFilter: false,
+    showFilterButtons: true,
     fullTextSearch: true,
     multilineSwitch: false,
     multilineSwitchInitValue: "allLines",

@@ -1,5 +1,6 @@
 import React from "react";
 import {XInputTextBase} from "./XInputTextBase";
+import {XUtils} from "./XUtils";
 
 // typ XFtsInputValue reprezentuje hodnoty ktore sa daju menit touto komponentou
 // tento typ ciastocne zodpoveda typu XFullTextSearch pouzivanom v api
@@ -18,6 +19,6 @@ export const XFtsInput = (props: {value: XFtsInputValue; onChange: (value: XFtsI
     // TODO - pridat input na zmenu matchMode
     // we use XInputTextBase - we save onChange calls
     return (
-        <XInputTextBase value={props.value.value} onChange={onChange} style={{height: '2.5rem', width: '17rem'}} className="m-1"/>
+        <XInputTextBase value={props.value.value} onChange={onChange} style={{height: '2.5rem', width: XUtils.isMobile() ? '7rem' : '17rem'}} className="m-1"/>
     );
 }
