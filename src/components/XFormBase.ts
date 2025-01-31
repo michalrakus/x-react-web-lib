@@ -45,6 +45,11 @@ export abstract class XFormBase extends Component<XFormProps> {
     assocToValidateList: Array<string>; // zoznam oneToMany asociacii, pre ktore sa zavola spracovanie vysledku validacie ktory je ulozny v xRowTechData (pouzivane pre specialnu custom validaciu)
     assocToSortList: Array<{assoc: string; sortField: string;}>; // zoznam oneToMany asociacii, ktore po nacitani z DB zosortujeme podla daneho fieldu (zvycajne id)
 
+    // special flag - application can set this flag if the form uses component TabView
+    // as a result, the width of components XFormScrollable and XFormDataTable2 will be proper adjusted (the margin of TabPanel will be subtracted from 100vw)
+    // (it is important for mobile display)
+    tabViewUsed: boolean;
+
     constructor(props: XFormProps) {
         super(props);
         // check
@@ -71,6 +76,7 @@ export abstract class XFormBase extends Component<XFormProps> {
         this.xFormDataTableList = [];
         this.assocToValidateList = [];
         this.assocToSortList = [];
+        this.tabViewUsed = false; // default
         this.onClickSave = this.onClickSave.bind(this);
         this.onClickCancel = this.onClickCancel.bind(this);
     }
@@ -158,6 +164,15 @@ export abstract class XFormBase extends Component<XFormProps> {
     // helper method
     isInDialog(): boolean {
         return this.props.onSaveOrCancel !== undefined;
+    }
+
+    // helper method
+    isTabViewUsed(): boolean {
+        return this.tabViewUsed;
+    }
+
+    setTabViewUsed(tabViewUsed: boolean) {
+        this.tabViewUsed = tabViewUsed;
     }
 
     onFieldChange(field: string, value: any, error?: string | undefined, onChange?: XFieldOnChange, assocObjectChange?: OperationType) {

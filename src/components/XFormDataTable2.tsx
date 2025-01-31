@@ -578,7 +578,12 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             if (this.props.scrollWidth !== "none") {
                 scrollWidth = this.props.scrollWidth;
                 if (scrollWidth === "viewport") {
-                    scrollWidth = `calc(100vw - ${XUtils.isMobile() ? 1.2 : 2.2}rem)`; // desktop - povodne bolo 1.4rem (20px okraje) namiesto 2.2 ale pri vela stlpcoch vznikal horizontalny scrollbar
+                    let marginsWidth: number = XUtils.isMobile() ? 1.2 : 2.2; // desktop - povodne bolo 1.4rem (20px okraje) namiesto 2.2 ale pri vela stlpcoch vznikal horizontalny scrollbar
+                                                                            // mobil - padding 0.5rem body element, ale este bola tabulka moc siroka, tak sme dali 1.2
+                    if (this.props.form.isTabViewUsed()) {
+                        marginsWidth += 1; // TabPanel has padding 0.5rem (in css file) -> 1rem both margins
+                    }
+                    scrollWidth = `calc(100vw - ${marginsWidth}rem)`;
                 }
             }
             if (this.props.scrollHeight !== "none") {

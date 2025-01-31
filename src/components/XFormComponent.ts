@@ -27,6 +27,8 @@ export interface XFormComponentProps<T> {
     readOnly?: XReadOnlyProp;
     labelStyle?: React.CSSProperties;
     inline?: boolean; // poznamka: nenasiel som pouzitie v skch-finance a depaul (pouziva sa <div className="x-form-inline-row">), asi je to zombie
+                        // je to metuci nazov, da sa pouzit ked mame komponent v riadku (napr. cez uvedeny <div className="x-form-inline-row">)
+                        // a chceme aby mal element pre label dlzku labelu (je to vlastne labelStyle={{width: 'auto', marginLeft: '1rem'}}, ten marginLeft uz asi neni potrebny, mame to cez css poriesene)
     onChange?: XFieldOnChange;
     onlyInput?: boolean; // ak true, tak vyrenderuje len input element (nerenderuje <div className="field grid"> ani label)
 }

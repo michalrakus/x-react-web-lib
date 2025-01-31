@@ -66,6 +66,7 @@ export interface XAppButtonForRow {
     icon?: IconType<ButtonProps>;
     label: string;
     onClick: (selectedRow: any) => void;
+    style?: React.CSSProperties;
 }
 
 export interface XOptionalCustomFilter {
@@ -872,7 +873,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         if (props.scrollWidth !== "none") {
             scrollWidth = props.scrollWidth;
             if (scrollWidth === "viewport") {
-                scrollWidth = `calc(100vw - ${isMobile ? 1.2 : 2.2}rem)`; // desktop - povodne bolo 1.4rem (20px okraje) namiesto 2.2 ale pri vela stlpcoch vznikal horizontalny scrollbar
+                scrollWidth = `calc(100vw - ${isMobile ? 1 : 2.2}rem)`; // desktop - povodne bolo 1.4rem (20px okraje) namiesto 2.2 ale pri vela stlpcoch vznikal horizontalny scrollbar
+                                                                        // mobil - padding 0.5rem body element
             }
         }
 
@@ -1250,7 +1252,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {props.onEdit !== undefined && props.searchBrowseParams === undefined ? <XButton key="editRow" icon="pi pi-pencil" label={xLocaleOption('editRow')} onClick={onClickEdit}/> : null}
                 {props.removeRow !== undefined && props.removeRow !== false && props.searchBrowseParams === undefined ? <XButton key="removeRow" icon="pi pi-times" label={xLocaleOption('removeRow')} onClick={onClickRemoveRow}/> : null}
                 {exportRows ? <XButton key="exportRows" icon="pi pi-file-export" label={xLocaleOption('exportRows')} onClick={onClickExport} /> : null}
-                {props.appButtonsForRow ? props.appButtonsForRow.map((xAppButton: XAppButtonForRow) => <XButton key={xAppButton.key} icon={xAppButton.icon} label={xAppButton.label} onClick={() => onClickAppButtonForRow(xAppButton.onClick)}/>) : null}
+                {props.appButtonsForRow ? props.appButtonsForRow.map((xAppButton: XAppButtonForRow) => <XButton key={xAppButton.key} icon={xAppButton.icon} label={xAppButton.label} onClick={() => onClickAppButtonForRow(xAppButton.onClick)} style={xAppButton.style}/>) : null}
                 {props.appButtons}
                 {props.searchBrowseParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
                 {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogState={exportRowsDialogState} hideDialog={() => setExportRowsDialogState({dialogOpened: false})}/> : null}
