@@ -1,16 +1,15 @@
 import React, {ReactChild, useEffect, useRef, useState} from 'react';
 import {
-    DataTable,
+    DataTable, DataTableExpandedRows,
     DataTableFilterMeta,
     DataTableFilterMetaData,
-    DataTableOperatorFilterMetaData,
-    DataTableSortMeta
+    DataTableOperatorFilterMetaData, DataTableRowExpansionTemplate,
+    DataTableSortMeta, DataTableValueArray
 } from 'primereact/datatable';
 import {
     Column,
     ColumnBodyOptions,
     ColumnFilterElementTemplateOptions,
-    ColumnFilterMatchModeChangeEvent,
     ColumnFilterMatchModeOptions
 } from 'primereact/column';
 import {XButton} from "../XButton";
@@ -105,6 +104,8 @@ export interface XLazyDataTableProps {
     entity: string;
     label?: string;
     dataKey?: string;
+    rowExpansionTemplate?: (row: any, options: DataTableRowExpansionTemplate) => React.ReactNode;
+    showExpandedRow?: (row: any, multilineSwitchValue: XMultilineRenderType) => boolean;
     paginator: boolean;
     rows: number;
     filterDisplay: "menu" | "row";
@@ -132,6 +133,9 @@ export interface XLazyDataTableProps {
     multilineSwitch: boolean; // default false, ak true tak zobrazi switch, ktorym sa da vypnut zobrazenie viacriadkovych textov v sirokom riadku
     multilineSwitchInitValue: XMultilineRenderType; // default "allLines"
     multilineSwitchFewLinesCount: number; // max count of rendered lines for render type "fewLines" (default 2)
+    // ak chceme mat pristup k stavu multilineSwitchu, treba vytiahnut "const [multilineSwitchValue, setMultilineSwitchValue] = useState<XMultilineRenderType>(...);" do browse komponentu
+    multilineSwitchValue?: [XMultilineRenderType, React.Dispatch<React.SetStateAction<XMultilineRenderType>>]; // TODO - specialny typ vytvor, napr. XuseState<boolean>
+    headerElementRight?: React.ReactNode; // prida sa hned za multilineSwitch, moze sa tu pridat napr. custom switch
     searchBrowseParams?: XSearchBrowseParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
     rowClassName?: (data: any) => object | string | undefined;
@@ -271,6 +275,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [xFieldSetMaps, setXFieldSetMaps] = useState<XFieldSetMaps>({});
 
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0, aggregateValues: []});
+    const [expandedRows, setExpandedRows] = useState<DataTableExpandedRows | DataTableValueArray | undefined>(undefined);
     const [loading, setLoading] = useState(false);
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(props.paginator ? props.rows : undefined);
@@ -292,7 +297,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const initFtsInputValue: XFtsInputValue | undefined = props.fullTextSearch ? createInitFtsInputValue() : undefined;
     const [ftsInputValue, setFtsInputValue] = useState<XFtsInputValue | undefined>(initFtsInputValue);
     const [optionalCustomFilter, setOptionalCustomFilter] = useState<XOptionalCustomFilter | undefined>(undefined);
-    const [multilineSwitchValue, setMultilineSwitchValue] = useState<XMultilineRenderType>(props.multilineSwitchInitValue);
+    const [multilineSwitchValue, setMultilineSwitchValue] = props.multilineSwitchValue ?? useState<XMultilineRenderType>(props.multilineSwitchInitValue);
     const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[] | undefined>(XUtilsCommon.createMultiSortMeta(props.sortField));
     const [selectedRow, setSelectedRow] = useState<any>(null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
@@ -439,11 +444,30 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         setLoading(true);
         const findResult = await findByFilter(findParam);
         setValue(findResult);
+        setupExpandedRows(findResult, multilineSwitchValue);
         setLoading(false);
         // odlozime si filter hodnoty pre pripadny export - deep cloning vyzera ze netreba
         setFiltersAfterFiltering(filters);
         setFtsInputValueAfterFiltering(ftsInputValue ? {...ftsInputValue} : undefined);
         setOptionalCustomFilterAfterFiltering(optionalCustomFilter);
+    }
+
+    const setupExpandedRows = (findResult: FindResult, multilineSwitchValue: XMultilineRenderType) => {
+        if (props.rowExpansionTemplate) {
+            const expandedRowsLocal: DataTableExpandedRows = {};
+            if (findResult.rowList) {
+                for (const row of findResult.rowList) {
+                    let showExpandedRow: boolean = true; // default
+                    if (props.showExpandedRow) {
+                        showExpandedRow = props.showExpandedRow(row, multilineSwitchValue);
+                    }
+                    if (showExpandedRow) {
+                        expandedRowsLocal[`${row[dataKey]}`] = true;
+                    }
+                }
+            }
+            setExpandedRows(expandedRowsLocal);
+        }
     }
 
     const findByFilter = async (findParam: FindParam) : Promise<FindResult> => {
@@ -543,11 +567,15 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onRowDoubleClick");
         //console.log(event.data);
 
+        onRowDoubleClickBase(event.data);
+    }
+
+    const onRowDoubleClickBase = (row: any) => {
         if (props.onEdit !== undefined && props.searchBrowseParams === undefined) {
-            props.onEdit(event.data);
+            props.onEdit(row);
         }
         else if (props.searchBrowseParams !== undefined) {
-            props.searchBrowseParams.onChoose(event.data);
+            props.searchBrowseParams.onChoose(row);
         }
     }
 
@@ -826,7 +854,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         else if (xField.type === "jsonb" && fieldSetId) {
             // zatial sem dame; este by sme mohli dat hlbsie do convertValue/convertValueBase (aby fungovalo aj pre excel) ale tam je problem ze nemame k dispozicii "xFieldSetMaps"
             // poznamka: krajsie by bolo brat fieldSetId z xField ale to by sme museli vytvorit decorator na backend-e...
-            valueResult = XFieldSetBase.xFieldSetValuesAsUI(value, xFieldSetMaps[fieldSetId]);
+            valueResult = <div className={multilineSwitchValue === "fewLines" || multilineSwitchValue === "allLines" ? "x-multiline-content" : undefined}>{XFieldSetBase.xFieldSetValuesAsUI(value, xFieldSetMaps[fieldSetId])}</div>;
         }
         else {
             if (contentType === "html") {
@@ -861,6 +889,15 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         }
         return bodyValue;
     }
+
+    // in order that row expansion works like standard row, we wrap row expansion into div
+    const rowExpansionTemplate = (row: any, options: DataTableRowExpansionTemplate): React.ReactNode => {
+        return (
+            <div onClick={() => setSelectedRow(row)} onDoubleClick={() => onRowDoubleClickBase(row)}>
+                {props.rowExpansionTemplate!(row, options)}
+            </div>
+        );
+    };
 
     // ak mame scrollWidth/scrollHeight = viewport (default), vyratame scrollWidth/scrollHeight tak aby tabulka "sadla" do okna (viewport-u)
 
@@ -1230,11 +1267,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {props.showFilterButtons ? <XButton key="filter" icon={isMobile ? "pi pi-search" : undefined} label={!isMobile ? xLocaleOption('filter') : undefined} onClick={onClickFilter} /> : null}
                 {props.showFilterButtons ? <XButton key="clearFilter" icon={isMobile ? "pi pi-ban" : undefined} label={!isMobile ? xLocaleOption('clearFilter') : undefined} onClick={onClickClearFilter} /> : null}
                 {props.optionalCustomFilters ? <XOcfDropdown optionalCustomFilters={props.optionalCustomFilters} value={optionalCustomFilter} onChange={(value: XOptionalCustomFilter | undefined) => setOptionalCustomFilter(value)} className="m-1"/> : null}
-                {props.multilineSwitch ? <XMultilineSwitch value={multilineSwitchValue} onChange={(value: XMultilineRenderType) => setMultilineSwitchValue(value)} className="m-1"/> : null}
+                {props.multilineSwitch ? <XMultilineSwitch value={multilineSwitchValue} onChange={(switchValue: XMultilineRenderType) => {setMultilineSwitchValue(switchValue); setupExpandedRows(value, switchValue);}} className="m-1"/> : null}
+                {props.headerElementRight}
                 {props.label && !isMobile ? <div className="x-lazy-datatable-label-right-compensation"/> : null}
             </div>
             <div className="flex justify-content-center">
-                <DataTable value={value.rowList} dataKey={dataKey} paginator={props.paginator} pageLinkSize={pageLinkSize}
+                <DataTable value={value.rowList} dataKey={dataKey}
+                           expandedRows={expandedRows} rowExpansionTemplate={props.rowExpansionTemplate ? rowExpansionTemplate : undefined}
+                           paginator={props.paginator} pageLinkSize={pageLinkSize}
                            rows={rows} totalRecords={value.totalRecords}
                            lazy={true} first={first} onPage={onPage} loading={loading}
                            filterDisplay={props.filterDisplay} filters={filters} onFilter={onFilter}

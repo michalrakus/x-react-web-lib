@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 import {Calendar, CalendarSelectEvent} from "primereact/calendar";
-import {dateFormatCalendar, dateFromModel, dateFromUI, XDateScale} from "../serverApi/XUtilsConversions";
+import {dateAsUI, dateFormatCalendar, dateFromModel, dateFromUI, XDateScale} from "../serverApi/XUtilsConversions";
 import {XUtils} from "./XUtils";
 import {FormEvent} from "primereact/ts-helpers";
 
@@ -36,7 +36,14 @@ export const XCalendar = (props: {
     const onSelect = (e: CalendarSelectEvent) => {
         // musime tu zavolat props.onChange lebo event select zavola aj onChange ale my umyselne v onChange nevolame props.onChange
         // (cakame na event blur, ktory po selecte nepride)
-        props.onChange(e.value as any); // vzdycky Date
+        //props.onChange(e.value as any); // vzdycky Date
+        // <- bolo takto ale vytvaralo Tue Feb 04 2025 00:00:00 GMT+0100 (Central European Standard Time) a cez onBlur (a ked prisiel string z DB)
+        //               tak vytvaralo Tue Feb 04 2025 01:00:00 GMT+0100 (Central European Standard Time)
+        //               a potom nefungoval XUtilsCommon.dateEquals (cez date1.getTime() === date2.getTime())
+        // aby bol onSelect aj onBlur jednotne, tak dame:
+        const value: Date | null | undefined = dateFromUI(dateAsUI(e.value as any, props.scale), props.scale); // e.value je vzdy Date
+        props.onChange(value ?? null);
+
         // pre poriadok resetneme stav
         setInputChanged(false);
         setInputValueState(undefined);

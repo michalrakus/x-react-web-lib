@@ -132,6 +132,28 @@ export class XUtils {
         return XUtils.remSize;
     }
 
+    // alternative to 100vw, if 100vw can not be used because of technical reasons
+    static getViewWidth(): number {
+        return Math.max(
+            document.body.scrollWidth,
+            document.documentElement.scrollWidth,
+            document.body.offsetWidth,
+            document.documentElement.offsetWidth,
+            document.documentElement.clientWidth
+        );
+    }
+
+    // alternative to 100vh, if 100vh can not be used because of technical reasons
+    static getViewHeight(): number {
+        return Math.max(
+            document.body.scrollHeight,
+            document.documentElement.scrollHeight,
+            document.body.offsetHeight,
+            document.documentElement.offsetHeight,
+            document.documentElement.clientHeight
+        );
+    }
+
     // param example: "3rem md:4rem xl:6rem"
     // (in general: "<exp1> sm:<exp2> md:<exp3> lg:<exp4> xl:<exp5>")
     // according to device width returns "exp(n)"
