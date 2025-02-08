@@ -1,6 +1,6 @@
 {
   "name": "@michalrakus/x-react-web-lib",
-  "version": "1.32.5",
+  "version": "1.32.6",
   "description": "",
   "scripts": {
     "clean": "rimraf lib",
@@ -30,8 +30,8 @@
     "@types/jest": "^29.5.0",
     "@types/lodash": "^4.14.202",
     "@types/node": "^18.15.3",
-    "@types/react": "^18.0.28",
-    "@types/react-dom": "^18.0.11",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
     "@types/react-transition-group": "^4.4.5",
     "gulp": "^4.0.2",
     "rimraf": "^4.4.0",
@@ -40,10 +40,10 @@
   "peerDependencies": {
     "primeflex": "^3.3.1",
     "primeicons": "^7.0.0",
-    "primereact": "~10.8.2",
-    "quill": "^2.0.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "primereact": "10.9.2",
+    "quill": "^2.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-transition-group": "^4.4.5"
   },
   "files": [
