@@ -51,6 +51,9 @@ import {XOcfDropdown} from "./XOcfDropdown";
 import {XFieldSetBase, XFieldSetMeta, XFieldXFieldMetaMap} from "../XFieldSet/XFieldSetBase";
 import {XAutoCompleteBase} from "../XAutoCompleteBase";
 import {XInputTextBase} from "../XInputTextBase";
+import {useXStateSession} from "../useXStateSession";
+import {useXStateSessionBase} from "../useXStateSessionBase";
+import * as _ from "lodash";
 
 // typ pouzivany len v XLazyDataTable
 interface XFieldSetMaps {
@@ -100,8 +103,19 @@ export interface XSearchBrowseProps {
     searchBrowseParams?: XSearchBrowseParams;
 }
 
+export enum XStateKeySuffix {
+    filters = 'filters',
+    ftsInputValue = 'fts-input-value',
+    optionalCustomFilter = 'optional-custom-filter',
+    multiSortMeta = 'multi-sort-meta',
+    pagingFirst = 'paging-first',
+    selectedRow = 'selected-row',
+    multilineSwitchValue = 'multiline-switch-value'
+}
+
 export interface XLazyDataTableProps {
     entity: string;
+    stateKey?: string; // key used to save the state into session (or local), default is entity, but sometimes we have more then 1 browse/XLazyDataTable for 1 entity
     label?: string;
     dataKey?: string;
     rowExpansionTemplate?: (row: any, options: DataTableRowExpansionTemplate) => React.ReactNode;
@@ -118,6 +132,7 @@ export interface XLazyDataTableProps {
     scrollHeight: string; // hodnota "none" vypne vertikalne scrollovanie
     formFooterHeight?: string; // pouziva sa (zatial) len pri deme - zadava sa sem vyska linkov na zdrojaky (SourceCodeLinkForm, SourceCodeLinkEntity) aby ich bolo vidno pri automatickom vypocte vysky tabulky
     shrinkWidth: boolean; // default true - ak je true, nerozsiruje stlpce na viac ako je ich explicitna sirka (nevznikaju "siroke" tabulky na celu dlzku parent elementu)
+    onResetTable?: () => void; // zavola sa pri kliknuti na button resetTable (Reset filter)
     onAddRow?: () => void;
     onEdit?: (selectedRow: any) => void;
     removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean;
@@ -152,7 +167,7 @@ export interface XLazyDataTableProps {
 
 export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
-    // must be here, is used in createInitFilters()
+    // must be here, is used in createFiltersInit()
     const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(props.entity);
 
     const createAggregateItems = (): XSimpleAggregateItem[] => {
@@ -170,9 +185,17 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return aggregateItems;
     }
 
-    const createInitFilters = () : DataTableFilterMeta => {
+    const overrideFilters = (filters: DataTableFilterMeta, filtersHigherPrio: DataTableFilterMeta | undefined) : DataTableFilterMeta => {
+        if (filtersHigherPrio) {
+            // deep clone is needed, otherwise filter elements write into "filters" and override the values in filtersHigherPrio ("props.filters") (simple cloning "..." is not enough to create 2 instances of filter values)
+            filters = {...filters, ..._.cloneDeep(filtersHigherPrio)}; // items from filtersHigherPrio will replace existing items in filters
+        }
+        return filters;
+    }
 
-        const initFilters: DataTableFilterMeta = {};
+    const createFiltersInit = () : DataTableFilterMeta => {
+
+        let filtersInit: DataTableFilterMeta = {};
 
         //let columns = dataTableEl.current.props.children; - does not work
         let columns = props.children;
@@ -182,10 +205,19 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
             // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
             const filterMatchMode: FilterMatchMode = getInitFilterMatchMode(xLazyColumn.props, xField);
-            initFilters[field] = createFilterItem(props.filterDisplay, {value: null, matchMode: filterMatchMode});
+            filtersInit[field] = createFilterItem(props.filterDisplay, {value: null, matchMode: filterMatchMode});
         }
 
-        return initFilters;
+        filtersInit = overrideFilters(filtersInit, props.filters);
+
+        if (props.searchBrowseParams !== undefined) {
+            const displayFieldFilter: XFieldFilter | undefined = props.searchBrowseParams.displayFieldFilter;
+            if (displayFieldFilter !== undefined) {
+                filtersInit[displayFieldFilter.field] = createFilterItem(props.filterDisplay, displayFieldFilter.constraint);
+            }
+        }
+
+        return filtersInit;
     }
 
     const getInitFilterMatchMode = (xLazyColumnProps: XLazyColumnProps, xField: XField) : FilterMatchMode => {
@@ -263,11 +295,39 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return {value: null, matchMode: "contains"};
     }
 
+/*
+    // TODO turn off/on storage
+    const saveValueIntoStorage = (stateKeySuffix: XStateKeySuffix, value: any) => {
+        XUtils.saveValueIntoStorage(`${getTableStateKey()}-${stateKeySuffix}`, value);
+    }
+
+    // TODO turn off/on storage
+    const getValueFromStorage = (stateKeySuffix: XStateKeySuffix, initValue: any): any => {
+        return XUtils.getValueFromStorage(`${getTableStateKey()}-${stateKeySuffix}`, initValue);
+    }
+*/
+    const getStateKey = (stateKeySuffix: XStateKeySuffix): string => {
+        return `xldt-state-${props.stateKey ?? props.entity}-${stateKeySuffix}`;
+    }
+
+    const removePagingFromStorage = () => {
+        XUtils.removeValueFromStorage(getStateKey(XStateKeySuffix.pagingFirst));
+    }
+
     // premenne platne pre cely component (obdoba member premennych v class-e)
     const primeReactContext: APIOptions = React.useContext(PrimeReactContext); // probably does not work and deprecated PrimeReact.filterMatchModeOptions is used
     const dataTableEl = useRef<any>(null);
     let customFilterItems: XCustomFilterItem[] | undefined = XUtilsCommon.createCustomFilterItems(props.customFilter);
+    if (props.searchBrowseParams !== undefined) {
+        // ak mame props.searchBrowseParams.customFilterFunction, pridame filter
+        if (props.searchBrowseParams.customFilter) {
+            customFilterItems = XUtilsCommon.filterAnd(customFilterItems, XUtils.evalFilter(props.searchBrowseParams.customFilter));
+        }
+    }
     let aggregateItems: XSimpleAggregateItem[] = createAggregateItems();
+
+    // poznamka k useXStateSession - v buducnosti nahradit useXStateStorage, ktory bude mat parameter session/local/none a parameter bude riadit aky storage sa pouzije
+    // zatial vzdy ukladame do session
 
     // ak mame fieldSet stlpce (stlpce ktore maju zadany fieldSetId a zobrazuju hodnoty podla fieldSet-u),
     // tak sem nacitame mapy umoznujuce ziskanie labelov zakliknutych field-ov
@@ -277,35 +337,34 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0, aggregateValues: []});
     const [expandedRows, setExpandedRows] = useState<DataTableExpandedRows | DataTableValueArray | undefined>(undefined);
     const [loading, setLoading] = useState(false);
-    const [first, setFirst] = useState(0);
+    const [first, setFirst] = useXStateSession(getStateKey(XStateKeySuffix.pagingFirst), 0);
     const [rows, setRows] = useState(props.paginator ? props.rows : undefined);
-    let filtersInit: DataTableFilterMeta = createInitFilters();
-    if (props.filters) {
-        filtersInit = {...filtersInit, ...props.filters}; // items from props.filters will replace existing items in filtersInit
-    }
-    if (props.searchBrowseParams !== undefined) {
-        const displayFieldFilter: XFieldFilter | undefined = props.searchBrowseParams.displayFieldFilter;
-        if (displayFieldFilter !== undefined) {
-            filtersInit[displayFieldFilter.field] = createFilterItem(props.filterDisplay, displayFieldFilter.constraint);
+    // "filters" have special initialState function different from that used in useXStateSession
+    const filtersInitialStateFunction = (): DataTableFilterMeta => {
+        let filtersInit: DataTableFilterMeta | null = XUtils.getValueFromStorage(getStateKey(XStateKeySuffix.filters), null);
+        if (filtersInit != null) {
+            // we have filters from session - if we have props.filters, we always override the values from session (values from props.filters have higher priority)
+            filtersInit = overrideFilters(filtersInit, props.filters);
         }
-        // ak mame props.searchBrowseParams.customFilterFunction, pridame filter
-        if (props.searchBrowseParams.customFilter) {
-            customFilterItems = XUtilsCommon.filterAnd(customFilterItems, XUtils.evalFilter(props.searchBrowseParams.customFilter));
+        else {
+            // no filters in session
+            filtersInit = createFiltersInit();
         }
+        return filtersInit;
     }
-    const [filters, setFilters] = useState<DataTableFilterMeta>(filtersInit); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
+    const [filters, setFilters] = useXStateSessionBase<DataTableFilterMeta>(getStateKey(XStateKeySuffix.filters), filtersInitialStateFunction); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
     const initFtsInputValue: XFtsInputValue | undefined = props.fullTextSearch ? createInitFtsInputValue() : undefined;
-    const [ftsInputValue, setFtsInputValue] = useState<XFtsInputValue | undefined>(initFtsInputValue);
-    const [optionalCustomFilter, setOptionalCustomFilter] = useState<XOptionalCustomFilter | undefined>(undefined);
-    const [multilineSwitchValue, setMultilineSwitchValue] = props.multilineSwitchValue ?? useState<XMultilineRenderType>(props.multilineSwitchInitValue);
-    const [multiSortMeta, setMultiSortMeta] = useState<DataTableSortMeta[] | undefined>(XUtilsCommon.createMultiSortMeta(props.sortField));
-    const [selectedRow, setSelectedRow] = useState<any>(null);
+    const [ftsInputValue, setFtsInputValue] = useXStateSession<XFtsInputValue | undefined>(getStateKey(XStateKeySuffix.ftsInputValue), initFtsInputValue);
+    const [optionalCustomFilter, setOptionalCustomFilter] = useXStateSession<XOptionalCustomFilter | undefined>(getStateKey(XStateKeySuffix.optionalCustomFilter), undefined);
+    const [multilineSwitchValue, setMultilineSwitchValue] = props.multilineSwitchValue ?? useXStateSession<XMultilineRenderType>(getStateKey(XStateKeySuffix.multilineSwitchValue), props.multilineSwitchInitValue);
+    const [multiSortMeta, setMultiSortMeta] = useXStateSession<DataTableSortMeta[] | undefined>(getStateKey(XStateKeySuffix.multiSortMeta), XUtilsCommon.createMultiSortMeta(props.sortField));
+    const [selectedRow, setSelectedRow] = useXStateSession<any>(getStateKey(XStateKeySuffix.selectedRow), null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
     const [exportRowsDialogState, setExportRowsDialogState] = useState<XExportRowsDialogState>({dialogOpened: false});
     //const [exportRowsDialogRowCount, setExportRowsDialogRowCount] = useState<number>(); // param pre dialog
-    const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<DataTableFilterMeta>(filtersInit); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
-    const [ftsInputValueAfterFiltering, setFtsInputValueAfterFiltering] = useState<XFtsInputValue | undefined>(initFtsInputValue); // tak isto ako filtersAfterFiltering
-    const [optionalCustomFilterAfterFiltering, setOptionalCustomFilterAfterFiltering] = useState<XOptionalCustomFilter | undefined>(undefined); // tak isto ako filtersAfterFiltering
+    const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<DataTableFilterMeta>(filters); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
+    const [ftsInputValueAfterFiltering, setFtsInputValueAfterFiltering] = useState<XFtsInputValue | undefined>(ftsInputValue); // tak isto ako filtersAfterFiltering
+    const [optionalCustomFilterAfterFiltering, setOptionalCustomFilterAfterFiltering] = useState<XOptionalCustomFilter | undefined>(optionalCustomFilter); // tak isto ako filtersAfterFiltering
 
     // parameter [] zabezpeci ze sa metoda zavola len po prvom renderingu (a nie po kazdej zmene stavu (zavolani setNieco()))
     useEffect(() => {
@@ -357,6 +416,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
         // tymto zavolanim sa zapise znak zapisany klavesnicou do inputu filtra (ak prikaz zakomentujeme, input filtra zostane prazdny)
         setFilters(event.filters);
+        removePagingFromStorage();
         loadDataBaseIfAutoFilter(event.filters);
     }
 
@@ -386,9 +446,10 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         loadData();
     };
 
+/*  povodna metoda, ktora iba vycistila filter
     const onClickClearFilter = () => {
         // najjednoduchsi sposob - pomeni aj pripadne nastavene matchMode hodnoty
-        let filtersInit: DataTableFilterMeta = createInitFilters();
+        let filtersInit: DataTableFilterMeta = createFiltersInit();
         setFilters(filtersInit);
 
         if (ftsInputValue) {
@@ -398,6 +459,46 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         if (props.optionalCustomFilters) {
             setOptionalCustomFilter(undefined);
         }
+    };
+*/
+
+    const onClickResetTable = () => {
+        // every session state variable set to init value from "props" or default value
+        // (this code corresponds to init values in useXStateSession hooks)
+
+        const firstLocal: number = 0;
+        setFirst(firstLocal);
+
+        const filtersLocal: DataTableFilterMeta = createFiltersInit();
+        setFilters(filtersLocal);
+
+        const ftsInputValueLocal: XFtsInputValue = createInitFtsInputValue();
+        setFtsInputValue(ftsInputValueLocal);
+
+        const optionalCustomFilterLocal: XOptionalCustomFilter | undefined = undefined;
+        setOptionalCustomFilter(optionalCustomFilterLocal);
+
+        setMultilineSwitchValue(props.multilineSwitchInitValue);
+
+        const multiSortMetaLocal: DataTableSortMeta[] | undefined = XUtilsCommon.createMultiSortMeta(props.sortField);
+        setMultiSortMeta(multiSortMetaLocal);
+
+        setSelectedRow(null);
+
+        // custom operations
+        if (props.onResetTable) {
+            props.onResetTable();
+        }
+
+        // at least because of sort change (icon shows sorting column) we have to read data from db right now
+        const findParam: FindParam = createFindParam();
+        // overwrite first, filters, ... with (potentially) new values
+        findParam.first = firstLocal;
+        findParam.filters = filtersLocal;
+        findParam.fullTextSearch = createXFullTextSearch(ftsInputValueLocal);
+        findParam.customFilterItems = createXCustomFilterItems(customFilterItems, optionalCustomFilterLocal);
+        findParam.multiSortMeta = multiSortMetaLocal;
+        loadDataBase(findParam);
     };
 
     const loadData = async () => {
@@ -446,6 +547,8 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         setValue(findResult);
         setupExpandedRows(findResult, multilineSwitchValue);
         setLoading(false);
+        // save table state into session/local
+        //saveTableState(findParam); <- old solution, state is saved immediatelly after change of some filter field, sorting, etc.
         // odlozime si filter hodnoty pre pripadny export - deep cloning vyzera ze netreba
         setFiltersAfterFiltering(filters);
         setFtsInputValueAfterFiltering(ftsInputValue ? {...ftsInputValue} : undefined);
@@ -477,6 +580,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         findResult.totalRecords = parseInt(findResult.totalRecords as any as string);
         return findResult;
     }
+
+/*
+    const saveTableState = (findParam: FindParam) => {
+        saveValueIntoStorage(XStateKeySuffix.filters, findParam.filters);
+        saveValueIntoStorage(XStateKeySuffix.ftsInputValue, ftsInputValue);
+        saveValueIntoStorage(XStateKeySuffix.optionalCustomFilter, optionalCustomFilter);
+    }
+*/
 
     const createXFullTextSearch = (ftsInputValue: XFtsInputValue | undefined): XFullTextSearch | undefined => {
         let xFullTextSearch: XFullTextSearch | undefined = undefined; // default
@@ -735,6 +846,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         // neskusal som, ci treba aj toto klonovat ale pravdepodobne hej
         const filtersCloned: DataTableFilterMeta = {...filters};
         setFilters(filtersCloned);
+        removePagingFromStorage();
         loadDataBaseIfAutoFilter(filtersCloned);
     }
 
@@ -756,6 +868,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         // treba klonovat, inac react nezobrazi zmenenu hodnotu
         const filtersCloned: DataTableFilterMeta = {...filters};
         setFilters(filtersCloned);
+        // we had problem when page was set to e.g. 3 (more than 1), after setting some filter value that caused that only 1 page should be returned
+        // - after returning back to browse no rows were displayed (because requested page was 3) (this is quick fix)
+        removePagingFromStorage();
         loadDataBaseIfAutoFilter(filtersCloned);
     }
 
@@ -1265,9 +1380,12 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {props.label ? <div className="x-lazy-datatable-label">{props.label}</div> : null}
                 {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)}/> : null}
                 {props.showFilterButtons ? <XButton key="filter" icon={isMobile ? "pi pi-search" : undefined} label={!isMobile ? xLocaleOption('filter') : undefined} onClick={onClickFilter} /> : null}
-                {props.showFilterButtons ? <XButton key="clearFilter" icon={isMobile ? "pi pi-ban" : undefined} label={!isMobile ? xLocaleOption('clearFilter') : undefined} onClick={onClickClearFilter} /> : null}
+                {props.showFilterButtons ? <XButton key="resetTable" icon={isMobile ? "pi pi-ban" : undefined} label={!isMobile ? xLocaleOption('resetTable') : undefined} onClick={onClickResetTable} /> : null}
                 {props.optionalCustomFilters ? <XOcfDropdown optionalCustomFilters={props.optionalCustomFilters} value={optionalCustomFilter} onChange={(value: XOptionalCustomFilter | undefined) => setOptionalCustomFilter(value)} className="m-1"/> : null}
-                {props.multilineSwitch ? <XMultilineSwitch value={multilineSwitchValue} onChange={(switchValue: XMultilineRenderType) => {setMultilineSwitchValue(switchValue); setupExpandedRows(value, switchValue);}} className="m-1"/> : null}
+                {props.multilineSwitch ? <XMultilineSwitch value={multilineSwitchValue} onChange={(switchValue: XMultilineRenderType) => {
+                        setMultilineSwitchValue(switchValue);
+                        setupExpandedRows(value, switchValue);
+                    }} className="m-1"/> : null}
                 {props.headerElementRight}
                 {props.label && !isMobile ? <div className="x-lazy-datatable-label-right-compensation"/> : null}
             </div>

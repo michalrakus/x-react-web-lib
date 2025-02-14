@@ -6,7 +6,7 @@ import xEnJsonObject from "./locale/x-en.json";
 export interface XLocaleOptions {
     // XLazyDataTable
     filter?: string;
-    clearFilter?: string;
+    resetTable?: string;
     addRow?: string;
     editRow?: string;
     removeRow?: string;
@@ -30,6 +30,19 @@ export interface XLocaleOptions {
     fileUploadSizeToBig?: string;
     fileUploadFailed?: string;
     fileDownloadFailed?: string;
+    // XFieldSet
+    fieldSetSaveEditConfirm?: string;
+    fieldSetCancelEditConfirm?: string;
+    fieldSetRemoveFieldConfirm?: string;
+    // statistics
+    runStatisticMissingDateField?: string;
+    upload?: string;
+    yes?: string;
+    no?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    year?: string;
+    yearForAgeCalculation?: string;
 }
 
 // under this key are x-locale saved inside of PrimeReact locale

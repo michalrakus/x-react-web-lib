@@ -30,6 +30,7 @@ function generateApi(cb) {
         "./lib/components/XLazyDataTable/XLazyDataTable",
         "./lib/components/XLazyDataTable/XMultilineRenderer",
 
+        "./lib/components/useXStateSession",
         "./lib/components/useXToken",
         "./lib/components/XAutoComplete",
         "./lib/components/XAutoCompleteBase",

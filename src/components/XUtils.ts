@@ -13,7 +13,7 @@ import {XResponseError} from "./XResponseError";
 import React from "react";
 import {XEnvVar} from "./XEnvVars";
 import {XError, XErrorMap} from "./XErrors";
-import {FindParam, ResultType, XCustomFilter, XCustomFilterItem} from "../serverApi/FindParam";
+import {FindParam, ResultType, XCustomFilter} from "../serverApi/FindParam";
 import {DataTableSortMeta} from "primereact/datatable";
 import {XObject} from "./XObject";
 import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
@@ -610,4 +610,61 @@ export class XUtils {
     static options(valueStringList: string[]): SelectItem[] {
         return valueStringList.map<SelectItem>((valueString: string) => {return {value: valueString, label: valueString};});
     }
+
+    static saveValueIntoStorage(key: string, value: any) {
+        // value can be also string or null or undefined
+        // if we don't have object that can be serialised to json, we create special object
+        let valueObject: object;
+        if (typeof value === 'object') {
+            valueObject = value;
+        }
+        else if (value === undefined) {
+            valueObject = {_xValue: "_undefined_"};
+        }
+        else {
+            // value is null or string or boolean or number or Date...
+            valueObject = {_xValue: value};
+        }
+        sessionStorage.setItem(key, XUtilsCommon.objectAsJSON(valueObject));
+    }
+
+    static getValueFromStorage(key: string, initValue: any): any {
+        // if the value is not found in storage, initValue is returned
+        let value: any;
+        const item: string | null = sessionStorage.getItem(key);
+        if (item !== null) {
+            try {
+                const valueObject = JSON.parse(item);
+                if ('_xValue' in valueObject) {
+                    // we have special object with 1 value
+                    value = valueObject._xValue;
+                    if (value === "_undefined_") {
+                        value = undefined;
+                    }
+                }
+                else {
+                    // standard object
+                    value = valueObject;
+                }
+            }
+            catch (e) {
+                // exception should not happen
+                console.log(`XUtils.getValueFromStorage: Could not parse/process item from session. key = ${key}, item = ${item}. Error: ${e}`);
+                value = initValue;
+            }
+        }
+        else {
+            value = initValue;
+        }
+        return value;
+    }
+
+    static removeValueFromStorage(key: string) {
+        sessionStorage.removeItem(key);
+    }
+
+    // hleper method used for items of XLazyDataTable (shortcut ldt)
+    // static getValueFromStorageLdt(entity: string, stateKeySuffix: XStateKeySuffix, initValue: any): any {
+    //     return XUtils.getValueFromStorage(`xldt-state-${entity}-${stateKeySuffix}`, initValue);
+    // }
 }

@@ -28,6 +28,6 @@ export const XOcfDropdown = (props: {
     options.splice(0, 0, {label: ""});
 
     return (
-        <Dropdown options={options} optionLabel="label" value={props.value} onChange={onChange} className={props.className}/>
+        <Dropdown options={options} dataKey="label" optionLabel="label" value={props.value} onChange={onChange} className={props.className}/>
     );
 }

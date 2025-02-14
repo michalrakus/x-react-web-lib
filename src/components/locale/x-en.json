@@ -1,7 +1,7 @@
 {
   "en": {
     "filter": "Filter",
-    "clearFilter": "Clear filter",
+    "resetTable": "Reset filter",
     "addRow": "Add",
     "editRow": "Edit",
     "removeRow": "Remove",
