@@ -132,19 +132,7 @@ export class XFieldSetBase {
         for (const [field, value] of Object.entries(xFieldSetValues)) {
             const xFieldMeta: XFieldMeta | undefined = xFieldXFieldMetaMap.get(field);
             if (xFieldMeta) {
-                if (xFieldMeta.type === XFieldType.checkbox) {
-                    valueUIList.push(xFieldMeta.label);
-                }
-                else if (xFieldMeta.type === XFieldType.inputText) {
-                    valueUIList.push(`${xFieldMeta.label}: "${value}"`);
-                }
-                else if (xFieldMeta.type === XFieldType.inputDecimal) {
-                    valueUIList.push(`${xFieldMeta.label}: ${numberAsUI(numberFromModel(value), xFieldMeta.decimalProps?.scale)}`);
-                }
-                else {
-                    // neznamy typ
-                    valueUIList.push(`${xFieldMeta.label}: "${value}"`);
-                }
+                valueUIList.push(XFieldSetBase.xFieldSetValueAsUI(xFieldMeta, value));
             }
             else {
                 // field bol z formulara odstraneny (nemalo by sa to takto pouzivat, skor by sa mala datumom ohranicit platnost fieldu)
@@ -153,6 +141,24 @@ export class XFieldSetBase {
             }
         }
         return valueUIList.join(", ");
+    }
+
+    static xFieldSetValueAsUI(xFieldMeta: XFieldMeta, value: any): string {
+        let valueAsUI: string;
+        if (xFieldMeta.type === XFieldType.checkbox) {
+            valueAsUI = xFieldMeta.label;
+        }
+        else if (xFieldMeta.type === XFieldType.inputText) {
+            valueAsUI = `${xFieldMeta.label}: "${value}"`;
+        }
+        else if (xFieldMeta.type === XFieldType.inputDecimal) {
+            valueAsUI = `${xFieldMeta.label}: ${numberAsUI(numberFromModel(value), xFieldMeta.decimalProps?.scale)}`;
+        }
+        else {
+            // neznamy typ
+            valueAsUI = `${xFieldMeta.label}: "${value}"`;
+        }
+        return valueAsUI;
     }
 
     private static createMapForXFieldMeta(xFieldMeta: XFieldMeta, filterFromParent: string | undefined, xFieldXFieldMetaMap: XFieldXFieldMetaMap) {
