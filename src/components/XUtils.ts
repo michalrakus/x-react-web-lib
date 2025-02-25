@@ -89,6 +89,10 @@ export class XUtils {
     // konstanty (zatial takto jednoducho)
     static FIELD_LABEL_WIDTH: string = '10.5rem';
 
+    static lastVersionCheckTimestamp: number | null = null;
+
+    static VERSION_CHECK_PERIOD: number = 10 * 60 * 1000; // 10 minutes in milliseconds
+
     static demo(): boolean {
         return XUtils.getXBackendUrl().indexOf('x-demo-server') !== -1;
     }
@@ -667,4 +671,67 @@ export class XUtils {
     // static getValueFromStorageLdt(entity: string, stateKeySuffix: XStateKeySuffix, initValue: any): any {
     //     return XUtils.getValueFromStorage(`xldt-state-${entity}-${stateKeySuffix}`, initValue);
     // }
+
+    static reloadIfNewVersion() {
+        // to save requests, we check for new version only if 10 minutes (or another time period) are passed from the last check
+        // we could use method setInterval (timer) and run check exactly 10 minutes but the disadvantage is that then there will be
+        // some processing during idle time and that can exhaust battery on mobile phone (mobile phone will not go to sleeping mode) - is it true?
+        const currentTimestamp: number = Date.now(); // Current time
+        if (XUtils.lastVersionCheckTimestamp === null || currentTimestamp - XUtils.lastVersionCheckTimestamp > XUtils.VERSION_CHECK_PERIOD) {
+            XUtils.reloadIfNewVersionNow();
+            XUtils.lastVersionCheckTimestamp = currentTimestamp;
+        }
+    }
+
+    static async reloadIfNewVersionNow() {
+        if (await XUtils.isNewVersion()) {
+            alert("New version was released. Application will be restarted.");
+            XUtils.reload();
+        }
+    }
+
+    static async isNewVersion(): Promise<boolean> {
+        // we fetch file index.html and look up the hash "a7e03e2e" in element <script> - example:
+        // hash is created during react build and is different for every new version
+        // <script defer="defer" src="/static/js/main.a7e03e2e.js">
+        try {
+            // we don't use XUtils.fetchBasic because it creates request to nodejs backend and index.html is provided/located in nginx
+            //let response = await fetch("index.html", { method: 'get', mode: 'cors' });
+            let response = await fetch("index.html", {method: 'GET', cache: "no-store"});
+
+            let text = await response.text();
+            //console.log(text);
+            let r = /^.*<script.*\/(main.*\.js).*$/gim.exec(text);
+            if (!r || r.length < 2) {
+                return false;
+            }
+            let remoteMainScript = r.length > 1 ? r[1] : null;
+            if (remoteMainScript === null) {
+                return false;
+            }
+            let localMainScript = null;
+            let scripts = document.body.getElementsByTagName('script');
+            for (let script of scripts) {
+                let rl = /^.*\/(main.*\.js).*$/gim.exec(script.src);
+                if (!rl || rl.length < 2) {
+                    continue;
+                }
+                localMainScript = rl[1];
+                break;
+            }
+            if (localMainScript === null) {
+                return false;
+            }
+            return remoteMainScript !== localMainScript;
+        } catch (err) {
+            console.log(err);
+            return false;
+        }
+    }
+
+    static reload() {
+        // page reload (like pressing F5 or Enter on url bar)
+        // warning - if user has typed some data in form, the data will be lost
+        window.location.reload();
+    }
 }

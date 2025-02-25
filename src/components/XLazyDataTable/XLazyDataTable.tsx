@@ -553,6 +553,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         setFiltersAfterFiltering(filters);
         setFtsInputValueAfterFiltering(ftsInputValue ? {...ftsInputValue} : undefined);
         setOptionalCustomFilterAfterFiltering(optionalCustomFilter);
+        // async check for new version - the purpose is to get new version of app to the browser (if available) in short time (10 minutes)
+        // (if there is no new version, the check will run async (as the last operation) and nothing will happen)
+        XUtils.reloadIfNewVersion();
     }
 
     const setupExpandedRows = (findResult: FindResult, multilineSwitchValue: XMultilineRenderType) => {
