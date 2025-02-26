@@ -667,6 +667,10 @@ export class XUtils {
         sessionStorage.removeItem(key);
     }
 
+    static clearStorage() {
+        sessionStorage.clear();
+    }
+
     // hleper method used for items of XLazyDataTable (shortcut ldt)
     // static getValueFromStorageLdt(entity: string, stateKeySuffix: XStateKeySuffix, initValue: any): any {
     //     return XUtils.getValueFromStorage(`xldt-state-${entity}-${stateKeySuffix}`, initValue);
@@ -730,6 +734,10 @@ export class XUtils {
     }
 
     static reload() {
+        // data in session may not correspond with new structures in new version
+        // e.g. if we add new column to XLazyDataTable, filter operator/value for this column new column is missing in data from session and application will crash
+        // simple solution is to clear session
+        XUtils.clearStorage();
         // page reload (like pressing F5 or Enter on url bar)
         // warning - if user has typed some data in form, the data will be lost
         window.location.reload();

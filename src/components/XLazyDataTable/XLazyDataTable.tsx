@@ -117,6 +117,7 @@ export interface XLazyDataTableProps {
     entity: string;
     stateKey?: string; // key used to save the state into session (or local), default is entity, but sometimes we have more then 1 browse/XLazyDataTable for 1 entity
     label?: string;
+    labelStyle?: React.CSSProperties; // used to override default style or add new style
     dataKey?: string;
     rowExpansionTemplate?: (row: any, options: DataTableRowExpansionTemplate) => React.ReactNode;
     showExpandedRow?: (row: any, multilineSwitchValue: XMultilineRenderType) => boolean;
@@ -1382,7 +1383,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     return (
         <div>
             <div className="flex justify-content-center align-items-center">
-                {props.label ? <div className="x-lazy-datatable-label">{props.label}</div> : null}
+                {props.label ? <div className="x-lazy-datatable-label" style={props.labelStyle}>{props.label}</div> : null}
                 {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)}/> : null}
                 {props.showFilterButtons ? <XButton key="filter" icon={isMobile ? "pi pi-search" : undefined} label={!isMobile ? xLocaleOption('filter') : undefined} onClick={onClickFilter} /> : null}
                 {props.showFilterButtons ? <XButton key="resetTable" icon={isMobile ? "pi pi-ban" : undefined} label={!isMobile ? xLocaleOption('resetTable') : undefined} onClick={onClickResetTable} /> : null}
