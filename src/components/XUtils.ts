@@ -694,6 +694,10 @@ export class XUtils {
         }
     }
 
+    static isLocalhost(): boolean {
+        return window.location.hostname === 'localhost';
+    }
+
     static async isNewVersion(): Promise<boolean> {
         // we fetch file index.html and look up the hash "a7e03e2e" in element <script> - example:
         // hash is created during react build and is different for every new version
@@ -704,28 +708,37 @@ export class XUtils {
             let response = await fetch("index.html", {method: 'GET', cache: "no-store"});
 
             let text = await response.text();
-            //console.log(text);
+            let remoteMainScript: string | null = null;
             let r = /^.*<script.*\/(main.*\.js).*$/gim.exec(text);
-            if (!r || r.length < 2) {
-                return false;
+            if (r && r.length >= 2) {
+                remoteMainScript = r[1];
             }
-            let remoteMainScript = r.length > 1 ? r[1] : null;
             if (remoteMainScript === null) {
+                if (!XUtils.isLocalhost()) {
+                    console.log(`XUtils.isNewVersion(): Unexpected error - remoteMainScript (e.g. main.9d782ae7.js) not found in index.html from server. Content of index.html:`);
+                    console.log(text);
+                }
                 return false;
             }
-            let localMainScript = null;
-            let scripts = document.body.getElementsByTagName('script');
+
+            let localMainScript: string | null = null;
+            // element script is inside element head
+            let scripts = document.head.getElementsByTagName('script');
             for (let script of scripts) {
                 let rl = /^.*\/(main.*\.js).*$/gim.exec(script.src);
-                if (!rl || rl.length < 2) {
-                    continue;
+                if (rl && rl.length >= 2) {
+                    localMainScript = rl[1];
+                    break;
                 }
-                localMainScript = rl[1];
-                break;
             }
             if (localMainScript === null) {
+                if (!XUtils.isLocalhost()) {
+                    console.log(`XUtils.isNewVersion(): Unexpected error - localMainScript (e.g. main.9d782ae7.js) not found in element <head>...<script src="->here<-"/>...</head>`);
+                    console.log(document.head);
+                }
                 return false;
             }
+
             return remoteMainScript !== localMainScript;
         } catch (err) {
             console.log(err);
