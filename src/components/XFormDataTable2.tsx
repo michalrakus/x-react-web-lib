@@ -35,6 +35,7 @@ import {XInputIntervalDT} from "./XInputIntervalDT";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 import {XLazyColumnProps} from "./XLazyDataTable/XLazyDataTable";
 import {XInputTextareaDT} from "./XInputTextareaDT";
+import {XSuggestionsLoadProp} from "./XAutoCompleteBase";
 
 // typ pre technicky field row.__x_rowTechData (row je item zoznamu editovaneho v XFormDataTable2)
 export interface XRowTechData {
@@ -161,7 +162,10 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
-            return columnPropsAutoComplete.assocField + '.' + columnPropsAutoComplete.displayField;
+            // for simplicity we use here the first column (is used for filtering/sorting)
+            // TODO - all columns add in constructor (through method props.form.addField(...))
+            const displayField: string = Array.isArray(columnPropsAutoComplete.displayField) ? columnPropsAutoComplete.displayField[0] : columnPropsAutoComplete.displayField;
+            return columnPropsAutoComplete.assocField + '.' + displayField;
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
@@ -433,7 +437,15 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
         }
         else if (columnProps.type === "autoComplete") {
             const columnPropsAutoComplete = (columnProps as XFormAutoCompleteColumnProps);
-            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()} assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} searchBrowse={columnPropsAutoComplete.searchBrowse} assocForm={columnPropsAutoComplete.assocForm} addRowEnabled={columnPropsAutoComplete.addRowEnabled} filter={columnPropsAutoComplete.filter} sortField={columnPropsAutoComplete.sortField} fields={columnPropsAutoComplete.fields} suggestions={columnPropsAutoComplete.suggestions} rowData={rowData} readOnly={readOnly}/>;
+            body = <XAutoCompleteDT form={this.props.form} entity={this.getEntity()}
+                                    assocField={columnPropsAutoComplete.assocField} displayField={columnPropsAutoComplete.displayField} itemTemplate={columnPropsAutoComplete.itemTemplate}
+                                    searchBrowse={columnPropsAutoComplete.searchBrowse} assocForm={columnPropsAutoComplete.assocForm}
+                                    addRowEnabled={columnPropsAutoComplete.addRowEnabled} filter={columnPropsAutoComplete.filter}
+                                    sortField={columnPropsAutoComplete.sortField} fields={columnPropsAutoComplete.fields}
+                                    scrollHeight={columnPropsAutoComplete.scrollHeight}
+                                    suggestions={columnPropsAutoComplete.suggestions}
+                                    suggestionsLoad={columnPropsAutoComplete.suggestionsLoad} lazyLoadMaxRows={columnPropsAutoComplete.lazyLoadMaxRows}
+                                    rowData={rowData} readOnly={readOnly}/>;
         }
         else if (columnProps.type === "searchButton") {
             const columnPropsSearchButton = (columnProps as XFormSearchButtonColumnProps);
@@ -811,14 +823,18 @@ export interface XFormDropdownColumnProps extends XFormColumnBaseProps {
 
 export interface XFormAutoCompleteColumnProps extends XFormColumnBaseProps {
     assocField: string;
-    displayField: string;
+    displayField: string | string[];
+    itemTemplate?: (suggestion: any, index: number, createStringValue: boolean, defaultValue: (suggestion: any) => string) => React.ReactNode; // pouzivane ak potrebujeme nejaky custom format item-om (funkcia defaultValue rata default format)
     searchBrowse?: JSX.Element;
     assocForm?: JSX.Element; // na insert/update
     addRowEnabled: boolean; // ak dame false, tak nezobrazi insert button ani ked mame k dispozicii "valueForm" (default je true)
     filter?: XTableFieldFilterProp;
     sortField?: string | DataTableSortMeta[];
     fields?: string[]; // ak chceme pri citani suggestions nacitat aj asociovane objekty
+    scrollHeight?: string; // Maximum height of the suggestions panel.
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT)
+    suggestionsLoad?: XSuggestionsLoadProp; // ak nemame suggestions, pouzijeme suggestionsLoad (resp. jeho default)
+    lazyLoadMaxRows?: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
 }
 
 export interface XFormSearchButtonColumnProps extends XFormColumnBaseProps {
