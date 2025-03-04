@@ -75,6 +75,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
     };
 
     autoCompleteRef: any;
+    autoCompleteInputRef: any;
 
     state: {
         inputChanged: boolean; // priznak, ci uzivatel typovanim zmenil hodnotu v inpute
@@ -104,6 +105,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         super(props);
 
         this.autoCompleteRef = React.createRef();
+        this.autoCompleteInputRef = React.createRef();
 
         this.state = {
             inputChanged: false,
@@ -326,6 +328,13 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             // nedovolime vybrat specialny zaznam ...
             if (!XAutoCompleteBase.isMoreSuggestions(e.value)) {
                 this.setObjectValue(e.value, OperationType.None);
+                // ak sme na mobile, nechceme aby sa otvorila klavesnica mobilu, preto zavolame removeFocus
+                // pouzivame setTimeout, priame volanie nefungovalo
+                if (XUtils.isMobile()) {
+                    setTimeout(() => {
+                        this.removeFocusFromInput();
+                    }, 0); // Delaying blur to allow PrimeReact to finish its focus logic
+                }
             }
         }
     }
@@ -417,7 +426,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
 */
 
     setFocusToInput() {
-        this.autoCompleteRef.current.focus();
+        //this.autoCompleteRef.current.focus(); bolo toto kedysi
+        this.autoCompleteInputRef.current.focus();
+    }
+
+    removeFocusFromInput() {
+        this.autoCompleteInputRef.current.blur();
     }
 
     setObjectValue(object: any, objectChange: OperationType) {
@@ -726,7 +740,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             <div className="x-auto-complete-base" style={{width: this.props.width, maxWidth: this.props.maxWidth}}>
                 <AutoComplete value={inputValue} suggestions={this.state.filteredSuggestions} completeMethod={this.completeMethod} itemTemplate={this.itemTemplate}
                               onChange={this.onChange} onSelect={this.onSelect} onBlur={this.onBlur} minLength={this.props.minLength} scrollHeight={this.props.scrollHeight}
-                              ref={this.autoCompleteRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createTooltipOrErrorProps(error)} inputClassName={this.props.inputClassName}
+                              ref={this.autoCompleteRef} inputRef={this.autoCompleteInputRef} readOnly={readOnly} disabled={readOnly} {...XUtils.createTooltipOrErrorProps(error)} inputClassName={this.props.inputClassName}
                               showEmptyMessage={true}/>
                 {...buttons}{/* ked tu bolo len {buttons} bez ..., tak vypisoval hlasku Warning: Each child in a list should have a unique "key" prop. */}
                 {this.props.valueForm != undefined ?
