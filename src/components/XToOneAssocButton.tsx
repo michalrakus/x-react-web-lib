@@ -6,7 +6,7 @@ import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XUtils} from "./XUtils";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 
-export const XToOneAssocButton = (props: {form: XFormBase; assocField: string; assocForm: any; label?: string;}) => {
+export const XToOneAssocButton = (props: {form: XFormBase; assocField: string; assocForm: any; label?: string; buttonLabel?: string;}) => {
 
     // mozno lepsie by bolo sem dat xEntityAssoc.idField ale postaci aj *FAKE*
     props.form.addField(props.assocField + '.*FAKE*');
@@ -29,7 +29,7 @@ export const XToOneAssocButton = (props: {form: XFormBase; assocField: string; a
     return (
         <div className="field grid">
             <label htmlFor={props.assocField} className="col-fixed" style={{width: XUtils.FIELD_LABEL_WIDTH}}>{label}</label>
-            <Button label={label} onClick={onClickButton} disabled={assocObject === null}/>
+            <Button label={props.buttonLabel !== undefined ? props.buttonLabel : label} onClick={onClickButton} disabled={assocObject === null}/>
         </div>
     );
 }

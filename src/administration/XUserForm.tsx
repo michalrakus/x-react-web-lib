@@ -32,7 +32,7 @@ export class XUserForm extends XFormBaseModif {
 
     preInitForm(object: XObject, operationType: OperationType.Insert | OperationType.Update) {
         // aktualny user si nemoze zmenit username, enabled a admin status
-        const username = this.getXObject().username;
+        const username = object.username;
         if (operationType === OperationType.Update && (username === XUtils.getUsername() || (XUtils.demo() && (username === 'xman')))) {
             this.setState({usernameEnabledReadOnly: true});
         }
