@@ -54,6 +54,8 @@ import {XInputTextBase} from "../XInputTextBase";
 import {useXStateSession} from "../useXStateSession";
 import {useXStateSessionBase} from "../useXStateSessionBase";
 import * as _ from "lodash";
+import {XtDocTemplate} from "../../modules/docTemplates/xt-doc-template";
+import {XDocTemplateButton} from "../../modules/docTemplates/XDocTemplateButton";
 
 // typ pouzivany len v XLazyDataTable
 interface XFieldSetMaps {
@@ -138,6 +140,7 @@ export interface XLazyDataTableProps {
     onEdit?: (selectedRow: any) => void;
     removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean;
     onRemoveRow?: XOnSaveOrCancelProp;
+    docTemplates?: true | ((entity: string) => Promise<XtDocTemplate[]>); // if true, doc template button is rendered; function param: function returning list of templates that can be used by user (for the case if we need project specific way of fetching templates)
     appButtonsForRow?: XAppButtonForRow[]; // do funkcii tychto buttonov sa posiela vyselectovany row
     appButtons?: any; // vseobecne buttons (netreba im poslat vyselectovany row) - mozno by sa mali volat appButtonsGeneral
     filters?: DataTableFilterMeta; // pouzivatelsky filter
@@ -1416,6 +1419,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {props.onEdit !== undefined && props.searchBrowseParams === undefined ? <XButton key="editRow" icon="pi pi-pencil" label={xLocaleOption('editRow')} onClick={onClickEdit}/> : null}
                 {props.removeRow !== undefined && props.removeRow !== false && props.searchBrowseParams === undefined ? <XButton key="removeRow" icon="pi pi-times" label={xLocaleOption('removeRow')} onClick={onClickRemoveRow}/> : null}
                 {exportRows ? <XButton key="exportRows" icon="pi pi-file-export" label={xLocaleOption('exportRows')} onClick={onClickExport} /> : null}
+                {props.docTemplates && !isMobile ? <XDocTemplateButton key="docTemplates" entity={props.entity} rowId={selectedRow ? selectedRow[xEntity.idField] : undefined} docTemplates={typeof props.docTemplates === 'function' ? props.docTemplates : undefined}/> : null}
                 {props.appButtonsForRow ? props.appButtonsForRow.map((xAppButton: XAppButtonForRow) => <XButton key={xAppButton.key} icon={xAppButton.icon} label={xAppButton.label} onClick={() => onClickAppButtonForRow(xAppButton.onClick)} style={xAppButton.style}/>) : null}
                 {props.appButtons}
                 {props.searchBrowseParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}

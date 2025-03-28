@@ -78,6 +78,9 @@ function generateApi(cb) {
         "./lib/components/XUtils",
         "./lib/components/XUtilsMetadata",
 
+        "./lib/modules/docTemplates/XDocTemplateButton",
+        "./lib/modules/docTemplates/xt-doc-template",
+
         "./lib/serverApi/ExportImportParam",
         "./lib/serverApi/FindParam",
         "./lib/serverApi/XUtilsCommon",
