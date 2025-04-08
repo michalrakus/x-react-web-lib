@@ -14,6 +14,7 @@ export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     itemTemplate?: (suggestion: any, index: number, createStringValue: boolean, defaultValue: (suggestion: any) => string) => React.ReactNode; // pouzivane ak potrebujeme nejaky custom format item-om (funkcia defaultValue rata default format)
     searchBrowse?: JSX.Element;
     assocForm?: JSX.Element; // na insert/update
+    dropdownButtonEnabled?: boolean; // ak dame false, tak nezobrazi dropdown button (default je true), ale ak by sme nemali mat ziadny button tak ho (zatial) zobrazime readOnly aby bolo vidno ze mame autocomplete
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT) (suggestionsLoad sa nepouziva)
     suggestionsLoad?: XSuggestionsLoadProp; // ak nemame suggestions, tak suggestionsLoad (resp. jeho default) urcuje ako sa nacitaju suggestions
     lazyLoadMaxRows?: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
@@ -93,8 +94,12 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
             <div className="field grid">
                 <label htmlFor={this.props.assocField} className="col-fixed" style={this.getLabelStyle()}>{this.getLabel()}</label>
                 <XAutoCompleteBase value={this.getValue()} onChange={this.onChangeAutoCompleteBase}
-                                   field={this.props.displayField} itemTemplate={this.props.itemTemplate} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm} idField={xEntityAssoc.idField}
-                                   readOnly={this.isReadOnly()} error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase} width={this.props.width} scrollHeight={this.props.scrollHeight}
+                                   field={this.props.displayField} itemTemplate={this.props.itemTemplate}
+                                   searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm}
+                                   dropdownButtonEnabled={this.props.dropdownButtonEnabled}
+                                   idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
+                                   error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}
+                                   width={this.props.width} scrollHeight={this.props.scrollHeight}
                                    suggestions={this.props.suggestions} suggestionsLoad={this.props.suggestionsLoad} lazyLoadMaxRows={this.props.lazyLoadMaxRows} splitQueryValue={this.props.splitQueryValue} minLength={this.props.minLength}
                                    suggestionsQuery={{entity: this.xAssoc.entityName, filter: () => this.getFilterBase(this.props.filter), sortField: this.props.sortField, fields: this.props.fields}}
                                    inputClassName={this.props.inputClassName} setFocusOnCreate={this.props.setFocusOnCreate}/>

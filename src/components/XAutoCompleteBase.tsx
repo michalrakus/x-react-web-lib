@@ -46,6 +46,7 @@ export interface XAutoCompleteBaseProps {
     idField?: string; // id field (nazov atributu) objektu z value/suggestions - je potrebny pri otvoreni formularu na editaciu, formular potrebuje id-cko na nacitanie/update zaznamu z DB
     addRowEnabled: boolean; // ak dame false, tak nezobrazi insert button ani ked mame k dispozicii "valueForm" (default je true)
     onAddRow?: (inputValue: string) => void; // override handlera zaveseneho na "plus" buttone (otazka je ci nejakym sposobom nestrkat vytvoreny/ziskany row do tohto autocomplete - zatial nie)
+    dropdownButtonEnabled: boolean; // ak dame false, tak nezobrazi dropdown button (default je true), ale ak by sme nemali mat ziadny button tak ho (zatial) zobrazime readOnly aby bolo vidno ze mame autocomplete
     insertButtonTooltip?: string;
     updateButtonTooltip?: string;
     searchButtonTooltip?: string;
@@ -69,6 +70,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         lazyLoadMaxRows: 10,
         splitQueryValue: true,
         addRowEnabled: true,
+        dropdownButtonEnabled: true,
         minLength: 1,
         buttonsLayout: "buttons",
         scrollHeight: '15rem'   // primereact has 200px
@@ -673,6 +675,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         let buttons: JSX.Element[];
         if (!readOnly) {
             const createInsertItem: boolean = (this.props.addRowEnabled && (this.props.valueForm !== undefined || this.props.onAddRow !== undefined));
+            // TODO - upratat koli split layuot-u (ak dropdownButtonEnabled = false tak moze vzniknut split button s jednym buttonom)
             if (createInsertItem || this.props.valueForm || this.props.searchBrowse) {
                 // mame searchBrowse alebo CRUD operacie, potrebujeme viac buttonov alebo SplitButton
                 const buttonItems: XButtonItem[] = [];
@@ -689,7 +692,9 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     this.createSearchItem(buttonItems);
                 }
 
-                this.createDropdownItem(buttonItems);
+                if (this.props.dropdownButtonEnabled) {
+                    this.createDropdownItem(buttonItems);
+                }
 
                 if (this.props.buttonsLayout === "buttons") {
                     buttons = buttonItems.map((value: XButtonItem, index: number) => <Button key={`button${index}`} icon={value.icon} tooltip={value.tooltip} tooltipOptions={{position: 'top'}}
@@ -704,7 +709,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             }
             else {
                 // mame len 1 operaciu - dame jednoduchy button
-                buttons = [<Button icon="pi pi-chevron-down" onClick={(e: any) => this.onOpenDropdown(e)} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>];
+                buttons = [<Button icon="pi pi-chevron-down" onClick={(e: any) => this.onOpenDropdown(e)} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()} disabled={!this.props.dropdownButtonEnabled}/>];
             }
         }
         else {

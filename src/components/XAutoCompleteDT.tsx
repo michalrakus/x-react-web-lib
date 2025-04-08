@@ -14,6 +14,7 @@ export interface XAutoCompleteDTProps extends XFormComponentDTProps {
     itemTemplate?: (suggestion: any, index: number, createStringValue: boolean, defaultValue: (suggestion: any) => string) => React.ReactNode; // pouzivane ak potrebujeme nejaky custom format item-om (funkcia defaultValue rata default format)
     searchBrowse?: JSX.Element;
     assocForm?: JSX.Element; // na insert/update
+    dropdownButtonEnabled?: boolean; // ak dame false, tak nezobrazi dropdown button (default je true), ale ak by sme nemali mat ziadny button tak ho (zatial) zobrazime readOnly aby bolo vidno ze mame autocomplete
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu
                         // poznamka: treba zabezpecit volanie setState, ak overridneme suggestions
                         // poznamka2: ak sa zmeni asociovany objekt cez "assocForm",
@@ -91,7 +92,9 @@ export class XAutoCompleteDT extends XFormComponentDT<XAutoCompleteDTProps> {
         // div className="col" nam zabezpeci aby XAutoCompleteBase nezaberal celu dlzku grid-u (ma nastaveny width=100% vdaka "formgroup-inline")
         return (
             <XAutoCompleteBase value={this.getValue()} onChange={this.onChangeAutoCompleteBase}
-                               field={this.props.displayField} itemTemplate={this.props.itemTemplate} searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm}
+                               field={this.props.displayField} itemTemplate={this.props.itemTemplate}
+                               searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm}
+                               dropdownButtonEnabled={this.props.dropdownButtonEnabled}
                                idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
                                error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}
                                suggestions={this.props.suggestions} suggestionsLoad={this.props.suggestionsLoad} lazyLoadMaxRows={this.props.lazyLoadMaxRows} splitQueryValue={this.props.splitQueryValue}

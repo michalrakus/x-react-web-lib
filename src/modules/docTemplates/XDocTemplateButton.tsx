@@ -41,29 +41,11 @@ export const XDocTemplateButton = (props: {
             return;
         }
 
-        const xtRunDocTemplateRequest: XtRunDocTemplateRequest = {xtDocTemplateId: xtDocTemplate.id, rowId: props.rowId!};
-
-        let response;
-        try {
-            response = await XUtils.fetchBasicJson('xt-run-doc-template', xtRunDocTemplateRequest);
-        }
-        catch (e) {
-            XUtils.showErrorMessage("File download failed.", e);
-            return;
-        }
+        const xtRunDocTemplateRequest: XtRunDocTemplateRequest = {xtDocTemplateId: xtDocTemplate.id, rowId: props.rowId!, xUser: XUtils.getXToken()?.xUser};
 
         // TODO - pridat id-cko do nazvu? alebo na XtDocTemplate vytvorit nejaky atribut pre nazov suboru vo forme Klient-{klient.meno}-{klient.priezvisko}.xlsx
         // ale to by chcelo vytvorit ten nazov v service (po tom co bude nacitany row) a nejako ho dostat sem
-        const fileName = xtDocTemplate.templateXFile.name;
-        // let respJson = await response.json(); - konvertuje do json objektu
-        let respBlob = await response.blob();
-
-        // download blob-u (download by mal fungovat asynchronne a "stream-ovo" v spolupraci so servrom)
-        let url = window.URL.createObjectURL(respBlob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
+        XUtils.downloadFile('xt-run-doc-template', xtRunDocTemplateRequest, xtDocTemplate.templateXFile.name);
     }
 
     if (docTemplateList.length === 0) {

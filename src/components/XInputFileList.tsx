@@ -2,7 +2,6 @@ import React from "react";
 import {Component} from "react";
 import {FileUpload, FileUploadHandlerEvent} from "primereact/fileupload";
 import {XFormBase} from "./XFormBase";
-import {XUtilsMetadata} from "./XUtilsMetadata";
 import {XAssoc, XEntity} from "../serverApi/XEntityMetadata";
 import {XUtils} from "./XUtils";
 import {XObject} from "./XObject";
@@ -31,6 +30,7 @@ export interface XInputFileListProps {
     maxFileSize?: number; // maximum file size allowed in bytes
 }
 
+// notice: in skch there is new version XInputFileList2 and that version don´t use fetch api because fetch api does not support progress bar
 export class XInputFileList extends Component<XInputFileListProps> {
 
     public static defaultProps = {
@@ -108,24 +108,7 @@ export class XInputFileList extends Component<XInputFileListProps> {
     }
 
     async onDownloadFile(xFile: XFile) {
-        let response;
-        try {
-            response = await XUtils.fetchBasicJson('x-download-file', {xFileId: xFile.id});
-        }
-        catch (e) {
-            XUtils.showErrorMessage(xLocaleOption('fileDownloadFailed'), e);
-            return;
-        }
-        const fileName = xFile.name;
-        // let respJson = await response.json(); - konvertuje do json objektu
-        let respBlob = await response.blob();
-
-        // download blob-u (download by mal fungovat asynchronne a "stream-ovo" v spolupraci so servrom)
-        let url = window.URL.createObjectURL(respBlob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
+        XUtils.downloadFile('x-download-file',{xFileId: xFile.id}, xFile.name);
     }
 
     async onRemoveFile(fileItem: any) {

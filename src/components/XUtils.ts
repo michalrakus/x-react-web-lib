@@ -19,6 +19,7 @@ import {XObject} from "./XObject";
 import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 import {SelectItem} from "primereact/selectitem";
+import {xLocaleOption} from "./XLocale";
 
 export enum OperationType {
     None,
@@ -281,25 +282,29 @@ export class XUtils {
     }
 
     static async openExcelReport(apiPath: string, requestPayload: any, fileName?: string): Promise<boolean> {
+        return XUtils.downloadFile(apiPath, requestPayload, `${fileName ?? apiPath}.xlsx`);
+    }
 
+    // general method for file download
+    // returns true if the download finished successfully (often we don´t need this info)
+    // it would be nice if the fileName could be taken also from backend, from the service call
+    static async downloadFile(apiPath: string, requestPayload: any, fileName: string): Promise<boolean> {
         let response;
         try {
             response = await XUtils.fetchBasicJson(apiPath, requestPayload);
         }
         catch (e) {
-            XUtils.showErrorMessage(`Nepodarilo sa vytvoriť/stiahnuť xlsx súbor.`, e); // dalsie info (apiPath, payload) by mali byt v "e"
+            XUtils.showErrorMessage(xLocaleOption('fileDownloadFailed'), e);  // next info (apiPath, payload) should be in "e"
             return false;
         }
-
-        const fileNameExt = `${fileName ?? apiPath}.xlsx`; // TODO - krajsie poriesit
         // let respJson = await response.json(); - konvertuje do json objektu
         let respBlob = await response.blob();
 
-        // download blob-u (download by mal fungovat asynchronne a "stream-ovo" v spolupraci so serverom)
+        // download blob-u (download by mal fungovat asynchronne a "stream-ovo" v spolupraci so servrom)
         let url = window.URL.createObjectURL(respBlob);
         let a = document.createElement('a');
         a.href = url;
-        a.download = fileNameExt;
+        a.download = fileName;
         a.click();
 
         return true;

@@ -103,26 +103,9 @@ export const XExportRowsDialog = (props: {
             throw `Unimplemented exportType = ${exportType}`;
         }
 
-        let response;
-        try {
-            response = await XUtils.fetchBasicJson(apiPath, requestPayload);
-        }
-        catch (e) {
-            XUtils.showErrorMessage("Export failed.", e);
-            return;
-        }
-
         const fileExt: string = exportType === ExportType.Excel ? "xlsx" : exportType;
         const fileName = `${exportParams.fileName}.${fileExt}`;
-        // let respJson = await response.json(); - konvertuje do json objektu
-        let respBlob = await response.blob();
-
-        // download blob-u (download by mal fungovat asynchronne a "stream-ovo" v spolupraci so servrom)
-        let url = window.URL.createObjectURL(respBlob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
+        XUtils.downloadFile(apiPath, requestPayload, fileName);
     }
 
     const createExcelCsvParam = (exportParams: XExportParams): ExcelCsvParam => {

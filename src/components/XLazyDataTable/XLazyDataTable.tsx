@@ -136,7 +136,7 @@ export interface XLazyDataTableProps {
     formFooterHeight?: string; // pouziva sa (zatial) len pri deme - zadava sa sem vyska linkov na zdrojaky (SourceCodeLinkForm, SourceCodeLinkEntity) aby ich bolo vidno pri automatickom vypocte vysky tabulky
     shrinkWidth: boolean; // default true - ak je true, nerozsiruje stlpce na viac ako je ich explicitna sirka (nevznikaju "siroke" tabulky na celu dlzku parent elementu)
     onResetTable?: () => void; // zavola sa pri kliknuti na button resetTable (Reset filter)
-    onAddRow?: () => void;
+    onAddRow?: (filters: DataTableFilterMeta) => void; // filters are here in order to enable init some attributes of new row from filters values (if needed)
     onEdit?: (selectedRow: any) => void;
     removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean;
     onRemoveRow?: XOnSaveOrCancelProp;
@@ -154,7 +154,7 @@ export interface XLazyDataTableProps {
     multilineSwitchFewLinesCount: number; // max count of rendered lines for render type "fewLines" (default 2)
     // ak chceme mat pristup k stavu multilineSwitchu, treba vytiahnut "const [multilineSwitchValue, setMultilineSwitchValue] = useState<XMultilineRenderType>(...);" do browse komponentu
     multilineSwitchValue?: [XMultilineRenderType, React.Dispatch<React.SetStateAction<XMultilineRenderType>>]; // TODO - specialny typ vytvor, napr. XuseState<boolean>
-    headerElementRight?: React.ReactNode; // prida sa hned za multilineSwitch, moze sa tu pridat napr. custom switch
+    headerBodyRight?: React.ReactNode; // prida sa hned za multilineSwitch, moze sa tu pridat napr. custom switch
     searchBrowseParams?: XSearchBrowseParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
     rowClassName?: (data: any) => object | string | undefined;
@@ -226,7 +226,10 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     const getInitFilterMatchMode = (xLazyColumnProps: XLazyColumnProps, xField: XField) : FilterMatchMode => {
         let filterMatchMode: FilterMatchMode;
-        if (isAutoCompleteInFilterEnabled(xLazyColumnProps)) {
+        if (xLazyColumnProps.filterElement !== undefined) {
+            filterMatchMode = XFilterMatchMode.X_FILTER_ELEMENT as unknown as FilterMatchMode; // little hack
+        }
+        else if (isAutoCompleteInFilterEnabled(xLazyColumnProps)) {
             filterMatchMode = XFilterMatchMode.X_AUTO_COMPLETE as unknown as FilterMatchMode; // little hack
         }
         else if (xField.type === "string" || xField.type === "jsonb") {
@@ -701,7 +704,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         //console.log("zavolany onClickAddRow");
 
         if (props.onAddRow !== undefined) {
-            props.onAddRow();
+            props.onAddRow(filters);
         }
     }
 
@@ -848,13 +851,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     // zatial funguje len pre simple filtrovanie (filterDisplay="row")
 
     // vseobecna specialna metodka pouzvana pri custom filtri (XLazyColumn.filterElement)
-    const setFilterItem: XSetFilterItem = (field: string, filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData) => {
+    // nepodarilo sa posunut autoFilter takym sposobom aby app programmer nemusel autoFilter nastavovat
+    const setFilterItem: XSetFilterItem = (field: string, filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData, autoFilter: boolean) => {
         filters[field] = filterItem;
         // neskusal som, ci treba aj toto klonovat ale pravdepodobne hej
         const filtersCloned: DataTableFilterMeta = {...filters};
         setFilters(filtersCloned);
         removePagingFromStorage();
-        loadDataBaseIfAutoFilter(filtersCloned, false);
+        loadDataBaseIfAutoFilter(filtersCloned, autoFilter);
     }
 
     // vseobecna specialna metodka pouzvana pri custom filtri (XLazyColumn.filterElement)
@@ -1181,103 +1185,128 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
             // *********** filterElement ***********
             let betweenFilter: XBetweenFilterProp = undefined;
-            let filterElement;
+            let filterElement:  React.ReactNode | ((options: ColumnFilterElementTemplateOptions) => React.ReactNode) | null = null;
             if (childColumn.props.filterElement !== undefined) {
-                filterElement = (options: ColumnFilterElementTemplateOptions): React.ReactNode => {
-                                    // compilator sa stazoval ze childColumn.props.filterElement moze byt undefined, preto som pridal "!"
-                                    return childColumn.props.filterElement!({getFilterItem: getFilterItem, setFilterItem: setFilterItem, options: options});
-                                };
+                // if we use matchModeLabel and this special match mode is chosen then we use custom filter element
+                // if we don't use matchModeLabel (undefined) then we use custom filter element always
+                if ((childColumn.props.filterElement.matchModeLabel && getFilterMatchMode(childColumn.props.field) === XFilterMatchMode.X_FILTER_ELEMENT)
+                        || childColumn.props.filterElement.matchModeLabel === undefined) {
+                    filterElement = (options: ColumnFilterElementTemplateOptions): React.ReactNode => {
+                        // compilator sa stazoval ze childColumn.props.filterElement moze byt undefined, preto som pridal "!"
+                        return childColumn.props.filterElement!.element({getFilterItem: getFilterItem, setFilterItem: setFilterItem, options: options, autoFilter: childColumn.props.autoFilter});
+                    };
+                }
             }
-            else if (getFilterMatchMode(childColumn.props.field) === XFilterMatchMode.X_AUTO_COMPLETE) {
-                let assocField: string | undefined = undefined; // path to manyToOne assoc
-                let displayField: string | string[] | undefined = undefined; // field/fields displayed in autocomplete (can be path)
-                // if childColumn.props.autoComplete = true, then autoComplete = undefined and default autocomlete is created
-                const autoComplete: XAutoCompleteInFilterProps | undefined = (typeof childColumn.props.autoComplete === 'object' ? childColumn.props.autoComplete : undefined);
-                if (autoComplete) {
-                    if (autoComplete.field) {
-                        displayField = autoComplete.field;
-                    }
+            if (filterElement === null) {
+                if (getFilterMatchMode(childColumn.props.field) === XFilterMatchMode.X_AUTO_COMPLETE) {
+                    let assocField: string | undefined = undefined; // path to manyToOne assoc
+                    let displayField: string | string[] | undefined = undefined; // field/fields displayed in autocomplete (can be path)
+                    // if childColumn.props.autoComplete = true, then autoComplete = undefined and default autocomplete is created
+                    const autoComplete: XAutoCompleteInFilterProps | undefined = (typeof childColumn.props.autoComplete === 'object' ? childColumn.props.autoComplete : undefined);
+                    if (autoComplete) {
+                        if (autoComplete.field) {
+                            displayField = autoComplete.field;
+                        }
 
-                    if (autoComplete.assocField) {
-                        // check - autoComplete.assocField must be prefix (part) of childColumn.props.field
-                        if (!childColumn.props.field.startsWith(autoComplete.assocField + ".")) {
-                            throw `XLazyColumn with field "${childColumn.props.field}": autoComplete.assocField "${autoComplete.assocField}" is not prefix of the field`;
+                        if (autoComplete.assocField) {
+                            // check - autoComplete.assocField must be prefix (part) of childColumn.props.field
+                            if (!childColumn.props.field.startsWith(autoComplete.assocField + ".")) {
+                                throw `XLazyColumn with field "${childColumn.props.field}": autoComplete.assocField "${autoComplete.assocField}" is not prefix of the field`;
+                            }
+                            assocField = autoComplete.assocField;
+                            if (displayField === undefined) {
+                                // take displayField from childColumn.props.field (rest of the path)
+                                displayField = childColumn.props.field.substring(autoComplete.assocField.length + 1);
+                            }
                         }
-                        assocField = autoComplete.assocField;
+                    }
+                    if (assocField === undefined) {
+                        // default - take assocField/displayField from childColumn.props.field
+                        const [assocFieldTemp, displayFieldTemp] = XUtilsCommon.getPathToAssocAndField(childColumn.props.field);
+                        if (assocFieldTemp === null) {
+                            throw `XLazyColumn with field "${childColumn.props.field}": unexpected error - path of length >= 2 expected`;
+                        }
+                        assocField = assocFieldTemp;
                         if (displayField === undefined) {
-                            // take displayField from childColumn.props.field (rest of the path)
-                            displayField = childColumn.props.field.substring(autoComplete.assocField.length + 1);
+                            displayField = displayFieldTemp;
+                        }
+                    }
+                    const xAssoc: XAssoc = XUtilsMetadataCommon.getXAssocToOneByPath(xEntity, assocField);
+                    const object: any | null = getFilterValue(childColumn.props.field);
+                    filterElement = <XAutoCompleteBase value={object}
+                                                       onChange={(object: any, objectChange: OperationType) => setFilterValue(childColumn.props.field, object, undefined, object !== null ? [{
+                                                           where: `[${assocField}] = ${object['id']}`,
+                                                           params: {}
+                                                       }] : undefined, childColumn.props.autoFilter)}
+                                                       error={undefined} onErrorChange={(error: string | undefined) => {}}
+                                                       idField="id" field={displayField!} itemTemplate={autoComplete?.itemTemplate} inputClassName={autoComplete?.inputClassName}
+                                                       suggestionsQuery={{
+                                                           entity: xAssoc.entityName,
+                                                           filter: autoComplete?.filter,
+                                                           sortField: autoComplete?.sortField,
+                                                           fields: autoComplete?.fields
+                                                       }}
+                                                       searchBrowse={autoComplete?.searchBrowse}
+                                                       valueForm={autoComplete?.valueForm} addRowEnabled={false}
+                                                       width="100%" scrollHeight={autoComplete?.scrollHeight}
+                                                       suggestionsLoad="lazy"
+                                                       lazyLoadMaxRows={autoComplete?.lazyLoadMaxRows}
+                                                       minLength={autoComplete?.minLength}/>
+                } else {
+                    if (xField.type === "boolean") {
+                        const checkboxValue: boolean | null = getFilterValue(childColumn.props.field);
+                        filterElement = <TriStateCheckbox value={checkboxValue}
+                                                          onChange={(e: any) => setFilterValue(childColumn.props.field, e.value, FilterMatchMode.EQUALS, undefined, childColumn.props.autoFilter)}/>;
+                    } else if (childColumn.props.dropdownInFilter) {
+                        const dropdownValue = getDropdownFilterValue(childColumn.props.field);
+                        filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field}
+                                                           value={dropdownValue}
+                                                           onValueChange={(field: string, displayValue: any) => onDropdownFilterChange(field, displayValue, childColumn.props.autoFilter)}
+                                                           filter={childColumn.props.dropdownFilter}
+                                                           sortField={childColumn.props.dropdownSortField}/>
+                    } else if (xField.type === "string") {
+                        const stringValue: string | null = getFilterValue(childColumn.props.field);
+                        filterElement = <XInputTextBase value={stringValue}
+                                                        onChange={(value: string | null) => setFilterValue(childColumn.props.field, value, undefined, undefined, childColumn.props.autoFilter)}/>
+                    } else if (xField.type === "date" || xField.type === "datetime") {
+                        betweenFilter = getBetweenFilter(childColumn.props.betweenFilter, props.betweenFilter);
+                        if (betweenFilter !== undefined) {
+                            // display: 'flex' umiestni XCalendar elementy vedla seba
+                            filterElement =
+                                <div style={betweenFilter === "row" ? {display: 'flex'} : undefined}>
+                                    <XCalendar value={getFilterValue1(childColumn.props.field)}
+                                               onChange={(value: Date | null) => setFilterValue1(childColumn.props.field, value, childColumn.props.autoFilter)}
+                                               scale={xField.scale} datetime={xField.type === "datetime"}/>
+                                    <XCalendar value={getFilterValue2(childColumn.props.field)}
+                                               onChange={(value: Date | null) => setFilterValue2(childColumn.props.field, value, childColumn.props.autoFilter)}
+                                               scale={xField.scale} datetime={xField.type === "datetime"}/>
+                                </div>;
+                        } else {
+                            const dateValue: Date | null = getFilterValue(childColumn.props.field);
+                            filterElement = <XCalendar value={dateValue}
+                                                       onChange={(value: Date | null) => setFilterValue(childColumn.props.field, value, undefined, undefined, childColumn.props.autoFilter)}
+                                                       scale={xField.scale} datetime={xField.type === "datetime"}/>
+                        }
+                    } else if (xField.type === "decimal" || xField.type === "number") {
+                        const params = XUtilsMetadata.getParamsForInputNumber(xField);
+                        betweenFilter = getBetweenFilter(childColumn.props.betweenFilter, props.betweenFilter);
+                        if (betweenFilter !== undefined) {
+                            // display: 'flex' umiestni input elementy pod seba (betweenFilter = "column") resp. vedla seba (betweenFilter = "row")
+                            filterElement =
+                                <div style={{display: 'flex', flexDirection: betweenFilter}}>
+                                    <XInputDecimalBase value={getFilterValue1(childColumn.props.field)}
+                                                       onChange={(value: number | null) => setFilterValue1(childColumn.props.field, value, childColumn.props.autoFilter)} {...params}/>
+                                    <XInputDecimalBase value={getFilterValue2(childColumn.props.field)}
+                                                       onChange={(value: number | null) => setFilterValue2(childColumn.props.field, value, childColumn.props.autoFilter)} {...params}/>
+                                </div>;
+                        } else {
+                            const numberValue: number | null = getFilterValue(childColumn.props.field);
+                            filterElement = <XInputDecimalBase value={numberValue}
+                                                               onChange={(value: number | null) => setFilterValue(childColumn.props.field, value, undefined, undefined, childColumn.props.autoFilter)} {...params}/>
                         }
                     }
                 }
-                if (assocField === undefined) {
-                    // default - take assocField/displayField from childColumn.props.field
-                    const [assocFieldTemp, displayFieldTemp] = XUtilsCommon.getPathToAssocAndField(childColumn.props.field);
-                    if (assocFieldTemp === null) {
-                        throw `XLazyColumn with field "${childColumn.props.field}": unexpected error - path of length >= 2 expected`;
-                    }
-                    assocField = assocFieldTemp;
-                    if (displayField === undefined) {
-                        displayField = displayFieldTemp;
-                    }
-                }
-                const xAssoc: XAssoc = XUtilsMetadataCommon.getXAssocToOneByPath(xEntity, assocField);
-                const object: any | null = getFilterValue(childColumn.props.field);
-                filterElement = <XAutoCompleteBase value={object} onChange={(object: any, objectChange: OperationType) => setFilterValue(childColumn.props.field, object, undefined, object !== null ? [{where: `[${assocField}] = ${object['id']}`, params: {}}] : undefined, childColumn.props.autoFilter)}
-                                                   error={undefined} onErrorChange={(error: string | undefined) => {}} idField="id"
-                                                   field={displayField!}
-                                                   suggestionsQuery={{entity: xAssoc.entityName, filter: autoComplete?.filter, sortField: autoComplete?.sortField}}
-                                                   searchBrowse={autoComplete?.searchBrowse} valueForm={autoComplete?.valueForm} addRowEnabled={false}
-                                                   width="100%" scrollHeight={autoComplete?.scrollHeight}
-                                                   suggestionsLoad="lazy" lazyLoadMaxRows={autoComplete?.lazyLoadMaxRows} minLength={autoComplete?.minLength}/>
-            }
-            else {
-                if (xField.type === "boolean") {
-                    const checkboxValue: boolean | null = getFilterValue(childColumn.props.field);
-                    filterElement = <TriStateCheckbox value={checkboxValue} onChange={(e: any) => setFilterValue(childColumn.props.field, e.value, FilterMatchMode.EQUALS, undefined, childColumn.props.autoFilter)}/>;
-                }
-                else if (childColumn.props.dropdownInFilter) {
-                    const dropdownValue = getDropdownFilterValue(childColumn.props.field);
-                    filterElement = <XDropdownDTFilter entity={props.entity} path={childColumn.props.field}
-                                                       value={dropdownValue} onValueChange={(field: string, displayValue: any) => onDropdownFilterChange(field, displayValue, childColumn.props.autoFilter)}
-                                                       filter={childColumn.props.dropdownFilter} sortField={childColumn.props.dropdownSortField}/>
-                }
-                else if (xField.type === "string") {
-                    const stringValue: string | null = getFilterValue(childColumn.props.field);
-                    filterElement = <XInputTextBase value={stringValue} onChange={(value: string | null) => setFilterValue(childColumn.props.field, value, undefined, undefined, childColumn.props.autoFilter)}/>
-                }
-                else if (xField.type === "date" || xField.type === "datetime") {
-                    betweenFilter = getBetweenFilter(childColumn.props.betweenFilter, props.betweenFilter);
-                    if (betweenFilter !== undefined) {
-                        // display: 'flex' umiestni XCalendar elementy vedla seba
-                        filterElement =
-                            <div style={betweenFilter === "row" ? {display: 'flex'} : undefined}>
-                                <XCalendar value={getFilterValue1(childColumn.props.field)} onChange={(value: Date | null) => setFilterValue1(childColumn.props.field, value, childColumn.props.autoFilter)} scale={xField.scale} datetime={xField.type === "datetime"}/>
-                                <XCalendar value={getFilterValue2(childColumn.props.field)} onChange={(value: Date | null) => setFilterValue2(childColumn.props.field, value, childColumn.props.autoFilter)} scale={xField.scale} datetime={xField.type === "datetime"}/>
-                            </div>;
-                    }
-                    else {
-                        const dateValue: Date | null = getFilterValue(childColumn.props.field);
-                        filterElement = <XCalendar value={dateValue} onChange={(value: Date | null) => setFilterValue(childColumn.props.field, value, undefined, undefined, childColumn.props.autoFilter)} scale={xField.scale} datetime={xField.type === "datetime"}/>
-                    }
-                }
-                else if (xField.type === "decimal" || xField.type === "number") {
-                    const params = XUtilsMetadata.getParamsForInputNumber(xField);
-                    betweenFilter = getBetweenFilter(childColumn.props.betweenFilter, props.betweenFilter);
-                    if (betweenFilter !== undefined) {
-                        // display: 'flex' umiestni input elementy pod seba (betweenFilter = "column") resp. vedla seba (betweenFilter = "row")
-                        filterElement =
-                            <div style={{display: 'flex', flexDirection: betweenFilter}}>
-                                <XInputDecimalBase value={getFilterValue1(childColumn.props.field)} onChange={(value: number | null) => setFilterValue1(childColumn.props.field, value, childColumn.props.autoFilter)} {...params}/>
-                                <XInputDecimalBase value={getFilterValue2(childColumn.props.field)} onChange={(value: number | null) => setFilterValue2(childColumn.props.field, value, childColumn.props.autoFilter)} {...params}/>
-                            </div>;
-                    }
-                    else {
-                        const numberValue: number | null = getFilterValue(childColumn.props.field);
-                        filterElement = <XInputDecimalBase value={numberValue} onChange={(value: number | null) => setFilterValue(childColumn.props.field, value, undefined, undefined, childColumn.props.autoFilter)} {...params}/>
-                    }
-                }
-            }
+            } // if (filterElement === null)
 
             // ************** dataType **************
             // depending on the dataType of the column, suitable match modes are displayed in filter
@@ -1314,6 +1343,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
                 if (isAutoCompleteInFilterEnabled(childColumn.props)) {
                     filterMatchModeOptions.push({label: xLocaleOption('xAutoComplete'), value: XFilterMatchMode.X_AUTO_COMPLETE});
+                }
+                if (childColumn.props.filterElement?.matchModeLabel) {
+                    filterMatchModeOptions.push({label: childColumn.props.filterElement?.matchModeLabel, value: XFilterMatchMode.X_FILTER_ELEMENT});
                 }
             }
 
@@ -1395,7 +1427,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                         setMultilineSwitchValue(switchValue);
                         setupExpandedRows(value, switchValue);
                     }} className="m-1"/> : null}
-                {props.headerElementRight}
+                {props.headerBodyRight}
                 {props.label && !isMobile ? <div className="x-lazy-datatable-label-right-compensation"/> : null}
             </div>
             <div className="flex justify-content-center">
@@ -1419,9 +1451,9 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 {props.onEdit !== undefined && props.searchBrowseParams === undefined ? <XButton key="editRow" icon="pi pi-pencil" label={xLocaleOption('editRow')} onClick={onClickEdit}/> : null}
                 {props.removeRow !== undefined && props.removeRow !== false && props.searchBrowseParams === undefined ? <XButton key="removeRow" icon="pi pi-times" label={xLocaleOption('removeRow')} onClick={onClickRemoveRow}/> : null}
                 {exportRows ? <XButton key="exportRows" icon="pi pi-file-export" label={xLocaleOption('exportRows')} onClick={onClickExport} /> : null}
-                {props.docTemplates && !isMobile ? <XDocTemplateButton key="docTemplates" entity={props.entity} rowId={selectedRow ? selectedRow[xEntity.idField] : undefined} docTemplates={typeof props.docTemplates === 'function' ? props.docTemplates : undefined}/> : null}
-                {props.appButtonsForRow ? props.appButtonsForRow.map((xAppButton: XAppButtonForRow) => <XButton key={xAppButton.key} icon={xAppButton.icon} label={xAppButton.label} onClick={() => onClickAppButtonForRow(xAppButton.onClick)} style={xAppButton.style}/>) : null}
-                {props.appButtons}
+                {props.docTemplates && !isMobile && props.searchBrowseParams === undefined ? <XDocTemplateButton key="docTemplates" entity={props.entity} rowId={selectedRow ? selectedRow[xEntity.idField] : undefined} docTemplates={typeof props.docTemplates === 'function' ? props.docTemplates : undefined}/> : null}
+                {props.appButtonsForRow && props.searchBrowseParams === undefined ? props.appButtonsForRow.map((xAppButton: XAppButtonForRow) => <XButton key={xAppButton.key} icon={xAppButton.icon} label={xAppButton.label} onClick={() => onClickAppButtonForRow(xAppButton.onClick)} style={xAppButton.style}/>) : null}
+                {props.appButtons && props.searchBrowseParams === undefined}
                 {props.searchBrowseParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
                 {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogState={exportRowsDialogState} hideDialog={() => setExportRowsDialogState({dialogOpened: false})}/> : null}
             </div>
@@ -1452,19 +1484,23 @@ XLazyDataTable.defaultProps = {
 // remark: this complicated way is used only to get filter value from custom filter input to "filters" in XLazyDataTable
 // remark2: filter value transfer "custom filter input" -> "filters" is (temporary?) only one way, if some third party changes filter value in "filters",
 // the change will be not visible in custom filter input!
+// remark3: autoFilter is just copy of column property autoFilter, should by send to setFilterItem as last param but the constant true/false can be also sent
 export type XGetFilterItem = (field: string) => DataTableFilterMetaData | DataTableOperatorFilterMetaData;
-export type XSetFilterItem = (field: string, filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData) => void;
-export type XFilterElementParams = {getFilterItem: XGetFilterItem; setFilterItem: XSetFilterItem; options: ColumnFilterElementTemplateOptions;};
-export type XFilterElementProp = (params: XFilterElementParams) => React.ReactNode;
+export type XSetFilterItem = (field: string, filterItem: DataTableFilterMetaData | DataTableOperatorFilterMetaData, autoFilter: boolean) => void;
+export type XFilterElementParams = {getFilterItem: XGetFilterItem; setFilterItem: XSetFilterItem; options: ColumnFilterElementTemplateOptions; autoFilter: boolean};
+export type XFilterElementProp = {element: (params: XFilterElementParams) => React.ReactNode; matchModeLabel?: string};
 
 export type XAutoCompleteInFilterProps = {
-    // copy of some props in XAutoComplete
+    // copy of some props in XAutoComplete (?)
     assocField?: string; // overrides default splitting of field prop (example: if field is "assocA.assocB.attrC", default assocField is "assocA.assocB", using this prop we can set assocField="assocA")
     filter?: XCustomFilter;
     sortField?: string | DataTableSortMeta[];
-    // copy of some props in XAutoCompleteBase
+    fields?: string[];
+    // copy of some props in XAutoCompleteBase (?)
     lazyLoadMaxRows?: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
     field?: string | string[]; // field ktory zobrazujeme v input-e (niektory z fieldov objektu z value/suggestions)
+    itemTemplate?: (suggestion: any, index: number, createStringValue: boolean, defaultValue: (suggestion: any) => string) => React.ReactNode; // pouzivane ak potrebujeme nejaky custom format item-om (funkcia defaultValue rata default format)
+    inputClassName?: string;
     searchBrowse?: JSX.Element; // ak je zadany, moze uzivatel vyhladavat objekt podobne ako pri XSearchButton (obchadza tym suggestions)
     valueForm?: JSX.Element; // formular na editaciu aktualne vybrateho objektu; ak je undefined, neda sa editovat
     minLength?: number; // Minimum number of characters to initiate a search (default 1)
