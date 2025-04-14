@@ -1,4 +1,4 @@
-import React, {ReactChild, useEffect, useRef, useState} from 'react';
+import React, {forwardRef, ReactChild, useEffect, useImperativeHandle, useRef, useState} from 'react';
 import {
     DataTable, DataTableExpandedRows,
     DataTableFilterMeta,
@@ -56,6 +56,7 @@ import {useXStateSessionBase} from "../useXStateSessionBase";
 import * as _ from "lodash";
 import {XtDocTemplate} from "../../modules/docTemplates/xt-doc-template";
 import {XDocTemplateButton} from "../../modules/docTemplates/XDocTemplateButton";
+import {XFormDialog, XFormDialogState} from "../XFormDialog";
 
 // typ pouzivany len v XLazyDataTable
 interface XFieldSetMaps {
@@ -115,6 +116,12 @@ export enum XStateKeySuffix {
     multilineSwitchValue = 'multiline-switch-value'
 }
 
+// exposed methods
+export interface XLazyDataTableRef {
+    reread: () => void;
+    setupExpandedRows: () => void;
+}
+
 export interface XLazyDataTableProps {
     entity: string;
     stateKey?: string; // key used to save the state into session (or local), default is entity, but sometimes we have more then 1 browse/XLazyDataTable for 1 entity
@@ -123,23 +130,27 @@ export interface XLazyDataTableProps {
     dataKey?: string;
     rowExpansionTemplate?: (row: any, options: DataTableRowExpansionTemplate) => React.ReactNode;
     showExpandedRow?: (row: any, multilineSwitchValue: XMultilineRenderType) => boolean;
-    paginator: boolean;
-    rows: number;
-    filterDisplay: "menu" | "row";
+    paginator?: boolean;
+    rows?: number;
+    filterDisplay?: "menu" | "row";
     betweenFilter?: XBetweenFilterProp; // umiestnenie inputov od do: "row" - vedla seba, "column" - pod sebou; plati pre vsetky stlpce typu date/datetime/decimal/number ak nemaju definovany svoj betweenFilter
-    autoFilter: boolean; // if true, filtering starts immediately after setting filter value (button Filter is not used/rendered) (default false)
-    showFilterButtons: boolean; // if true, Filter/Clear filter buttons are rendered (default true)
+    autoFilter?: boolean; // if true, filtering starts immediately after setting filter value (button Filter is not used/rendered) (default false)
+    showFilterButtons?: boolean; // if true, Filter/Clear filter buttons are rendered (default true)
     showExportRows?: boolean; // true - export button rendered, false - export button not rendered, undefined (default) - Export button rendered only on desktop (not on mobile)
-    scrollable: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
-    scrollWidth: string; // hodnota "none" vypne horizontalne scrollovanie
-    scrollHeight: string; // hodnota "none" vypne vertikalne scrollovanie
+    scrollable?: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
+    scrollWidth?: string; // hodnota "none" vypne horizontalne scrollovanie
+    scrollHeight?: string; // hodnota "none" vypne vertikalne scrollovanie
     formFooterHeight?: string; // pouziva sa (zatial) len pri deme - zadava sa sem vyska linkov na zdrojaky (SourceCodeLinkForm, SourceCodeLinkEntity) aby ich bolo vidno pri automatickom vypocte vysky tabulky
-    shrinkWidth: boolean; // default true - ak je true, nerozsiruje stlpce na viac ako je ich explicitna sirka (nevznikaju "siroke" tabulky na celu dlzku parent elementu)
+    shrinkWidth?: boolean; // default true - ak je true, nerozsiruje stlpce na viac ako je ich explicitna sirka (nevznikaju "siroke" tabulky na celu dlzku parent elementu)
     onResetTable?: () => void; // zavola sa pri kliknuti na button resetTable (Reset filter)
-    onAddRow?: (filters: DataTableFilterMeta) => void; // filters are here in order to enable init some attributes of new row from filters values (if needed)
-    onEdit?: (selectedRow: any) => void;
-    removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean;
-    onRemoveRow?: XOnSaveOrCancelProp;
+    editForm?: JSX.Element; // form for editing of the selected row and for adding new row; using this prop creates add row button and edit row button (if they are not suppressed by props onAddRow or onEdit)
+    onAddRow?: ((filters: DataTableFilterMeta) => void) | false; // creates add row button (or overrides default add row function used by editForm); if false, no add row button is created
+                                                            // filters are here in order to enable init some attributes of new row from filters values (if needed)
+    onEdit?: ((selectedRow: any) => void) | false; // creates edit row button (or overrides default edit function used by editForm); if false, no edit row button is created
+        // -> TODO - rename to onEditRow
+    removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean; // if removeRow is function or removeRow = true, then remove row button is created
+        // -> TODO - rename to onRemoveRow
+    onRemoveRow?: XOnSaveOrCancelProp; // function called after removing row (post remove row) -> TODO - rename to postRemoveRow
     docTemplates?: true | ((entity: string) => Promise<XtDocTemplate[]>); // if true, doc template button is rendered; function param: function returning list of templates that can be used by user (for the case if we need project specific way of fetching templates)
     appButtonsForRow?: XAppButtonForRow[]; // do funkcii tychto buttonov sa posiela vyselectovany row
     appButtons?: any; // vseobecne buttons (netreba im poslat vyselectovany row) - mozno by sa mali volat appButtonsGeneral
@@ -147,11 +158,11 @@ export interface XLazyDataTableProps {
     customFilter?: XCustomFilter; // (programatorsky) filter ktory sa aplikuje na zobrazovane data (uzivatel ho nedokaze zmenit)
     optionalCustomFilters?: XOptionalCustomFilter[]; // programatorom predpripravene filtre, user si moze vybrat predpripraveny filter v dropdown-e vedla Filter/Clear buttonov
     sortField?: string | DataTableSortMeta[];
-    fullTextSearch: boolean | string[]; // false - nemame full-text search, true - mame full-text search na default stlpcoch, string[] - full-text search na danych stlpcoch
+    fullTextSearch?: boolean | string[]; // false - nemame full-text search, true - mame full-text search na default stlpcoch, string[] - full-text search na danych stlpcoch
     fields?: string[]; // ak chceme nacitat aj asociovane objekty mimo tych ktore sa nacitavaju koli niektoremu zo stlpcov
-    multilineSwitch: boolean; // default false, ak true tak zobrazi switch, ktorym sa da vypnut zobrazenie viacriadkovych textov v sirokom riadku
-    multilineSwitchInitValue: XMultilineRenderType; // default "allLines"
-    multilineSwitchFewLinesCount: number; // max count of rendered lines for render type "fewLines" (default 2)
+    multilineSwitch?: boolean; // default false, ak true tak zobrazi switch, ktorym sa da vypnut zobrazenie viacriadkovych textov v sirokom riadku
+    multilineSwitchInitValue?: XMultilineRenderType; // default "allLines"
+    multilineSwitchFewLinesCount?: number; // max count of rendered lines for render type "fewLines" (default 2)
     // ak chceme mat pristup k stavu multilineSwitchu, treba vytiahnut "const [multilineSwitchValue, setMultilineSwitchValue] = useState<XMultilineRenderType>(...);" do browse komponentu
     multilineSwitchValue?: [XMultilineRenderType, React.Dispatch<React.SetStateAction<XMultilineRenderType>>]; // TODO - specialny typ vytvor, napr. XuseState<boolean>
     headerBodyRight?: React.ReactNode; // prida sa hned za multilineSwitch, moze sa tu pridat napr. custom switch
@@ -169,7 +180,42 @@ export interface XLazyDataTableProps {
     children: ReactChild[];
 }
 
-export const XLazyDataTable = (props: XLazyDataTableProps) => {
+export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>((
+    {
+        paginator = true,
+        rows = 10,
+        filterDisplay = "row",
+        autoFilter = false,
+        showFilterButtons = true,
+        fullTextSearch = true,
+        multilineSwitch = false,
+        multilineSwitchInitValue = "allLines",
+        multilineSwitchFewLinesCount = 2,
+        scrollable = true,
+        scrollWidth = 'viewport', // nastavi sirku tabulky na (100vw - nieco) (ak bude obsah sirsi, zapne horizontalny scrollbar)
+        scrollHeight = 'viewport', // nastavi vysku tabulky na (100vh - nieco) (ak bude obsah vecsi, zapne vertikalny scrollbar)
+        shrinkWidth = true,
+        ...propsRest
+    },
+    ref
+) => {
+
+    const props: XLazyDataTableProps = {
+        paginator,
+        rows,
+        filterDisplay,
+        autoFilter,
+        showFilterButtons,
+        fullTextSearch,
+        multilineSwitch,
+        multilineSwitchInitValue,
+        multilineSwitchFewLinesCount,
+        scrollable,
+        scrollWidth,
+        scrollHeight,
+        shrinkWidth,
+        ...propsRest
+    };
 
     // must be here, is used in createFiltersInit()
     const xEntity: XEntity = XUtilsMetadataCommon.getXEntity(props.entity);
@@ -209,7 +255,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
             // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
             const filterMatchMode: FilterMatchMode = getInitFilterMatchMode(xLazyColumn.props, xField);
-            filtersInit[field] = createFilterItem(props.filterDisplay, {value: null, matchMode: filterMatchMode});
+            filtersInit[field] = createFilterItem(props.filterDisplay!, {value: null, matchMode: filterMatchMode});
         }
 
         filtersInit = overrideFilters(filtersInit, props.filters);
@@ -217,7 +263,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         if (props.searchBrowseParams !== undefined) {
             const displayFieldFilter: XFieldFilter | undefined = props.searchBrowseParams.displayFieldFilter;
             if (displayFieldFilter !== undefined) {
-                filtersInit[displayFieldFilter.field] = createFilterItem(props.filterDisplay, displayFieldFilter.constraint);
+                filtersInit[displayFieldFilter.field] = createFilterItem(props.filterDisplay!, displayFieldFilter.constraint);
             }
         }
 
@@ -345,7 +391,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [expandedRows, setExpandedRows] = useState<DataTableExpandedRows | DataTableValueArray | undefined>(undefined);
     const [loading, setLoading] = useState(false);
     const [first, setFirst] = useXStateSession(getStateKey(XStateKeySuffix.pagingFirst), 0);
-    const [rows, setRows] = useState(props.paginator ? props.rows : undefined);
+    const [rowsLocal, setRowsLocal] = useState(props.paginator ? props.rows : undefined);
     // "filters" have special initialState function different from that used in useXStateSession
     const filtersInitialStateFunction = (): DataTableFilterMeta => {
         let filtersInit: DataTableFilterMeta | null = XUtils.getValueFromStorage(getStateKey(XStateKeySuffix.filters), null);
@@ -363,7 +409,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const initFtsInputValue: XFtsInputValue | undefined = props.fullTextSearch ? createInitFtsInputValue() : undefined;
     const [ftsInputValue, setFtsInputValue] = useXStateSession<XFtsInputValue | undefined>(getStateKey(XStateKeySuffix.ftsInputValue), initFtsInputValue);
     const [optionalCustomFilter, setOptionalCustomFilter] = useXStateSession<XOptionalCustomFilter | undefined>(getStateKey(XStateKeySuffix.optionalCustomFilter), undefined);
-    const [multilineSwitchValue, setMultilineSwitchValue] = props.multilineSwitchValue ?? useXStateSession<XMultilineRenderType>(getStateKey(XStateKeySuffix.multilineSwitchValue), props.multilineSwitchInitValue);
+    const [multilineSwitchValue, setMultilineSwitchValue] = props.multilineSwitchValue ?? useXStateSession<XMultilineRenderType>(getStateKey(XStateKeySuffix.multilineSwitchValue), props.multilineSwitchInitValue!);
     const [multiSortMeta, setMultiSortMeta] = useXStateSession<DataTableSortMeta[] | undefined>(getStateKey(XStateKeySuffix.multiSortMeta), XUtilsCommon.createMultiSortMeta(props.sortField));
     const [selectedRow, setSelectedRow] = useXStateSession<any>(getStateKey(XStateKeySuffix.selectedRow), null);
     const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
@@ -372,6 +418,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<DataTableFilterMeta>(filters); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
     const [ftsInputValueAfterFiltering, setFtsInputValueAfterFiltering] = useState<XFtsInputValue | undefined>(ftsInputValue); // tak isto ako filtersAfterFiltering
     const [optionalCustomFilterAfterFiltering, setOptionalCustomFilterAfterFiltering] = useState<XOptionalCustomFilter | undefined>(optionalCustomFilter); // tak isto ako filtersAfterFiltering
+    const [formDialogState, setFormDialogState] = useState<XFormDialogState>({opened: false});
 
     // parameter [] zabezpeci ze sa metoda zavola len po prvom renderingu (a nie po kazdej zmene stavu (zavolani setNieco()))
     useEffect(() => {
@@ -400,6 +447,11 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
             }
         }
     }); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useImperativeHandle(ref, () => ({
+        reread: reread,
+        setupExpandedRows: () => setupExpandedRows(value, multilineSwitchValue)
+    }));
 
     // TODO - preco je to tu? presunut dole ak sa da...
     const dataKey = props.dataKey !== undefined ? props.dataKey : XUtilsMetadataCommon.getXEntity(props.entity).idField;
@@ -485,7 +537,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         const optionalCustomFilterLocal: XOptionalCustomFilter | undefined = undefined;
         setOptionalCustomFilter(optionalCustomFilterLocal);
 
-        setMultilineSwitchValue(props.multilineSwitchInitValue);
+        setMultilineSwitchValue(props.multilineSwitchInitValue!);
 
         const multiSortMetaLocal: DataTableSortMeta[] | undefined = XUtilsCommon.createMultiSortMeta(props.sortField);
         setMultiSortMeta(multiSortMetaLocal);
@@ -508,6 +560,11 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         loadDataBase(findParam);
     };
 
+    // API function
+    const reread = () => {
+        loadData();
+    }
+
     const loadData = async () => {
         // pre poriadok zaserializujeme obidve operacie (aj ked teoreticky by to malo fungovat aj bez serializovania)
         await loadXFieldSetMaps();
@@ -518,7 +575,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         return {
             resultType: ResultType.RowCountAndPagedRows,
             first: first,
-            rows: rows,
+            rows: rowsLocal,
             filters: filters,
             fullTextSearch: createXFullTextSearch(ftsInputValue),
             customFilterItems: createXCustomFilterItems(customFilterItems, optionalCustomFilter),
@@ -692,10 +749,10 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     }
 
     const onRowDoubleClickBase = (row: any) => {
-        if (props.onEdit !== undefined && props.searchBrowseParams === undefined) {
-            props.onEdit(row);
+        if (props.searchBrowseParams === undefined) {
+            editRow(row);
         }
-        else if (props.searchBrowseParams !== undefined) {
+        else {
             props.searchBrowseParams.onChoose(row);
         }
     }
@@ -703,22 +760,49 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
     const onClickAddRow = () => {
         //console.log("zavolany onClickAddRow");
 
-        if (props.onAddRow !== undefined) {
+        if (typeof props.onAddRow === 'function') {
             props.onAddRow(filters);
+        }
+        else if (props.editForm !== undefined && props.onAddRow !== false) {
+            setFormDialogState({
+                opened: true,
+                id: undefined, // insert
+                initValues: {}
+            });
         }
     }
 
-    const onClickEdit = () => {
-        //console.log("zavolany onClickEdit");
+    const onClickEditRow = () => {
+        //console.log("zavolany onClickEditRow");
 
         if (selectedRow !== null) {
-            if (props.onEdit !== undefined) {
-                props.onEdit(selectedRow);
-            }
+            editRow(selectedRow);
         }
         else {
             alert(xLocaleOption('pleaseSelectRow'));
         }
+    }
+
+    const editRow = (row: any) => {
+        if (typeof props.onEdit === 'function') {
+            props.onEdit(row);
+        }
+        else if (props.editForm !== undefined && props.onEdit !== false) {
+            setFormDialogState({
+                opened: true,
+                id: row[dataKey], // update
+                initValues: undefined
+            });
+        }
+    }
+
+    const editRowOnSaveOrCancel = (object: any | null, objectChange: OperationType) => {
+        if (object !== null) {
+            // save was pressed, reread from DB
+            loadData();
+        }
+        // if object === null, then cancel was pressed, we do nothing, we just close the dialog
+        setFormDialogState({opened: false});
     }
 
     const onClickRemoveRow = async () => {
@@ -779,7 +863,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         const findParam: FindParam = {
             resultType: ResultType.OnlyRowCount,
             first: first,
-            rows: rows,
+            rows: rowsLocal,
             filters: filtersAfterFiltering,
             fullTextSearch: createXFullTextSearch(ftsInputValueAfterFiltering),
             customFilterItems: createXCustomFilterItems(customFilterItems, optionalCustomFilterAfterFiltering),
@@ -985,7 +1069,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         else {
             if (contentType === "html") {
                 // value should be always string (xField.type === "string")
-                valueResult = <XHtmlRenderer htmlValue={value} renderType={multilineSwitchValue} fewLinesCount={props.multilineSwitchFewLinesCount}/>;
+                valueResult = <XHtmlRenderer htmlValue={value} renderType={multilineSwitchValue} fewLinesCount={props.multilineSwitchFewLinesCount!}/>;
             }
             else {
                 // ine typy - convertValue vrati string
@@ -995,7 +1079,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 if (contentType === "multiline" && multilineSwitchValue !== "singleLine") {
                     if (xField.type === "string" && typeof valueResult === "string" && valueResult) {
                         const lines: string[] = valueResult.split(XUtilsCommon.newLine);
-                        valueResult = <XMultilineRenderer valueList={lines} renderType={multilineSwitchValue} fewLinesCount={props.multilineSwitchFewLinesCount} multilineContent={true}/>;
+                        valueResult = <XMultilineRenderer valueList={lines} renderType={multilineSwitchValue} fewLinesCount={props.multilineSwitchFewLinesCount!} multilineContent={true}/>;
                     }
                 }
             }
@@ -1008,7 +1092,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
         const rowDataValue: any | any[] = XUtilsCommon.getValueOrValueListByPath(rowData, columnProps.field);
         if (Array.isArray(rowDataValue)) {
             const elemList: React.ReactNode[] = rowDataValue.map((value: any) => valueAsUI(value, xField, columnProps.contentType, columnProps.fieldSetId));
-            bodyValue = <XMultilineRenderer valueList={elemList} renderType={multilineSwitchValue} fewLinesCount={props.multilineSwitchFewLinesCount}/>;
+            bodyValue = <XMultilineRenderer valueList={elemList} renderType={multilineSwitchValue} fewLinesCount={props.multilineSwitchFewLinesCount!}/>;
         }
         else {
             bodyValue = valueAsUI(rowDataValue, xField, columnProps.contentType, columnProps.fieldSetId);
@@ -1029,21 +1113,21 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
 
     const isMobile: boolean = XUtils.isMobile();
 
-    let scrollWidth: string | undefined = undefined; // vypnute horizontalne scrollovanie
-    let scrollHeight: string | undefined = undefined; // vypnute vertikalne scrollovanie
+    let scrollWidthLocal: string | undefined = undefined; // vypnute horizontalne scrollovanie
+    let scrollHeightLocal: string | undefined = undefined; // vypnute vertikalne scrollovanie
 
     if (props.scrollable) {
         if (props.scrollWidth !== "none") {
-            scrollWidth = props.scrollWidth;
-            if (scrollWidth === "viewport") {
-                scrollWidth = `calc(100vw - ${isMobile ? 1 : 2.2}rem)`; // desktop - povodne bolo 1.4rem (20px okraje) namiesto 2.2 ale pri vela stlpcoch vznikal horizontalny scrollbar
+            scrollWidthLocal = props.scrollWidth;
+            if (scrollWidthLocal === "viewport") {
+                scrollWidthLocal = `calc(100vw - ${isMobile ? 1 : 2.2}rem)`; // desktop - povodne bolo 1.4rem (20px okraje) namiesto 2.2 ale pri vela stlpcoch vznikal horizontalny scrollbar
                                                                         // mobil - padding 0.5rem body element
             }
         }
 
         if (props.scrollHeight !== "none") {
-            scrollHeight = props.scrollHeight;
-            if (scrollHeight === "viewport") {
+            scrollHeightLocal = props.scrollHeight;
+            if (scrollHeightLocal === "viewport") {
                 // vypocet je priblizny, robeny na mobil, desktop bude mat mozno iny
                 //const headerHeight = XUtils.toPX0('12.7rem');
                 //let footerHeight = XUtils.toPX0('3.7rem') + XUtils.toPX0('3rem'); // table footer (paging) + buttons Add row, Edit, ...
@@ -1080,14 +1164,14 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 if (props.formFooterHeight !== undefined) {
                     headerFooterHeight += XUtils.toPX0(XUtils.processGridBreakpoints(props.formFooterHeight));
                 }
-                scrollHeight = `calc(${viewHeight} - ${headerFooterHeight}px)`;
+                scrollHeightLocal = `calc(${viewHeight} - ${headerFooterHeight}px)`;
             }
         }
     }
 
     let style: React.CSSProperties = {};
-    if (scrollWidth !== undefined) {
-        style.width = scrollWidth;
+    if (scrollWidthLocal !== undefined) {
+        style.width = scrollWidthLocal;
     }
 
     if (props.shrinkWidth) {
@@ -1434,7 +1518,7 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                 <DataTable value={value.rowList} dataKey={dataKey}
                            expandedRows={expandedRows} rowExpansionTemplate={props.rowExpansionTemplate ? rowExpansionTemplate : undefined}
                            paginator={props.paginator} pageLinkSize={pageLinkSize}
-                           rows={rows} totalRecords={value.totalRecords}
+                           rows={rowsLocal} totalRecords={value.totalRecords}
                            lazy={true} first={first} onPage={onPage} loading={loading}
                            filterDisplay={props.filterDisplay} filters={filters} onFilter={onFilter}
                            sortMode="multiple" removableSort={true} multiSortMeta={multiSortMeta} onSort={onSort}
@@ -1442,41 +1526,26 @@ export const XLazyDataTable = (props: XLazyDataTableProps) => {
                            onRowDoubleClick={onRowDoubleClick} rowClassName={props.rowClassName}
                            ref={dataTableEl} className="p-datatable-sm x-lazy-datatable" resizableColumns columnResizeMode="expand" tableStyle={tableStyle}
                            paginatorLeft={paginatorLeft} paginatorRight={paginatorRight}
-                           scrollable={props.scrollable} scrollHeight={scrollHeight} style={style}>
+                           scrollable={props.scrollable} scrollHeight={scrollHeightLocal} style={style}>
                     {columnElemList}
                 </DataTable>
             </div>
             <div className="flex justify-content-center">
-                {props.onAddRow !== undefined && props.searchBrowseParams === undefined ? <XButton key="addRow" icon="pi pi-plus" label={xLocaleOption('addRow')} onClick={onClickAddRow}/> : null}
-                {props.onEdit !== undefined && props.searchBrowseParams === undefined ? <XButton key="editRow" icon="pi pi-pencil" label={xLocaleOption('editRow')} onClick={onClickEdit}/> : null}
-                {props.removeRow !== undefined && props.removeRow !== false && props.searchBrowseParams === undefined ? <XButton key="removeRow" icon="pi pi-times" label={xLocaleOption('removeRow')} onClick={onClickRemoveRow}/> : null}
+                {(props.onAddRow !== false && (props.editForm !== undefined || props.onAddRow !== undefined)) && props.searchBrowseParams === undefined ? <XButton key="addRow" icon="pi pi-plus" label={xLocaleOption('addRow')} onClick={onClickAddRow}/> : null}
+                {(props.onEdit !== false && (props.editForm !== undefined || props.onEdit !== undefined)) && props.searchBrowseParams === undefined ? <XButton key="editRow" icon="pi pi-pencil" label={xLocaleOption('editRow')} onClick={onClickEditRow}/> : null}
+                {(props.removeRow !== false && (props.removeRow !== undefined)) && props.searchBrowseParams === undefined ? <XButton key="removeRow" icon="pi pi-times" label={xLocaleOption('removeRow')} onClick={onClickRemoveRow}/> : null}
                 {exportRows ? <XButton key="exportRows" icon="pi pi-file-export" label={xLocaleOption('exportRows')} onClick={onClickExport} /> : null}
-                {props.docTemplates && !isMobile && props.searchBrowseParams === undefined ? <XDocTemplateButton key="docTemplates" entity={props.entity} rowId={selectedRow ? selectedRow[xEntity.idField] : undefined} docTemplates={typeof props.docTemplates === 'function' ? props.docTemplates : undefined}/> : null}
+                {props.docTemplates && !isMobile && props.searchBrowseParams === undefined ? <XDocTemplateButton key="docTemplates" entity={props.entity} rowId={selectedRow ? selectedRow[dataKey] : undefined} docTemplates={typeof props.docTemplates === 'function' ? props.docTemplates : undefined}/> : null}
                 {props.appButtonsForRow && props.searchBrowseParams === undefined ? props.appButtonsForRow.map((xAppButton: XAppButtonForRow) => <XButton key={xAppButton.key} icon={xAppButton.icon} label={xAppButton.label} onClick={() => onClickAppButtonForRow(xAppButton.onClick)} style={xAppButton.style}/>) : null}
                 {props.appButtons && props.searchBrowseParams === undefined}
                 {props.searchBrowseParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
+                {props.editForm != undefined ? <XFormDialog key="formDialog" dialogState={formDialogState} form={props.editForm} onSaveOrCancel={editRowOnSaveOrCancel}/> : null}
                 {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogState={exportRowsDialogState} hideDialog={() => setExportRowsDialogState({dialogOpened: false})}/> : null}
             </div>
             {hasContentTypeHtml() ? <Editor style={{display: 'none'}} showHeader={false}/> : null /* we want to import css if needed (<style type="text/css" data-primereact-style-id="editor">) */}
         </div>
     );
-}
-
-XLazyDataTable.defaultProps = {
-    paginator: true,
-    rows: 10,
-    filterDisplay: "row",
-    autoFilter: false,
-    showFilterButtons: true,
-    fullTextSearch: true,
-    multilineSwitch: false,
-    multilineSwitchInitValue: "allLines",
-    multilineSwitchFewLinesCount: 2,
-    scrollable: true,
-    scrollWidth: 'viewport', // nastavi sirku tabulky na (100vw - nieco) (ak bude obsah sirsi, zapne horizontalny scrollbar)
-    scrollHeight: 'viewport', // nastavi vysku tabulky na (100vh - nieco) (ak bude obsah vecsi, zapne vertikalny scrollbar)
-    shrinkWidth: true
-};
+});
 
 // property filterElement is of type function, this functions returns custom filter input (e.g. AutoComplete, type React.ReactNode),
 // setFilterItem is function that the custom filter input calls upon onChange - the function setFilterItem sets the selected filter value into "filters"

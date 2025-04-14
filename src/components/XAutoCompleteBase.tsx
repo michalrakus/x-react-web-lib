@@ -8,11 +8,11 @@ import {MenuItem, MenuItemCommandEvent} from "primereact/menuitem";
 import {XSearchBrowseParams} from "./XSearchBrowseParams";
 import {XCustomFilter, XLazyAutoCompleteSuggestionsRequest} from "../serverApi/FindParam";
 import {DataTableSortMeta} from "primereact/datatable";
-import { XFormProps } from "./XFormBase"; /* DO NOT REMOVE - IS USED EVEN IF IT IS MARKED AS NOT USED */
 import {FindResult} from "../serverApi/FindResult";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import {XFormDialog, XFormDialogState} from "./XFormDialog";
 
 // helper
 interface XButtonItem {
@@ -88,7 +88,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                             // zmena je hlasena cez onErrorChange parentovi, parent by mal zabezpecit, ze ak mame nejaky nevalidny autocomplete, formular sa neda sejvnut na stacenie Save
         suggestions: any[] | undefined; // pouzivane ak suggestionsLoad = eager alebo onSearchStart, nepouzivane ak mame this.props.suggestions alebo suggestionsLoad = lazy
         filteredSuggestions: any[] | undefined;
-        formDialogOpened: boolean;
+        formDialogState: XFormDialogState;
         searchDialogOpened: boolean;
     };
 
@@ -98,10 +98,6 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                                 // a druhy raz z onSelect ked uzivatel klikol na tento jeden "vybraty" zaznam
 
     xEntity: XEntity | undefined;
-
-    // parametre pre form dialog (vzdy aspon jeden musi byt undefined)
-    formDialogObjectId: number | undefined;
-    formDialogInitValuesForInsert: any | undefined;
 
     constructor(props: XAutoCompleteBaseProps) {
         super(props);
@@ -115,7 +111,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             notValid: false,
             suggestions: undefined,
             filteredSuggestions: undefined,
-            formDialogOpened: false,
+            formDialogState: {opened: false},
             searchDialogOpened: false
         };
 
@@ -145,7 +141,6 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         this.itemTemplateString = this.itemTemplateString.bind(this);
         this.computeDefaultDisplayValue = this.computeDefaultDisplayValue.bind(this);
         this.formDialogOnSaveOrCancel = this.formDialogOnSaveOrCancel.bind(this);
-        this.formDialogOnHide = this.formDialogOnHide.bind(this);
         this.searchDialogOnChoose = this.searchDialogOnChoose.bind(this);
         this.searchDialogOnHide = this.searchDialogOnHide.bind(this);
     }
@@ -462,15 +457,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                 this.setFocusToInput();
             }
         }
-        this.setState({formDialogOpened: false});
-    }
-
-    formDialogOnHide() {
-        this.setState({formDialogOpened: false});
-        // ak mame v inpute neplatnu hodnotu, vratime kurzor na input
-        if (this.state.inputChanged) {
-            this.setFocusToInput();
-        }
+        const formDialogState: XFormDialogState = {opened: false};
+        this.setState({formDialogState: formDialogState});
     }
 
     searchDialogOnChoose(chosenRow: any) {
@@ -505,13 +493,13 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                     }
                     else {
                         // otvorime dialog na insert
-                        this.formDialogObjectId = undefined;
-                        this.formDialogInitValuesForInsert = {};
+                        const initValues: any = {};
                         // ak mame nevalidnu hodnotu, tak ju predplnime (snaha o user friendly)
                         if (this.state.inputChanged) {
-                            this.formDialogInitValuesForInsert[this.getFirstField()] = this.state.inputValueState;
+                            initValues[this.getFirstField()] = this.state.inputValueState;
                         }
-                        this.setState({formDialogOpened: true});
+                        const formDialogState: XFormDialogState = {opened: true, id: undefined, initValues: initValues};
+                        this.setState({formDialogState: formDialogState});
                     }
                 }
             });
@@ -595,9 +583,8 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         if (this.props.idField === undefined) {
             throw "XAutoCompleteBase: property valueForm is defined but property idField is also needed for form editation.";
         }
-        this.formDialogObjectId = this.props.value[this.props.idField];
-        this.formDialogInitValuesForInsert = undefined;
-        this.setState({formDialogOpened: true});
+        const formDialogState: XFormDialogState = {opened: true, id: this.props.value[this.props.idField], initValues: undefined};
+        this.setState({formDialogState: formDialogState});
     }
 
     // vracia objekt (ak inputChanged === false) alebo string (ak inputChanged === true)
@@ -737,9 +724,6 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             error = this.props.error;
         }
 
-        // Dialog pre konkretny form:
-        // <DobrovolnikForm id={this.formDialogObjectId} object={this.formDialogInitValuesForInsert} onSaveOrCancel={this.formDialogOnSaveOrCancel}/>
-
         // formgroup-inline lepi SplitButton na autocomplete a zarovna jeho vysku
         return (
             <div className="x-auto-complete-base" style={{width: this.props.width, maxWidth: this.props.maxWidth}}>
@@ -749,12 +733,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                               showEmptyMessage={true}/>
                 {...buttons}{/* ked tu bolo len {buttons} bez ..., tak vypisoval hlasku Warning: Each child in a list should have a unique "key" prop. */}
                 {this.props.valueForm != undefined ?
-                    <Dialog key="dialog-form" className="x-dialog-without-header" visible={this.state.formDialogOpened} onHide={this.formDialogOnHide}>
-                        {/* klonovanim elementu pridame atributy id, initValues, onSaveOrCancel */}
-                        {React.cloneElement(this.props.valueForm, {
-                            id: this.formDialogObjectId, initValues: this.formDialogInitValuesForInsert, onSaveOrCancel: this.formDialogOnSaveOrCancel
-                        } satisfies XFormProps/*, this.props.valueForm.children*/)}
-                    </Dialog>
+                    <XFormDialog key="dialog-form" dialogState={this.state.formDialogState} form={this.props.valueForm} onSaveOrCancel={this.formDialogOnSaveOrCancel}/>
                     : undefined}
                 {this.props.searchBrowse != undefined && !readOnly ?
                     <Dialog key="dialog-browse" className="x-dialog-without-header" visible={this.state.searchDialogOpened} onHide={this.searchDialogOnHide}>

@@ -102,7 +102,9 @@ export class XUtils {
         // extra small displays (podla https://www.w3schools.com/howto/howto_css_media_query_breakpoints.asp)
         // mozno tu treba dat (window.screen.width * window.devicePixelRatio)
         // bolo 600 ($sm = 576 (primeflex)) - len ak bol mobil na vysku, 768 ma byt aj pre mobil na sirku
-        return typeof window !== 'undefined' && window.screen.availWidth < 768; // $sm = 576 (primeflex)
+        //return typeof window !== 'undefined' && window.screen.availWidth < 768; // $sm = 576 (primeflex)
+        // blblo mi window.screen.availWidth (vracalo 1920 v mobile mode v browseri)
+        return XUtils.getViewWidth() < 768;
     }
 
     static mobileCssSuffix(): string {
@@ -174,7 +176,9 @@ export class XUtils {
         let breakpointsToFind: string[];
         let availWidth;
         if (typeof window !== 'undefined') {
-            availWidth = window.screen.availWidth; // pouzivame availWidth, nie width, availWidth odratava napr. taskbar
+            //availWidth = window.screen.availWidth; // pouzivame availWidth, nie width, availWidth odratava napr. taskbar
+            // blblo mi window.screen.availWidth (vracalo 1920 v mobile mode v browseri) - mozno by tu malo byt window.outerWidth
+            availWidth = XUtils.getViewWidth();
             if (availWidth < 576) {
                 breakpointsToFind = ['xs:'];
             }
