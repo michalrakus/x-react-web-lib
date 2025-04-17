@@ -4,6 +4,9 @@ export interface XFormNavigator3Props {
     rootFormElement?: JSX.Element;
 }
 
+/**
+ * @deprecated use opening form in dialogs instead
+ */
 export class XFormNavigator3 extends Component<XFormNavigator3Props> {
 
     // formElements after rootFormElement

@@ -20,6 +20,8 @@ import {XTableFieldReadOnlyProp} from "./XFormDataTable2";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 import {SelectItem} from "primereact/selectitem";
 import {xLocaleOption} from "./XLocale";
+import {XLazyDataTableRef} from "./XLazyDataTable/XLazyDataTable";
+import {XOnSaveOrCancelProp} from "./XFormBase";
 
 export enum OperationType {
     None,
@@ -763,5 +765,19 @@ export class XUtils {
         // page reload (like pressing F5 or Enter on url bar)
         // warning - if user has typed some data in form, the data will be lost
         window.location.reload();
+    }
+
+    /**
+     * @deprecated returns onSaveOrCancel method used when opening form from browse when using XFormNavigator (deprecated)
+     */
+    static onSaveOrCancelNavigator(openForm: (newFormElement: JSX.Element | null) => void, xLazyDataTableRef: React.RefObject<XLazyDataTableRef>): XOnSaveOrCancelProp {
+        return (object: any | null, objectChange: OperationType) => {
+            // close form and display the previous form (it should be browse)
+            openForm(null);
+            if (object !== null) {
+                // save was pressed, reread from DB
+                xLazyDataTableRef.current?.reread();
+            }
+        }
     }
 }

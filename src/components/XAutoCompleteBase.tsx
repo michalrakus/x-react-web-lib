@@ -498,7 +498,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                         if (this.state.inputChanged) {
                             initValues[this.getFirstField()] = this.state.inputValueState;
                         }
-                        const formDialogState: XFormDialogState = {opened: true, id: undefined, initValues: initValues};
+                        const formDialogState: XFormDialogState = {
+                            opened: true,
+                            id: undefined,
+                            initValues: initValues,
+                            onSaveOrCancel: this.formDialogOnSaveOrCancel
+                        };
                         this.setState({formDialogState: formDialogState});
                     }
                 }
@@ -583,7 +588,12 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         if (this.props.idField === undefined) {
             throw "XAutoCompleteBase: property valueForm is defined but property idField is also needed for form editation.";
         }
-        const formDialogState: XFormDialogState = {opened: true, id: this.props.value[this.props.idField], initValues: undefined};
+        const formDialogState: XFormDialogState = {
+            opened: true,
+            id: this.props.value[this.props.idField],
+            initValues: undefined,
+            onSaveOrCancel: this.formDialogOnSaveOrCancel
+        };
         this.setState({formDialogState: formDialogState});
     }
 
@@ -733,7 +743,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                               showEmptyMessage={true}/>
                 {...buttons}{/* ked tu bolo len {buttons} bez ..., tak vypisoval hlasku Warning: Each child in a list should have a unique "key" prop. */}
                 {this.props.valueForm != undefined ?
-                    <XFormDialog key="dialog-form" dialogState={this.state.formDialogState} form={this.props.valueForm} onSaveOrCancel={this.formDialogOnSaveOrCancel}/>
+                    <XFormDialog key="dialog-form" dialogState={this.state.formDialogState} form={this.props.valueForm}/>
                     : undefined}
                 {this.props.searchBrowse != undefined && !readOnly ?
                     <Dialog key="dialog-browse" className="x-dialog-without-header" visible={this.state.searchDialogOpened} onHide={this.searchDialogOnHide}>

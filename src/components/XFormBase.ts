@@ -381,7 +381,7 @@ export abstract class XFormBase extends Component<XFormProps> {
             this.props.onSaveOrCancel(object, isAddRow ? OperationType.Insert : OperationType.Update);
         }
         else {
-            (this.props as any).openForm(null); // standardny rezim; save zbehol, ideme naspet do browsu
+            this.openFormNull();
         }
     }
 
@@ -390,10 +390,21 @@ export abstract class XFormBase extends Component<XFormProps> {
             this.props.onSaveOrCancel(null, OperationType.None); // formular je zobrazeny v dialogu
         }
         else {
-            // standardny rezim
-            // openForm pridavame automaticky v XFormNavigator2 pri renderovani komponentu
-            // null - vrati sa do predchadzajuceho formularu, z ktoreho bol otvoreny
+            this.openFormNull();
+        }
+    }
+
+    openFormNull() {
+        // deprecated functionality used when XFormNavigator (deprecated) used
+        // standardny rezim
+        // openForm pridavame automaticky v XFormNavigator pri renderovani komponentu
+        // null - vrati sa do predchadzajuceho formularu, z ktoreho bol otvoreny
+        if (typeof (this.props as any).openForm === 'function') {
             (this.props as any).openForm(null);
+        }
+        else {
+            // warning
+            console.log(`Form has no onSaveOrCancel method declared.`);
         }
     }
 

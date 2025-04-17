@@ -66,6 +66,9 @@ interface XFieldSetMaps {
 export type XBetweenFilterProp = "row" | "column" | undefined;
 export type XMultilineRenderType = "singleLine" | "fewLines" | "allLines";
 
+export type XOpenFormForInsert = (initValues?: object, onSaveOrCancel?: XOnSaveOrCancelProp, form?: JSX.Element) => void;
+export type XOpenFormForUpdate = (id: number, onSaveOrCancel?: XOnSaveOrCancelProp, form?: JSX.Element) => void;
+
 export interface XAppButtonForRow {
     key?: string;
     icon?: IconType<ButtonProps>;
@@ -97,6 +100,9 @@ export interface XEditModeHandlers {
 // property openForm sa pouziva na otvorenie dalsieho "podformulara", velmi casto <entity>Form (odtial sa potom zavolanim openForm(null) vraciame naspet do <entity>Browse)
 // ak chceme pouzit ten isty <entity>Browse ako klasicky Browse aj ako SearchBrowse, treba pouzit typ (props: XBrowseProps & XSearchBrowseProps) - zjednotenie propertiesov
 
+/**
+ * @deprecated was used to send props displayed and openForm to *Browse when using XFormNavigator (deprecated)
+ */
 export interface XBrowseProps {
     displayed?: boolean;
     openForm?: (newFormElement: JSX.Element | null) => void;
@@ -144,9 +150,11 @@ export interface XLazyDataTableProps {
     shrinkWidth?: boolean; // default true - ak je true, nerozsiruje stlpce na viac ako je ich explicitna sirka (nevznikaju "siroke" tabulky na celu dlzku parent elementu)
     onResetTable?: () => void; // zavola sa pri kliknuti na button resetTable (Reset filter)
     editForm?: JSX.Element; // form for editing of the selected row and for adding new row; using this prop creates add row button and edit row button (if they are not suppressed by props onAddRow or onEdit)
-    onAddRow?: ((filters: DataTableFilterMeta) => void) | false; // creates add row button (or overrides default add row function used by editForm); if false, no add row button is created
+    onAddRow?: ((filters: DataTableFilterMeta, openFormForInsert: XOpenFormForInsert) => void) | false; // creates add row button (or overrides default add row function used by editForm); if false, no add row button is created
                                                             // filters are here in order to enable init some attributes of new row from filters values (if needed)
-    onEdit?: ((selectedRow: any) => void) | false; // creates edit row button (or overrides default edit function used by editForm); if false, no edit row button is created
+                                                            // function openFormForInsert can be used to open form from the body of the onAddRow method (no need to implement the whole boilerplate for opening form, it iś shortcut back into the framework)
+    onEdit?: ((selectedRow: any, openFormForUpdate: XOpenFormForUpdate) => void) | false; // creates edit row button (or overrides default edit function used by editForm); if false, no edit row button is created
+                                                            // function openFormForUpdate can be used to open form from the body of the onEditRow method (no need to implement the whole boilerplate for opening form, it iś shortcut back into the framework)
         // -> TODO - rename to onEditRow
     removeRow?: ((selectedRow: any) => Promise<boolean>) | boolean; // if removeRow is function or removeRow = true, then remove row button is created
         // -> TODO - rename to onRemoveRow
@@ -169,13 +177,15 @@ export interface XLazyDataTableProps {
     searchBrowseParams?: XSearchBrowseParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
     rowClassName?: (data: any) => object | string | undefined;
-    // ak chceme zavolat reload zaznamov, treba vytiahnut "const [dataLoaded, setDataLoaded] = useState<boolean>(false);" do browse komponentu a zavolat setDataLoaded(false);
-    dataLoadedState?: [boolean, React.Dispatch<React.SetStateAction<boolean>>]; // TODO - specialny typ vytvor, napr. XuseState<boolean>
     exportFieldsToDuplicateValues?: string[]; // zoznam fieldov (stlpcov), hodnoty v tychto stlpcoch sa budu duplikovat v pripade ak je row viacriadkovy koli toMany asociaciam
                                             // krajsie by bolo priamo tieto stlpce oznacit nejakou {true} properties ale nechce sa mi do toho tolko investovat
                                             // je to koli nejakym kontingencnym tabulkam v exceli ktore to potrebuju
     editMode?: boolean;
     editModeHandlers?: XEditModeHandlers;
+    /**
+     * @deprecated was used to reread data after save/cancel of the form when using XFormNavigator (deprecated),
+     * now method reread() is exposed and supposed to be called in onSaveOrCancel of the form
+     */
     displayed?: boolean;
     children: ReactChild[];
 }
@@ -183,7 +193,7 @@ export interface XLazyDataTableProps {
 export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>((
     {
         paginator = true,
-        rows = 10,
+        rows = 30,
         filterDisplay = "row",
         autoFilter = false,
         showFilterButtons = true,
@@ -412,7 +422,10 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
     const [multilineSwitchValue, setMultilineSwitchValue] = props.multilineSwitchValue ?? useXStateSession<XMultilineRenderType>(getStateKey(XStateKeySuffix.multilineSwitchValue), props.multilineSwitchInitValue!);
     const [multiSortMeta, setMultiSortMeta] = useXStateSession<DataTableSortMeta[] | undefined>(getStateKey(XStateKeySuffix.multiSortMeta), XUtilsCommon.createMultiSortMeta(props.sortField));
     const [selectedRow, setSelectedRow] = useXStateSession<any>(getStateKey(XStateKeySuffix.selectedRow), null);
-    const [dataLoaded, setDataLoaded] = props.dataLoadedState ?? useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
+    /**
+     * @deprecated was used to reread data after save/cancel of the form when using XFormNavigator (deprecated)
+     */
+    const [dataLoaded, setDataLoaded] = useState<boolean>(false); // priznak kde si zapiseme, ci uz sme nacitali data
     const [exportRowsDialogState, setExportRowsDialogState] = useState<XExportRowsDialogState>({dialogOpened: false});
     //const [exportRowsDialogRowCount, setExportRowsDialogRowCount] = useState<number>(); // param pre dialog
     const [filtersAfterFiltering, setFiltersAfterFiltering] = useState<DataTableFilterMeta>(filters); // sem si odkladame stav filtra po kliknuti na button Filter (chceme exportovat presne to co vidno vyfiltrovane)
@@ -761,15 +774,24 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         //console.log("zavolany onClickAddRow");
 
         if (typeof props.onAddRow === 'function') {
-            props.onAddRow(filters);
+            props.onAddRow(filters, openFormForInsert);
         }
         else if (props.editForm !== undefined && props.onAddRow !== false) {
-            setFormDialogState({
-                opened: true,
-                id: undefined, // insert
-                initValues: {}
-            });
+            openFormForInsert();
         }
+    }
+
+    const openFormForInsert: XOpenFormForInsert = (initValues?: object, onSaveOrCancel?: XOnSaveOrCancelProp, form?: JSX.Element): void => {
+        if (props.editForm === undefined && form === undefined) {
+            throw `No form declared. XLazyDataTable.editForm is undefined and also form in call of the method openFormForInsert is undefined.`;
+        }
+        setFormDialogState({
+            opened: true,
+            id: undefined, // insert
+            initValues: initValues, // undefined or {} is the same (no attributes to initialise)
+            onSaveOrCancel: onSaveOrCancel ?? editRowOnSaveOrCancel,
+            form: form ?? props.editForm
+        });
     }
 
     const onClickEditRow = () => {
@@ -785,15 +807,24 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
 
     const editRow = (row: any) => {
         if (typeof props.onEdit === 'function') {
-            props.onEdit(row);
+            props.onEdit(row, openFormForUpdate);
         }
         else if (props.editForm !== undefined && props.onEdit !== false) {
-            setFormDialogState({
-                opened: true,
-                id: row[dataKey], // update
-                initValues: undefined
-            });
+            openFormForUpdate(row[dataKey]);
         }
+    }
+
+    const openFormForUpdate: XOpenFormForUpdate = (id: number, onSaveOrCancel?: XOnSaveOrCancelProp, form?: JSX.Element): void => {
+        if (props.editForm === undefined && form === undefined) {
+            throw `No form declared. XLazyDataTable.editForm is undefined and also form in call of the method openFormForUpdate is undefined.`;
+        }
+        setFormDialogState({
+            opened: true,
+            id: id, // update
+            initValues: undefined, // must be undefined for update
+            onSaveOrCancel: onSaveOrCancel ?? editRowOnSaveOrCancel,
+            form: form ?? props.editForm
+        });
     }
 
     const editRowOnSaveOrCancel = (object: any | null, objectChange: OperationType) => {
@@ -1539,7 +1570,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
                 {props.appButtonsForRow && props.searchBrowseParams === undefined ? props.appButtonsForRow.map((xAppButton: XAppButtonForRow) => <XButton key={xAppButton.key} icon={xAppButton.icon} label={xAppButton.label} onClick={() => onClickAppButtonForRow(xAppButton.onClick)} style={xAppButton.style}/>) : null}
                 {props.appButtons && props.searchBrowseParams === undefined}
                 {props.searchBrowseParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
-                {props.editForm != undefined ? <XFormDialog key="formDialog" dialogState={formDialogState} form={props.editForm} onSaveOrCancel={editRowOnSaveOrCancel}/> : null}
+                {props.editForm != undefined ? <XFormDialog key="formDialog" dialogState={formDialogState}/> : null}
                 {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogState={exportRowsDialogState} hideDialog={() => setExportRowsDialogState({dialogOpened: false})}/> : null}
             </div>
             {hasContentTypeHtml() ? <Editor style={{display: 'none'}} showHeader={false}/> : null /* we want to import css if needed (<style type="text/css" data-primereact-style-id="editor">) */}

@@ -8,26 +8,29 @@ export interface XFormDialogState {
     opened: boolean;
     id?: number;
     initValues?: object;
+    onSaveOrCancel?: XOnSaveOrCancelProp;
+    form?: JSX.Element; // overrides prop form in XFormDialog
 }
 
 export const XFormDialog = (props: {
     dialogState: XFormDialogState;
-    form: JSX.Element;
-    onSaveOrCancel: XOnSaveOrCancelProp;
+    form?: JSX.Element;
 }) => {
 
     const onHide = () => {
-        if (props.onSaveOrCancel) {
-            props.onSaveOrCancel(null, OperationType.None);
+        if (props.dialogState.onSaveOrCancel) {
+            props.dialogState.onSaveOrCancel(null, OperationType.None);
         }
     }
 
+    const form: JSX.Element | undefined = props.dialogState.form ?? props.form;
+
     return (
         <Dialog key="dialog-form" className="x-dialog-without-header" visible={props.dialogState.opened} onHide={onHide}>
-            {/* klonovanim elementu pridame atributy id, initValues, onSaveOrCancel */}
-            {React.cloneElement(props.form, {
-                id: props.dialogState.id, initValues: props.dialogState.initValues, onSaveOrCancel: props.onSaveOrCancel
-            } satisfies XFormProps/*, this.props.valueForm.children*/)}
+            {/* using cloneElement we add props id, initValues, onSaveOrCancel */}
+            {form ? React.cloneElement(form, {
+                id: props.dialogState.id, initValues: props.dialogState.initValues, onSaveOrCancel: props.dialogState.onSaveOrCancel
+            } satisfies XFormProps/*, props.form.children*/) : null}
         </Dialog>
     );
 }
