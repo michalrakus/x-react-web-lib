@@ -19,23 +19,24 @@
   },
   "author": "Michal Rakus",
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
-    "dateformat": "^4.6.3",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^5.16.5",
-    "@testing-library/react": "^14.0.0",
-    "@testing-library/user-event": "^14.4.3",
-    "@types/jest": "^29.5.0",
-    "@types/lodash": "^4.14.202",
-    "@types/node": "^18.15.3",
-    "@types/react": "^18.3.1",
-    "@types/react-dom": "^18.3.1",
-    "@types/react-transition-group": "^4.4.5",
-    "gulp": "^4.0.2",
-    "rimraf": "^4.4.0",
-    "typescript": "^4.9.5"
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/lodash": "^4.17.16",
+    "@types/node": "^22.7.4",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.0",
+    "@types/react-transition-group": "^4.4.11",
+    "gulp": "^5.0.0",
+    "rimraf": "^6.0.1",
+    "typescript": "5.1.6"
   },
   "peerDependencies": {
     "primeflex": "^3.3.1",
