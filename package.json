@@ -1,6 +1,6 @@
 {
   "name": "@michalrakus/x-react-web-lib",
-  "version": "1.35.2",
+  "version": "1.36.0",
   "description": "",
   "scripts": {
     "clean": "rimraf lib",
@@ -41,7 +41,7 @@
   "peerDependencies": {
     "primeflex": "^3.3.1",
     "primeicons": "^7.0.0",
-    "primereact": "10.8.5",
+    "primereact": "10.9.4",
     "quill": "^2.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
