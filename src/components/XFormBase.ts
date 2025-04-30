@@ -16,7 +16,9 @@ export type XOnSaveOrCancelProp = (object: XObject | null, objectChange: Operati
 export interface XFormProps {
     id?: number;
     initValues?: object; // pri inserte (id je undefined) mozme cez tuto property poslat do formulara default hodnoty ktore sa nastavia do objektu vytvoreneho v metode this.createNewObject(): XObject
-    onSaveOrCancel?: XOnSaveOrCancelProp; // pouziva sa pri zobrazeni formulara v dialogu (napr. v XAutoCompleteBase) - pri onSave odovzdava updatnuty/insertnuty objekt, pri onCancel odovzdava null
+    onSaveOrCancel?: XOnSaveOrCancelProp; // pouziva sa pri zobrazeni formulara v dialogu (napr. v XAutoCompleteBase) - pri onSave odovzdava updatnuty/insertnuty objekt, pri onCancel odovzdava null,
+                                            // pouziva sa aj pri navrate do browsu - v tejto metode sa zavola reread browsu
+    isInDialog?: boolean; // flag, if form is opened in Dialog (usually true)
 }
 
 // class decorator ktory nastavuje property entity (dalo by sa to nastavovat v konstruktore ale decorator je menej ukecany)
@@ -163,7 +165,7 @@ export abstract class XFormBase extends Component<XFormProps> {
 
     // helper method
     isInDialog(): boolean {
-        return this.props.onSaveOrCancel !== undefined;
+        return this.props.isInDialog ?? false;
     }
 
     // helper method

@@ -39,6 +39,8 @@ export enum XViewStatus {
 // special type - purpose is to simply use true/false (instead of XViewStatus.ReadWrite/XViewStatus.Hidden)
 export type XViewStatusOrBoolean = XViewStatus | boolean;
 
+export type XStorageType = "none" | "session" | "local";
+
 // copy of IPostgresInterval at the backend
 // (this type is used only at the frontend)
 export interface IPostgresInterval {
@@ -626,7 +628,7 @@ export class XUtils {
         return valueStringList.map<SelectItem>((valueString: string) => {return {value: valueString, label: valueString};});
     }
 
-    static saveValueIntoStorage(key: string, value: any) {
+    static saveValueIntoStorage(xStorageType: XStorageType, key: string, value: any) {
         // value can be also string or null or undefined
         // if we don't have object that can be serialised to json, we create special object
         let valueObject: object;
@@ -640,13 +642,24 @@ export class XUtils {
             // value is null or string or boolean or number or Date...
             valueObject = {_xValue: value};
         }
-        sessionStorage.setItem(key, XUtilsCommon.objectAsJSON(valueObject));
+        if (xStorageType === "session") {
+            sessionStorage.setItem(key, XUtilsCommon.objectAsJSON(valueObject));
+        }
+        else if (xStorageType === "local") {
+            localStorage.setItem(key, XUtilsCommon.objectAsJSON(valueObject));
+        }
     }
 
-    static getValueFromStorage(key: string, initValue: any): any {
+    static getValueFromStorage(xStorageType: XStorageType, key: string, initValue: any): any {
         // if the value is not found in storage, initValue is returned
         let value: any;
-        const item: string | null = sessionStorage.getItem(key);
+        let item: string | null = null;
+        if (xStorageType === "session") {
+            item = sessionStorage.getItem(key);
+        }
+        else if (xStorageType === "local") {
+            item = localStorage.getItem(key);
+        }
         if (item !== null) {
             try {
                 const valueObject = JSON.parse(item);
@@ -664,7 +677,7 @@ export class XUtils {
             }
             catch (e) {
                 // exception should not happen
-                console.log(`XUtils.getValueFromStorage: Could not parse/process item from session. key = ${key}, item = ${item}. Error: ${e}`);
+                console.log(`XUtils.getValueFromStorage: Could not parse/process item from storage "${xStorageType}". key = ${key}, item = ${item}. Error: ${e}`);
                 value = initValue;
             }
         }
@@ -674,12 +687,22 @@ export class XUtils {
         return value;
     }
 
-    static removeValueFromStorage(key: string) {
-        sessionStorage.removeItem(key);
+    static removeValueFromStorage(xStorageType: XStorageType, key: string) {
+        if (xStorageType === "session") {
+            sessionStorage.removeItem(key);
+        }
+        else if (xStorageType === "local") {
+            localStorage.removeItem(key);
+        }
     }
 
-    static clearStorage() {
-        sessionStorage.clear();
+    static clearStorage(xStorageType: XStorageType) {
+        if (xStorageType === "session") {
+            sessionStorage.clear();
+        }
+        else if (xStorageType === "local") {
+            localStorage.clear();
+        }
     }
 
     // hleper method used for items of XLazyDataTable (shortcut ldt)
@@ -761,7 +784,8 @@ export class XUtils {
         // data in session may not correspond with new structures in new version
         // e.g. if we add new column to XLazyDataTable, filter operator/value for this column new column is missing in data from session and application will crash
         // simple solution is to clear session
-        XUtils.clearStorage();
+        XUtils.clearStorage("session");
+        XUtils.clearStorage("local");
         // page reload (like pressing F5 or Enter on url bar)
         // warning - if user has typed some data in form, the data will be lost
         window.location.reload();

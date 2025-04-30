@@ -13,7 +13,7 @@ import {
     ColumnFilterMatchModeOptions
 } from 'primereact/column';
 import {XButton} from "../XButton";
-import {OperationType, XUtils, XViewStatus, XViewStatusOrBoolean} from "../XUtils";
+import {OperationType, XStorageType, XUtils, XViewStatus, XViewStatusOrBoolean} from "../XUtils";
 import {XFieldFilter, XSearchBrowseParams} from "../XSearchBrowseParams";
 import {XUtilsMetadata} from "../XUtilsMetadata";
 import {XDropdownDTFilter} from "../XDropdownDTFilter";
@@ -51,8 +51,8 @@ import {XOcfDropdown} from "./XOcfDropdown";
 import {XFieldSetBase, XFieldSetMeta, XFieldXFieldMetaMap} from "../XFieldSet/XFieldSetBase";
 import {XAutoCompleteBase} from "../XAutoCompleteBase";
 import {XInputTextBase} from "../XInputTextBase";
-import {useXStateSession} from "../useXStateSession";
-import {useXStateSessionBase} from "../useXStateSessionBase";
+import {useXStateStorage} from "../useXStateStorage";
+import {useXStateStorageBase} from "../useXStateStorageBase";
 import * as _ from "lodash";
 import {XtDocTemplate} from "../../modules/docTemplates/xt-doc-template";
 import {XDocTemplateButton} from "../../modules/docTemplates/XDocTemplateButton";
@@ -130,6 +130,7 @@ export interface XLazyDataTableRef {
 
 export interface XLazyDataTableProps {
     entity: string;
+    stateStorage?: XStorageType; // default is session
     stateKey?: string; // key used to save the state into session (or local), default is entity, but sometimes we have more then 1 browse/XLazyDataTable for 1 entity
     label?: string;
     labelStyle?: React.CSSProperties; // used to override default style or add new style
@@ -192,6 +193,7 @@ export interface XLazyDataTableProps {
 
 export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>((
     {
+        stateStorage = "session",
         paginator = true,
         rows = 30,
         filterDisplay = "row",
@@ -211,6 +213,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
 ) => {
 
     const props: XLazyDataTableProps = {
+        stateStorage,
         paginator,
         rows,
         filterDisplay,
@@ -374,7 +377,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
     }
 
     const removePagingFromStorage = () => {
-        XUtils.removeValueFromStorage(getStateKey(XStateKeySuffix.pagingFirst));
+        XUtils.removeValueFromStorage(props.stateStorage!, getStateKey(XStateKeySuffix.pagingFirst));
     }
 
     // premenne platne pre cely component (obdoba member premennych v class-e)
@@ -400,11 +403,11 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
     const [value, setValue] = useState<FindResult>({rowList: [], totalRecords: 0, aggregateValues: []});
     const [expandedRows, setExpandedRows] = useState<DataTableExpandedRows | DataTableValueArray | undefined>(undefined);
     const [loading, setLoading] = useState(false);
-    const [first, setFirst] = useXStateSession(getStateKey(XStateKeySuffix.pagingFirst), 0);
+    const [first, setFirst] = useXStateStorage(props.stateStorage!, getStateKey(XStateKeySuffix.pagingFirst), 0);
     const [rowsLocal, setRowsLocal] = useState(props.paginator ? props.rows : undefined);
     // "filters" have special initialState function different from that used in useXStateSession
     const filtersInitialStateFunction = (): DataTableFilterMeta => {
-        let filtersInit: DataTableFilterMeta | null = XUtils.getValueFromStorage(getStateKey(XStateKeySuffix.filters), null);
+        let filtersInit: DataTableFilterMeta | null = XUtils.getValueFromStorage(props.stateStorage!, getStateKey(XStateKeySuffix.filters), null);
         if (filtersInit != null) {
             // we have filters from session - if we have props.filters, we always override the values from session (values from props.filters have higher priority)
             filtersInit = overrideFilters(filtersInit, props.filters);
@@ -415,13 +418,13 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         }
         return filtersInit;
     }
-    const [filters, setFilters] = useXStateSessionBase<DataTableFilterMeta>(getStateKey(XStateKeySuffix.filters), filtersInitialStateFunction); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
+    const [filters, setFilters] = useXStateStorageBase<DataTableFilterMeta>(props.stateStorage!, getStateKey(XStateKeySuffix.filters), filtersInitialStateFunction); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
     const initFtsInputValue: XFtsInputValue | undefined = props.fullTextSearch ? createInitFtsInputValue() : undefined;
-    const [ftsInputValue, setFtsInputValue] = useXStateSession<XFtsInputValue | undefined>(getStateKey(XStateKeySuffix.ftsInputValue), initFtsInputValue);
-    const [optionalCustomFilter, setOptionalCustomFilter] = useXStateSession<XOptionalCustomFilter | undefined>(getStateKey(XStateKeySuffix.optionalCustomFilter), undefined);
-    const [multilineSwitchValue, setMultilineSwitchValue] = props.multilineSwitchValue ?? useXStateSession<XMultilineRenderType>(getStateKey(XStateKeySuffix.multilineSwitchValue), props.multilineSwitchInitValue!);
-    const [multiSortMeta, setMultiSortMeta] = useXStateSession<DataTableSortMeta[] | undefined>(getStateKey(XStateKeySuffix.multiSortMeta), XUtilsCommon.createMultiSortMeta(props.sortField));
-    const [selectedRow, setSelectedRow] = useXStateSession<any>(getStateKey(XStateKeySuffix.selectedRow), null);
+    const [ftsInputValue, setFtsInputValue] = useXStateStorage<XFtsInputValue | undefined>(props.stateStorage!, getStateKey(XStateKeySuffix.ftsInputValue), initFtsInputValue);
+    const [optionalCustomFilter, setOptionalCustomFilter] = useXStateStorage<XOptionalCustomFilter | undefined>(props.stateStorage!, getStateKey(XStateKeySuffix.optionalCustomFilter), undefined);
+    const [multilineSwitchValue, setMultilineSwitchValue] = props.multilineSwitchValue ?? useXStateStorage<XMultilineRenderType>(props.stateStorage!, getStateKey(XStateKeySuffix.multilineSwitchValue), props.multilineSwitchInitValue!);
+    const [multiSortMeta, setMultiSortMeta] = useXStateStorage<DataTableSortMeta[] | undefined>(props.stateStorage!, getStateKey(XStateKeySuffix.multiSortMeta), XUtilsCommon.createMultiSortMeta(props.sortField));
+    const [selectedRow, setSelectedRow] = useXStateStorage<any>(props.stateStorage!, getStateKey(XStateKeySuffix.selectedRow), null);
     /**
      * @deprecated was used to reread data after save/cancel of the form when using XFormNavigator (deprecated)
      */
@@ -1568,7 +1571,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
                 {exportRows ? <XButton key="exportRows" icon="pi pi-file-export" label={xLocaleOption('exportRows')} onClick={onClickExport} /> : null}
                 {props.docTemplates && !isMobile && props.searchBrowseParams === undefined ? <XDocTemplateButton key="docTemplates" entity={props.entity} rowId={selectedRow ? selectedRow[dataKey] : undefined} docTemplates={typeof props.docTemplates === 'function' ? props.docTemplates : undefined}/> : null}
                 {props.appButtonsForRow && props.searchBrowseParams === undefined ? props.appButtonsForRow.map((xAppButton: XAppButtonForRow) => <XButton key={xAppButton.key} icon={xAppButton.icon} label={xAppButton.label} onClick={() => onClickAppButtonForRow(xAppButton.onClick)} style={xAppButton.style}/>) : null}
-                {props.appButtons && props.searchBrowseParams === undefined}
+                {props.searchBrowseParams === undefined ? props.appButtons : null}
                 {props.searchBrowseParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
                 {props.editForm != undefined ? <XFormDialog key="formDialog" dialogState={formDialogState}/> : null}
                 {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogState={exportRowsDialogState} hideDialog={() => setExportRowsDialogState({dialogOpened: false})}/> : null}

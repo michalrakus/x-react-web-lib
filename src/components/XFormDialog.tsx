@@ -29,7 +29,7 @@ export const XFormDialog = (props: {
         <Dialog key="dialog-form" className="x-dialog-without-header" visible={props.dialogState.opened} onHide={onHide}>
             {/* using cloneElement we add props id, initValues, onSaveOrCancel */}
             {form ? React.cloneElement(form, {
-                id: props.dialogState.id, initValues: props.dialogState.initValues, onSaveOrCancel: props.dialogState.onSaveOrCancel
+                id: props.dialogState.id, initValues: props.dialogState.initValues, onSaveOrCancel: props.dialogState.onSaveOrCancel, isInDialog: true
             } satisfies XFormProps/*, props.form.children*/) : null}
         </Dialog>
     );
