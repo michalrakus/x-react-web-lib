@@ -424,7 +424,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                 body = <XInputIntervalDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly} onChange={columnPropsInputSimple.onChange}/>;
             }
             else if (xField.type === "boolean") {
-                body = <XCheckboxDT form={this.props.form} xField={xField} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly}/>;
+                body = <XCheckboxDT form={this.props.form} entity={this.getEntity()} field={columnPropsInputSimple.field} rowData={rowData} readOnly={readOnly} onChange={columnPropsInputSimple.onChange}/>;
             }
             else {
                 // xField.type === "string", pripadne ine jednoduche typy

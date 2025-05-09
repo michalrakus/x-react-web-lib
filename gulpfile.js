@@ -43,6 +43,7 @@ function generateApi(cb) {
         "./lib/components/XCalendar",
         "./lib/components/XChangePasswordForm",
         "./lib/components/XCheckbox",
+        "./lib/components/XCheckboxBase",
         "./lib/components/XDropdown",
         "./lib/components/XDropdownForEntity",
         "./lib/components/XEditBrowse",

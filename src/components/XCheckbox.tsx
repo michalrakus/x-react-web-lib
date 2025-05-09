@@ -1,7 +1,6 @@
 import React from "react";
-import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XInput, XInputProps} from "./XInput";
-import {Checkbox, CheckboxChangeEvent} from "primereact/checkbox";
+import {XCheckboxBase} from "./XCheckboxBase";
 
 export interface XCheckboxProps extends XInputProps<boolean> {
     // aby sme vedeli zobrazit dvojstavovy checkbox aj ked v DB mame null stlpec
@@ -14,8 +13,7 @@ export class XCheckbox extends XInput<boolean, XCheckboxProps> {
     constructor(props: XCheckboxProps) {
         super(props);
 
-        this.checkboxOnValueChange = this.checkboxOnValueChange.bind(this);
-        this.triStateCheckboxOnValueChange = this.triStateCheckboxOnValueChange.bind(this);
+        this.onValueChange = this.onValueChange.bind(this);
     }
 
     isNotNull(): boolean {
@@ -23,35 +21,17 @@ export class XCheckbox extends XInput<boolean, XCheckboxProps> {
     }
 
     getValue(): boolean | null {
-        // konvertovat null hodnotu na "" (vo funkcii stringAsUI) je dolezite aby sa prejavila zmena na null v modeli
-        const value: boolean | null = this.getValueFromObject();
-        return value;
+        return this.getValueFromObject();
     }
 
-    checkboxOnValueChange(e: CheckboxChangeEvent) {
-        this.onValueChangeBase(e.checked, this.props.onChange);
-    }
-
-    triStateCheckboxOnValueChange(e: any) {
-        let newValue: boolean | null = e.value;
-        // pri klikani na TriStateCheckbox prichadza v newValue cyklicky: true -> false -> null
-        // ak mame not null atribut, tak pri null hodnote skocime rovno na true
-        if (this.isNotNull()) {
-            if (newValue === null) {
-                newValue = true;
-            }
-        }
-
-        // zmenime hodnotu v modeli (odtial sa hodnota cita)
-        this.onValueChangeBase(newValue, this.props.onChange);
+    onValueChange(value: boolean | null) {
+        this.onValueChangeBase(value, this.props.onChange);
     }
 
     render() {
-        // note: style overrides size (width of the input according to character count)
-        // pre not null atributy pouzijeme standardny checkbox aby sme pre false mali prazdny biely checkbox - TODO - pomenit ikonky na TriStateCheckbox aby to pekne sedelo
-        let element: JSX.Element = this.isNotNull()
-            ? <Checkbox id={this.props.field} checked={this.getValue() ?? false} onChange={this.checkboxOnValueChange} disabled={this.isReadOnly()} style={this.props.inputStyle} tooltip={this.props.tooltip}/>
-            : <TriStateCheckbox id={this.props.field} value={this.getValue()} onChange={this.triStateCheckboxOnValueChange} disabled={this.isReadOnly()} style={this.props.inputStyle} tooltip={this.props.tooltip}/>;
+        let element: JSX.Element = <XCheckboxBase id={this.props.field} value={this.getValue()} onChange={this.onValueChange}
+                                                  readOnly={this.isReadOnly()} isNotNull={this.isNotNull()}
+                                                  tooltip={this.props.tooltip} error={this.getError()} style={this.props.inputStyle}/>;
 
         if (!this.props.onlyInput) {
             const label: string | undefined = this.props.label; // nepridavame * ani ak je atribut not null (kedze sa pouziva jednoduchy checkbox, nie je mozne zadat null hodnotu)
