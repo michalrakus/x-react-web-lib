@@ -20,6 +20,7 @@ export interface XInputTextareaBaseProps {
     readOnly?: boolean;
     error?: string;
     style?: React.CSSProperties;
+    className?: string;
     maxLength?: number;
     tooltip?: string;
     placeholder?: string;
@@ -88,7 +89,8 @@ export class XInputTextareaBase extends Component<XInputTextareaBaseProps> {
             <InputTextarea ref={this.inputTextareaRef} id={this.props.id} value={this.getInputValue()} onChange={this.onChange}
                            onBlur={this.onBlur} readOnly={this.props.readOnly}
                            maxLength={this.props.maxLength} style={this.props.style} rows={this.props.rows} cols={this.props.cols}
-                           autoResize={this.props.autoResize} {...XUtils.createTooltipOrErrorProps(this.props.error, this.props.tooltip)}
+                           autoResize={this.props.autoResize}
+                           {...XUtils.addClassName(XUtils.createTooltipOrErrorProps(this.props.error, this.props.tooltip), this.props.className)}
                            placeholder={this.props.placeholder}/>
         );
     }

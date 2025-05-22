@@ -7,6 +7,7 @@ import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
 export interface XInputProps<T> extends XFormComponentProps<T> {
     field: string;
     inputStyle?: React.CSSProperties;
+    inputClassName?: string;
 }
 
 // spolocna nadtrieda pre jednoduche inputy (nie asociacne)

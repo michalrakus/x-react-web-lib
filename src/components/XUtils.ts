@@ -535,13 +535,15 @@ export class XUtils {
 
     // pomocna metodka - prida className do props, ak uz className v props existuje tak len pripoji dalsiu hodnotu
     // pouzivame ju, lebo XUtils.createErrorProps nam prebijal className
-    static addClassName(props: {[key: string]: any;}, className: string): {[key: string]: any;} {
+    static addClassName(props: {[key: string]: any;}, className: string | undefined): {[key: string]: any;} {
         let propsClassName: string = props.className;
-        if (propsClassName !== undefined) {
-            propsClassName += " " + className;
-        }
-        else {
-            propsClassName = className;
+        if (className !== undefined) {
+            if (propsClassName !== undefined) {
+                propsClassName += " " + className;
+            }
+            else {
+                propsClassName = className;
+            }
         }
         props.className = propsClassName;
         return props;

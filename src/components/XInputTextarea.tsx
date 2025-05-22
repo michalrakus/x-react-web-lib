@@ -104,7 +104,7 @@ export class XInputTextarea extends XInput<string, XInputTextareaProps> {
                 {labelTooltip ? <Tooltip target={`#${labelElemId}`} content={labelTooltip}/> : null}
                 {this.props.form.state.object ?
                     <XInputTextareaBase ref={this.xInputTextareaBaseRef} id={this.props.field} value={value} onChange={this.onValueChange} readOnly={this.isReadOnly()}
-                               maxLength={this.xField.length} style={inputStyle} rows={this.props.rows} cols={cols}
+                               maxLength={this.xField.length} style={inputStyle} className={this.props.inputClassName} rows={this.props.rows} cols={cols}
                                autoResize={this.props.autoResize} error={this.getError()} tooltip={this.props.tooltip} placeholder={this.props.placeholder ?? this.props.desc}/>
                     : null
                 }
