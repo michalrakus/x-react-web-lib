@@ -302,7 +302,7 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
             filterMatchMode = FilterMatchMode.CONTAINS;
         }
         // zatial vsetky ostatne EQUALS
-        else if (xField.type === "decimal" || xField.type === "number" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
+        else if (xField.type === "decimal" || xField.type === "number" || xField.type === "interval" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
             filterMatchMode = FilterMatchMode.EQUALS;
         }
         else {

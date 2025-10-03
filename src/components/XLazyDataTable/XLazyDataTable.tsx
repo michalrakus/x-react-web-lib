@@ -174,6 +174,8 @@ export interface XLazyDataTableProps {
     multilineSwitchFewLinesCount?: number; // max count of rendered lines for render type "fewLines" (default 2)
     // ak chceme mat pristup k stavu multilineSwitchu, treba vytiahnut "const [multilineSwitchValue, setMultilineSwitchValue] = useState<XMultilineRenderType>(...);" do browse komponentu
     multilineSwitchValue?: [XMultilineRenderType, React.Dispatch<React.SetStateAction<XMultilineRenderType>>]; // TODO - specialny typ vytvor, napr. XuseState<boolean>
+    headerBodyTop?: React.ReactNode; // adds stuff above input for full text search and search buttons (used for mobile if there is not enaugh space in headerBodyLeft or headerBodyRight)
+    headerBodyLeft?: React.ReactNode; // adds stuff before input for full text search
     headerBodyRight?: React.ReactNode; // prida sa hned za multilineSwitch, moze sa tu pridat napr. custom switch
     searchBrowseParams?: XSearchBrowseParams;
     width?: string; // neviem ako funguje (najme pri pouziti scrollWidth/scrollHeight), ani sa zatial nikde nepouziva
@@ -295,7 +297,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
             filterMatchMode = FilterMatchMode.CONTAINS;
         }
         // zatial vsetky ostatne EQUALS
-        else if (xField.type === "decimal" || xField.type === "number" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
+        else if (xField.type === "decimal" || xField.type === "number" || xField.type === "interval" || xField.type === "date" || xField.type === "datetime" || xField.type === "boolean") {
             filterMatchMode = FilterMatchMode.EQUALS;
         }
         else {
@@ -1535,8 +1537,13 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
     // x-lazy-datatable-label-right-compensation - vyvazuje label, aby item-y v strede isli aspon priblizne do stredu
     return (
         <div>
+            {props.headerBodyTop ?
+            <div className="flex justify-content-center align-items-center">
+                {props.headerBodyTop}
+            </div> : null}
             <div className="flex justify-content-center align-items-center">
                 {props.label ? <div className="x-lazy-datatable-label" style={props.labelStyle}>{props.label}</div> : null}
+                {props.headerBodyLeft}
                 {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)}/> : null}
                 {props.showFilterButtons ? <XButton key="filter" icon={isMobile ? "pi pi-search" : undefined} label={!isMobile ? xLocaleOption('filter') : undefined} onClick={onClickFilter} /> : null}
                 {props.showFilterButtons ? <XButton key="resetTable" icon={isMobile ? "pi pi-ban" : undefined} label={!isMobile ? xLocaleOption('resetTable') : undefined} onClick={onClickResetTable} /> : null}

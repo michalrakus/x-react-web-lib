@@ -1,5 +1,6 @@
 {
   "en": {
+    "searchInAllFields": "Search in all fields",
     "filter": "Filter",
     "resetTable": "Reset filter",
     "addRow": "Add",
