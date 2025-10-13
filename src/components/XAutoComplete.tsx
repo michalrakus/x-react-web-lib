@@ -15,6 +15,9 @@ export interface XAutoCompleteProps extends XFormComponentProps<XObject> {
     searchBrowse?: JSX.Element;
     assocForm?: JSX.Element; // na insert/update
     dropdownButtonEnabled?: boolean; // ak dame false, tak nezobrazi dropdown button (default je true), ale ak by sme nemali mat ziadny button tak ho (zatial) zobrazime readOnly aby bolo vidno ze mame autocomplete
+    insertButtonTooltip?: string;
+    updateButtonTooltip?: string;
+    searchButtonTooltip?: string;
     suggestions?: any[]; // ak chceme overridnut suggestions ziskavane cez asociaciu (pozri poznamky v XAutoCompleteDT) (suggestionsLoad sa nepouziva)
     suggestionsLoad?: XSuggestionsLoadProp; // ak nemame suggestions, tak suggestionsLoad (resp. jeho default) urcuje ako sa nacitaju suggestions
     lazyLoadMaxRows?: number; // max pocet zaznamov ktore nacitavame pri suggestionsLoad = lazy
@@ -97,6 +100,9 @@ export class XAutoComplete extends XFormComponent<XObject, XAutoCompleteProps> {
                                    field={this.props.displayField} itemTemplate={this.props.itemTemplate}
                                    searchBrowse={this.props.searchBrowse} valueForm={this.props.assocForm}
                                    dropdownButtonEnabled={this.props.dropdownButtonEnabled}
+                                   insertButtonTooltip={this.props.insertButtonTooltip}
+                                   updateButtonTooltip={this.props.updateButtonTooltip}
+                                   searchButtonTooltip={this.props.searchButtonTooltip}
                                    idField={xEntityAssoc.idField} readOnly={this.isReadOnly()}
                                    error={this.getError()} onErrorChange={this.onErrorChangeAutoCompleteBase}
                                    width={this.props.width} scrollHeight={this.props.scrollHeight}
