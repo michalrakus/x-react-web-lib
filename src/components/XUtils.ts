@@ -22,6 +22,7 @@ import {SelectItem} from "primereact/selectitem";
 import {xLocaleOption} from "./XLocale";
 import {XLazyDataTableRef} from "./XLazyDataTable/XLazyDataTable";
 import {XOnSaveOrCancelProp} from "./XFormBase";
+import {XFindRowByIdRequest, XFindRowByIdResponse} from "../serverApi/x-lib-api";
 
 export enum OperationType {
     None,
@@ -385,8 +386,18 @@ export class XUtils {
         return response;
     }
 
-    static fetchById(entity: string, fields: string[], id: number): Promise<any> {
-        return XUtils.fetchOne('findRowById', {entity: entity, fields: fields, id: id})
+    static async fetchById(entity: string, fields: string[], id: number): Promise<any> {
+        const response: XFindRowByIdResponse = await XUtils.fetchByIdWithLock(entity, fields, id, false);
+        return response.row;
+    }
+
+    // more general function - can also lock the row
+    static fetchByIdWithLock(entity: string, fields: string[], id: number, lockRow: boolean, overwriteLock?: boolean): Promise<XFindRowByIdResponse> {
+        let request: XFindRowByIdRequest = {entity: entity, fields: fields, id: id};
+        if (lockRow) {
+            request = {...request, lockDate: new Date(), lockXUser: XUtils.getXToken()?.xUser, overwriteLock: overwriteLock ?? false};
+        }
+        return XUtils.fetchOne('x-find-row-by-id', request);
     }
 
     static setXToken(xToken: XToken | null) {
@@ -509,7 +520,7 @@ export class XUtils {
             }
             else if (e.xResponseErrorBody.exceptionName === 'OptimisticLockVersionMismatchError') {
                 // better error message for optimistic locking
-                msg += "The optimistic lock failed, someone else has changed the row during the editation. Sorry, you have to cancel the editation and start the editation again.";
+                msg += xLocaleOption('optimisticLockFailed');
             }
             else {
                 msg += e.message + XUtilsCommon.newLine;

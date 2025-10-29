@@ -1,4 +1,4 @@
-import {Component} from "react";
+import React, {Component} from "react";
 import {XObject} from "./XObject";
 import {OperationType, XUtils} from "./XUtils";
 import {XFieldOnChange, XFormComponent} from "./XFormComponent";
@@ -7,6 +7,9 @@ import {XErrorMap, XErrors} from "./XErrors";
 import {XUtilsCommon} from "../serverApi/XUtilsCommon";
 import {XEntity} from "../serverApi/XEntityMetadata";
 import {XUtilsMetadataCommon} from "../serverApi/XUtilsMetadataCommon";
+import {XFindRowByIdResponse, XUnlockRowRequest} from "../serverApi/x-lib-api";
+import {dateFromModel, datetimeAsUI} from "../serverApi/XUtilsConversions";
+import {xLocaleOption} from "./XLocale";
 
 export type XOnSaveOrCancelProp = (object: XObject | null, objectChange: OperationType) => void;
 
@@ -14,6 +17,7 @@ export type XOnSaveOrCancelProp = (object: XObject | null, objectChange: Operati
 // pri tomto zapise sa nezadava property id (id sa doplni automaticky pri otvoreni assoc formularu cez klonovanie elementu)
 // preto umoznujeme aby id mohlo byt undefined
 export interface XFormProps {
+    ref?: React.Ref<XFormBase>;
     id?: number;
     initValues?: object; // pri inserte (id je undefined) mozme cez tuto property poslat do formulara default hodnoty ktore sa nastavia do objektu vytvoreneho v metode this.createNewObject(): XObject
     onSaveOrCancel?: XOnSaveOrCancelProp; // pouziva sa pri zobrazeni formulara v dialogu (napr. v XAutoCompleteBase) - pri onSave odovzdava updatnuty/insertnuty objekt, pri onCancel odovzdava null,
@@ -25,11 +29,13 @@ export interface XFormProps {
 // ma sa pouzivat len na triedach odvodenych od XFormBase - obmedzenie som vsak nevedel nakodit
 // property sa nastavi az po zbehnuti konstruktora
 // pozor - decorator je vykopirovany do projektoveho suboru XLibItems.ts, lebo ked je umiestneny tu tak nefunguje pre class-y v projekte!
-export function Form(entity: string) {
+export function Form(entity: string, pessimisticLocking?: boolean, assocToLockingEntity?: string) {
     // sem (mozno) moze prist registracia formu-u
     return function <T extends { new(...args: any[]): {} }>(constructor: T) {
         return class extends constructor {
             entity = entity;
+            pessimisticLocking = pessimisticLocking ?? false;
+            assocToLockingEntity = assocToLockingEntity;
         }
     }
 }
@@ -38,6 +44,14 @@ export abstract class XFormBase extends Component<XFormProps> {
 
     entity?: string; // typ objektu, napr. Car, pouziva sa pri citani objektu z DB
     xEntity: XEntity | undefined; // zistene podla this.entity
+
+    formDataChanged: boolean; // true if user changed some attribute of the form - used (only) to create confirm if user clicks cancel
+
+    pessimisticLocking?: boolean; // true if the form uses pessimistic locking (default is optimistic locking if the attribute "version" is available)
+    assocToLockingEntity?: string; // special case if locking attributes (lockDate, lockXUser) are in other entity then in base entity of the form - here is manyToOne assoc to the entity with locking attributes (path is not supported)
+    rowLocked: boolean; // used by pessimistic locking, true if row was successfully locked
+    readOnly: boolean; // used if the lock was not acquired (other user holds the lock)
+
     fields: Set<string>; // zoznam zobrazovanych fieldov (vcetne asoc. objektov) - potrebujeme koli nacitavaniu root objektu
     state: {object: XObject | null; errorMap: XErrorMap} | any; // poznamka: mohli by sme sem dat aj typ any...
     // poznamka 2: " | any" sme pridali aby sme mohli do state zapisovat aj neperzistentne atributy typu "this.state.passwordNew"
@@ -59,6 +73,11 @@ export abstract class XFormBase extends Component<XFormProps> {
             throw "Form cannot have both props id and initValues defined. Only one of them can be defined.";
         }
         //this.entity = props.entity; - nastavuje sa cez decorator @Form
+        //this.pessimisticLocking - nastavuje sa cez decorator @Form
+        //this.assocToLockingEntity - nastavuje sa cez decorator @Form
+        this.formDataChanged = false; // default
+        this.rowLocked = false; // default
+        this.readOnly = false; // default
         let object = null;
         // if (props.id === undefined) {
         //     // add row operation
@@ -86,7 +105,7 @@ export abstract class XFormBase extends Component<XFormProps> {
     async componentDidMount() {
         //console.log("volany XFormBase.componentDidMount()");
         // kontrola (musi byt tu, v konstruktore este property nie je nastavena)
-        if (this.entity === undefined) {
+        if (this.entity === undefined || this.pessimisticLocking === undefined) {
             throw "XFormBase: Property entity is not defined - use decorator @Form.";
         }
         this.xEntity = XUtilsMetadataCommon.getXEntity(this.entity);
@@ -96,7 +115,29 @@ export abstract class XFormBase extends Component<XFormProps> {
         if (this.props.id !== undefined) {
             //console.log('XFormBase.componentDidMount ide nacitat objekt');
             //console.log(this.fields);
-            object = await XUtils.fetchById(this.entity, Array.from(this.fields), this.props.id);
+            // in constructor, member pessimisticLocking is still not set, that's why here we add the "lockXUser.name"
+            if (this.pessimisticLocking) {
+                this.addField("lockXUser.name");
+            }
+            const xFindRowByIdWithLockResponse: XFindRowByIdResponse = await XUtils.fetchByIdWithLock(this.entity, Array.from(this.fields), this.props.id, this.pessimisticLocking);
+            object = xFindRowByIdWithLockResponse.row;
+            if (this.pessimisticLocking) {
+                if (!xFindRowByIdWithLockResponse.lockAcquired) {
+                    if (window.confirm(`Záznam je editovaný užívateľom ${object.lockXUser?.name} od ${datetimeAsUI(dateFromModel(object.lockDate))}${XUtilsCommon.newLine}Chcete napriek tomu editovať záznam? (Voľba Zrušiť otvorí formulár na čítanie)`)) {
+                        // overwrite the lock in DB
+                        const xFindRowByIdWithLockResponse: XFindRowByIdResponse = await XUtils.fetchByIdWithLock(this.entity, Array.from(this.fields), this.props.id, this.pessimisticLocking, true);
+                        object = xFindRowByIdWithLockResponse.row;
+                        this.rowLocked = true;
+                    }
+                    else {
+                        // open form in read only mode
+                        this.readOnly = true;
+                    }
+                }
+                else {
+                    this.rowLocked = true;
+                }
+            }
             operationType = OperationType.Update;
 
             // sortovanie, aby sme nemuseli sortovat v DB (neviem co je efektivnejsie)
@@ -152,6 +193,10 @@ export abstract class XFormBase extends Component<XFormProps> {
         return this.getXObject() as any;
     }
 
+    setFormDataChanged(formDataChanged: boolean) {
+        this.formDataChanged = formDataChanged;
+    }
+
     isAddRow(): boolean {
         // povodny kod
         //return this.props.id === undefined;
@@ -194,8 +239,9 @@ export abstract class XFormBase extends Component<XFormProps> {
             onChange({object: object, assocObjectChange: assocObjectChange});
         }
 
-        // TODO - tu mozno treba setnut funkciu - koli moznej asynchronicite
         this.setState({object: object, errorMap: errorMap});
+
+        this.setFormDataChanged(true);
     }
 
     onTableFieldChange(rowData: any, field: string, value: any, error?: string | undefined, onChange?: XTableFieldOnChange, assocObjectChange?: OperationType) {
@@ -388,12 +434,7 @@ export abstract class XFormBase extends Component<XFormProps> {
     }
 
     onClickCancel() {
-        if (this.props.onSaveOrCancel !== undefined) {
-            this.props.onSaveOrCancel(null, OperationType.None); // formular je zobrazeny v dialogu
-        }
-        else {
-            this.openFormNull();
-        }
+        this.cancelEdit();
     }
 
     openFormNull() {
@@ -408,6 +449,29 @@ export abstract class XFormBase extends Component<XFormProps> {
             // warning
             console.log(`Form has no onSaveOrCancel method declared.`);
         }
+    }
+
+    // API function called upon cancel of edit/show of the form
+    // also outer components call this function, e.g XFormDialog, (legacy XMenu in depaul project)
+    // returns false if cancel was stopped (not confirmed) by user
+    cancelEdit(): boolean {
+        // confirm cancel if data was changed
+        if (this.formDataChanged) {
+            if (!window.confirm(xLocaleOption('cancelEditConfirm'))) {
+                return false; // stops canceling editing, the form stays open (because this.props.onSaveOrCancel is not called)
+            }
+        }
+
+        this.unlockRow();
+
+        if (this.props.onSaveOrCancel !== undefined) {
+            this.props.onSaveOrCancel(null, OperationType.None); // formular je zobrazeny v dialogu
+        }
+        else {
+            this.openFormNull();
+        }
+
+        return true;
     }
 
     async validateSave(): Promise<boolean> {
@@ -503,7 +567,7 @@ export abstract class XFormBase extends Component<XFormProps> {
     // (the purpose is to put the whole form to read only mode (maybe with exception a few fields))
     // if returns true for the param "field", then the field is read only, otherwise the property readOnly of the XInput* is processed
     formReadOnly(object: XObject, field: string): boolean {
-        return false;
+        return this.readOnly;
     }
 
     // this method can be overriden in subclass if needed (to set some default values for insert)
@@ -533,5 +597,18 @@ export abstract class XFormBase extends Component<XFormProps> {
     // this method can be overriden in subclass if needed (to use another service then default 'saveRow')
     async saveRow(): Promise<any> {
         return XUtils.fetch('saveRow', {entity: this.getEntity(), object: this.state.object, reload: this.props.onSaveOrCancel !== undefined});
+    }
+
+    async unlockRow() {
+        if (this.rowLocked) {
+            const xUnlockRowRequest: XUnlockRowRequest = {
+                entity: this.getEntity(),
+                id: this.state.object[this.xEntity!.idField],
+                lockDate: this.state.object.lockDate,
+                lockXUser: this.state.object.lockXUser
+            };
+            await XUtils.post('x-unlock-row', xUnlockRowRequest);
+            this.rowLocked = false;
+        }
     }
 }

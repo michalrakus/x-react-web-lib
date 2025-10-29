@@ -21,7 +21,8 @@ export type XFilterProp = XCustomFilter | ((object: any) => XCustomFilter | unde
 export interface XFormComponentProps<T> {
     form: XFormBase;
     label?: string;
-    tooltip?: string;
+    labelTooltip?: string; // tooltip for label (not implemented for every form component)
+    tooltip?: string; // tooltip for input
     placeholder?: string;
     desc?: string; // specialny prop pouzivany ako placeholder a tooltip pre label naraz (aby sme nemuseli duplikovat label a tooltip) - vytvoreny pre depaul
     readOnly?: XReadOnlyProp;

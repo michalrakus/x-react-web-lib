@@ -16,6 +16,8 @@
     "ok": "Ok",
     "save": "Save",
     "cancel": "Cancel",
+    "cancelEditConfirm": "Are you sure to cancel editing? All changes will be lost.",
+    "optimisticLockFailed": "Someone else has changed the row during the editation. Sorry, you have to cancel the editation and start the editation again.",
     "formRemoveRowConfirm": "Are you sure to remove the row?",
     "xAutoComplete": "Autocomplete",
     "expRowCount": "Row count",

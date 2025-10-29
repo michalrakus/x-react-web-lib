@@ -88,24 +88,21 @@ export class XInputTextarea extends XInput<string, XInputTextareaProps> {
             cols = this.props.cols;
         }
 
+        const label: string | undefined = this.getLabel();
         const value: string | null = this.getValue();
-        let labelTooltip: string | undefined = undefined;
-        let labelElemId: string | undefined = undefined;
-        if (value !== null) {
-            // nevidno placeholder, tak zobrazime desc ako label tooltip
-            labelTooltip = this.props.desc;
-            labelElemId = `${this.props.field}_label_id`;
-        }
+
+        const {labelTooltip, labelElemId, inputTooltip} = this.getTooltipsAndLabelElemId(
+            this.props.field, label, value, this.props.labelTooltip, this.props.tooltip, this.props.desc);
 
         // InputTextarea renderujeme az ked mame nacitany object, lebo inac pri autoResize sa nam nenastavi spravna velkost (hodnota nie je k dispozicii pri prvom renderingu)
         return (
             <div className={!this.labelOnTop ? 'field grid' : 'field grid x-inputtextarea-label-on-top'} style={fieldStyle}>
-                <label id={labelElemId} htmlFor={this.props.field} className={!this.labelOnTop ? 'col-fixed' : undefined} style={labelStyle}>{this.getLabel()}</label>
+                {label !== undefined ? <label id={labelElemId} htmlFor={this.props.field} className={!this.labelOnTop ? 'col-fixed' : undefined} style={labelStyle}>{label}</label> : null}
                 {labelTooltip ? <Tooltip target={`#${labelElemId}`} content={labelTooltip}/> : null}
                 {this.props.form.state.object ?
                     <XInputTextareaBase ref={this.xInputTextareaBaseRef} id={this.props.field} value={value} onChange={this.onValueChange} readOnly={this.isReadOnly()}
                                maxLength={this.xField.length} style={inputStyle} className={this.props.inputClassName} rows={this.props.rows} cols={cols}
-                               autoResize={this.props.autoResize} error={this.getError()} tooltip={this.props.tooltip} placeholder={this.props.placeholder ?? this.props.desc}/>
+                               autoResize={this.props.autoResize} error={this.getError()} tooltip={inputTooltip} placeholder={this.props.placeholder ?? this.props.desc}/>
                     : null
                 }
             </div>

@@ -5,6 +5,7 @@ import xEnJsonObject from "./locale/x-en.json";
 // type for x-locale
 export interface XLocaleOptions {
     // XLazyDataTable
+    searchInAllFields?: string;
     filter?: string;
     resetTable?: string;
     addRow?: string;
@@ -19,6 +20,9 @@ export interface XLocaleOptions {
     // XFormBase, XFormFooter
     save?: string;
     cancel?: string;
+    optimisticLockFailed?: string;
+    formRemoveRowConfirm?: string;
+    xAutoComplete?: string;
     // XExportRowsDialog
     expRowCount?: string;
     expExportType?: string;

@@ -1,6 +1,6 @@
-import React from "react";
+import React, {useRef} from "react";
 import {Dialog} from "primereact/dialog";
-import {XOnSaveOrCancelProp} from "./XFormBase";
+import {XFormBase, XOnSaveOrCancelProp} from "./XFormBase";
 import {OperationType} from "./XUtils";
 import { XFormProps } from "./XFormBase"; /* DO NOT REMOVE - IS USED EVEN IF IT IS MARKED AS NOT USED */
 
@@ -17,10 +17,10 @@ export const XFormDialog = (props: {
     form?: JSX.Element;
 }) => {
 
+    const xFormBaseRef = useRef<XFormBase>(null);
+
     const onHide = () => {
-        if (props.dialogState.onSaveOrCancel) {
-            props.dialogState.onSaveOrCancel(null, OperationType.None);
-        }
+        xFormBaseRef.current!.cancelEdit();
     }
 
     const form: JSX.Element | undefined = props.dialogState.form ?? props.form;
@@ -29,7 +29,7 @@ export const XFormDialog = (props: {
         <Dialog key="dialog-form" className="x-dialog-without-header" visible={props.dialogState.opened} onHide={onHide}>
             {/* using cloneElement we add props id, initValues, onSaveOrCancel */}
             {form ? React.cloneElement(form, {
-                id: props.dialogState.id, initValues: props.dialogState.initValues, onSaveOrCancel: props.dialogState.onSaveOrCancel, isInDialog: true
+                ref: xFormBaseRef, id: props.dialogState.id, initValues: props.dialogState.initValues, onSaveOrCancel: props.dialogState.onSaveOrCancel, isInDialog: true
             } satisfies XFormProps/*, props.form.children*/) : null}
         </Dialog>
     );
