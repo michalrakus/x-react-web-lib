@@ -393,11 +393,15 @@ export class XUtils {
 
     // more general function - can also lock the row
     static fetchByIdWithLock(entity: string, fields: string[], id: number, lockRow: boolean, overwriteLock?: boolean): Promise<XFindRowByIdResponse> {
+        return XUtils.fetchByIdWithLockBase('x-find-row-by-id', entity, fields, id, lockRow, overwriteLock);
+    }
+
+    static fetchByIdWithLockBase(path: string, entity: string, fields: string[], id: number, lockRow: boolean, overwriteLock?: boolean): Promise<XFindRowByIdResponse> {
         let request: XFindRowByIdRequest = {entity: entity, fields: fields, id: id};
         if (lockRow) {
             request = {...request, lockDate: new Date(), lockXUser: XUtils.getXToken()?.xUser, overwriteLock: overwriteLock ?? false};
         }
-        return XUtils.fetchOne('x-find-row-by-id', request);
+        return XUtils.fetchOne(path, request);
     }
 
     static setXToken(xToken: XToken | null) {
