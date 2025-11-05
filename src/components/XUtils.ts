@@ -450,6 +450,10 @@ export class XUtils {
      * @param envVar
      */
     static getEnvVarValue(envVarEnum: XEnvVar): string {
+        return XUtils.getEnvVarValueBase(envVarEnum);
+    }
+
+    static getEnvVarValueBase(envVarEnum: string): string {
         const value: string | undefined = process.env[envVarEnum];
         if (value === undefined) {
             throw `Environment variable ${envVarEnum} - value not found. Check configuration file .env*`;
