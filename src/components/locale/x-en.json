@@ -20,6 +20,8 @@
     "pessimisticLockNotAcquired": "The row is being edited by the user {lockXUser} from {lockDate}\nDo you still want to edit the row? (The choice Cancel will open the form in read only mode).",
     "optimisticLockFailed": "Someone else has changed the row during the editation. Sorry, you have to cancel the editation and start the editation again.",
     "formRemoveRowConfirm": "Are you sure to remove the row?",
+    "xIsNotNull": "Is not null",
+    "xIsNull": "Is null",
     "xAutoComplete": "Autocomplete",
     "expRowCount": "Row count",
     "expExportType": "Export type",

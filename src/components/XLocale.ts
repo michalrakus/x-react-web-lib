@@ -22,6 +22,8 @@ export interface XLocaleOptions {
     cancel?: string;
     optimisticLockFailed?: string;
     formRemoveRowConfirm?: string;
+    xIsNotNull?: string;
+    xIsNull?: string;
     xAutoComplete?: string;
     // XExportRowsDialog
     expRowCount?: string;

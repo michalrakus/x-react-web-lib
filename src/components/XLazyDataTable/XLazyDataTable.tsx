@@ -4,12 +4,13 @@ import {
     DataTableFilterMeta,
     DataTableFilterMetaData,
     DataTableOperatorFilterMetaData, DataTableRowExpansionTemplate,
-    DataTableSortMeta, DataTableValueArray
+    DataTableSortMeta, DataTableStateEvent, DataTableValueArray
 } from 'primereact/datatable';
 import {
     Column,
     ColumnBodyOptions,
     ColumnFilterElementTemplateOptions,
+    ColumnFilterMatchModeChangeEvent,
     ColumnFilterMatchModeOptions
 } from 'primereact/column';
 import {XButton} from "../XButton";
@@ -262,6 +263,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
 
         let filtersInit: DataTableFilterMeta = {};
 
+        // warning note: props.children are used to get props of XLazyColumn whereas dataTableEl.current.props.children are used to get props of Primereact DataTable
         //let columns = dataTableEl.current.props.children; - does not work
         let columns = props.children;
         for (let column of columns) {
@@ -421,6 +423,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         return filtersInit;
     }
     const [filters, setFilters] = useXStateStorageBase<DataTableFilterMeta>(props.stateStorage!, getStateKey(XStateKeySuffix.filters), filtersInitialStateFunction); // filtrovanie na "controlled manner" (moze sa sem nainicializovat nejaka hodnota)
+    const matchModeChangeFieldRef = useRef<string | null>(null);
     const initFtsInputValue: XFtsInputValue | undefined = props.fullTextSearch ? createInitFtsInputValue() : undefined;
     const [ftsInputValue, setFtsInputValue] = useXStateStorage<XFtsInputValue | undefined>(props.stateStorage!, getStateKey(XStateKeySuffix.ftsInputValue), initFtsInputValue);
     const [optionalCustomFilter, setOptionalCustomFilter] = useXStateStorage<XOptionalCustomFilter | undefined>(props.stateStorage!, getStateKey(XStateKeySuffix.optionalCustomFilter), undefined);
@@ -484,17 +487,69 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         loadDataBase(findParam);
     }
 
-    const onFilter = (event: any) => {
+    const onFilter = (e: DataTableStateEvent) => {
 
-        // pozor! tato metoda sa nevola, odkedy vzdy pouzivame filterElement na elemente Column (mame vo filtri vlastne komponenty ktore priamo volaju setFilters(...))
+        // HEY! this method is not called (on filter value change) since we use filterElement on component Column (in filter there are always custom components those call direct setFilters(...))
+        // this method is called (probably) only when user changes match mode
 
-        //console.log("zavolany onFilter - this.state.filters = " + JSON.stringify(filters));
-        //console.log("zavolany onFilter - event.filters = " + JSON.stringify(event.filters));
+        //console.log("called onFilter - this.state.filters = " + JSON.stringify(filters));
+        //console.log("called onFilter - event.filters = " + JSON.stringify(e.filters));
 
+        let filtersChanged: boolean = false;
+
+        const changedField: string | null = matchModeChangeFieldRef.current;
+        if (changedField) {
+            // method onFilterMatchModeChange was called (user changed match mode)
+            const filterValueOld: DataTableFilterMetaData | DataTableOperatorFilterMetaData = filters[changedField];
+            const filterValue: DataTableFilterMetaData | DataTableOperatorFilterMetaData = e.filters[changedField];
+            if (filterValueOld && filterValue) { // should be always true
+                const xFilterValueOld: XDataTableFilterMetaData = filterValueOld as XDataTableFilterMetaData; // works only for filterDisplay="row"
+                const xFilterValue: XDataTableFilterMetaData = filterValue as XDataTableFilterMetaData; // works only for filterDisplay="row"
+                if (xFilterValue.matchMode !== xFilterValueOld.matchMode) {
+                    const isNotNullValueAlias: string = `<${xLocaleOption('xIsNotNull')}>`;
+                    const isNullValueAlias: string = `<${xLocaleOption('xIsNull')}>`;
+                    const xFilterMatchMode: XFilterMatchMode = xFilterValue.matchMode as unknown as XFilterMatchMode;
+                    if (xFilterMatchMode === XFilterMatchMode.X_IS_NOT_NULL || xFilterMatchMode === XFilterMatchMode.X_IS_NULL) {
+                        let newValue: any = null;
+                        // for string types we set alias, for other types we set null (alias is not displayed -> NaN or Invalid date are displayed)
+                        const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, changedField);
+                        if (xField.type === "string" || xField.type === "jsonb") {
+                            if (xFilterMatchMode === XFilterMatchMode.X_IS_NOT_NULL) {
+                                newValue = isNotNullValueAlias;
+                            }
+                            else {
+                                // xFilterMatchMode === XFilterMatchMode.X_IS_NULL
+                                newValue = isNullValueAlias;
+                            }
+                        }
+
+                        xFilterValue.value = newValue;
+                        filtersChanged = true;
+                    }
+                    else if (xFilterMatchMode === XFilterMatchMode.X_AUTO_COMPLETE) {
+                        xFilterValue.value = null;
+                        filtersChanged = true;
+                    }
+                    // all other match modes - change to null, if previous match mode was X_IS_NOT_NULL or X_IS_NULL or X_AUTO_COMPLETE
+                    else if (xFilterValue.value === isNotNullValueAlias || xFilterValue.value === isNullValueAlias || typeof xFilterValue.value === 'object') {
+                        xFilterValue.value = null;
+                        filtersChanged = true;
+                    }
+                }
+            }
+
+            matchModeChangeFieldRef.current = null;
+        }
+
+        let filtersNew: DataTableFilterMeta = e.filters;
+        if (filtersChanged) {
+            // clone needed if there was change, otherwise react does not show the change
+            filtersNew = {...filtersNew};
+        }
         // tymto zavolanim sa zapise znak zapisany klavesnicou do inputu filtra (ak prikaz zakomentujeme, input filtra zostane prazdny)
-        setFilters(event.filters);
+        setFilters(filtersNew);
         removePagingFromStorage();
-        loadDataBaseIfAutoFilter(event.filters, false);
+        loadDataBaseIfAutoFilter(filtersNew, false); // TODO - pass value Column.props.autoFilter here
     }
 
     const onSort = (event: any) => {
@@ -1073,23 +1128,17 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         return betweenFilter;
     }
 
-    // after change from match mode xAutoComplete input displays [object Object] - trying resolving this hug does not work - I have no idea why
-/*
     const onFilterMatchModeChange = (e: ColumnFilterMatchModeChangeEvent): void => {
-        console.log(e.matchMode);
-        console.log(e.field);
-        console.log(getFilterValue(e.field));
-        console.log(typeof (getFilterValue(e.field)));
-        if (e.matchMode !== XFilterMatchMode.X_AUTO_COMPLETE) {
-            const filterValue: any | null = getFilterValue(e.field);
-            if (filterValue !== null && typeof filterValue === 'object') {
-                console.log("idem volat setFilterValue");
-                setFilterValue(e.field, null);
-                console.log(getFilterValue(e.field));
-            }
-        }
+        //console.log(e.matchMode);
+        //console.log(e.field);
+
+        // warning: we can not change/set the filter value for the column where match mode was changed
+        // if we call setFilters in this method, then after finishing this method primereact calls another setting of "filters" and that second call overwrites our change
+        // this method is only "read only" and the change must be done in onFilter method
+        // we only save the field of the column where the match mode was changed - it is used later in onFilter method
+        matchModeChangeFieldRef.current = e.field;
     }
-*/
+
 
     const valueAsUI = (value: any, xField: XField, contentType: XContentType | undefined, fieldSetId: string | undefined): React.ReactNode => {
         let valueResult: React.ReactNode;
@@ -1386,8 +1435,10 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
                                                            sortField={childColumn.props.dropdownSortField}/>
                     } else if (xField.type === "string") {
                         const stringValue: string | null = getFilterValue(childColumn.props.field);
+                        const xFilterMatchMode: XFilterMatchMode = getFilterMatchMode(childColumn.props.field);
                         filterElement = <XInputTextBase value={stringValue}
-                                                        onChange={(value: string | null) => setFilterValue(childColumn.props.field, value, undefined, undefined, childColumn.props.autoFilter)}/>
+                                                        onChange={(value: string | null) => setFilterValue(childColumn.props.field, value, undefined, undefined, childColumn.props.autoFilter)}
+                                                        readOnly={xFilterMatchMode === XFilterMatchMode.X_IS_NOT_NULL || xFilterMatchMode === XFilterMatchMode.X_IS_NULL}/>
                     } else if (xField.type === "date" || xField.type === "datetime") {
                         betweenFilter = getBetweenFilter(childColumn.props.betweenFilter, props.betweenFilter);
                         if (betweenFilter !== undefined) {
@@ -1461,6 +1512,8 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
                 filterMatchModeOptions = (primeReactContext && primeReactContext.filterMatchModeOptions![dataType].map((key) => ({ label: prLocaleOption(key), value: key }))) ||
                                             PrimeReact.filterMatchModeOptions![dataType].map((key) => ({ label: prLocaleOption(key), value: key }));
 
+                filterMatchModeOptions.push({label: xLocaleOption('xIsNotNull'), value: XFilterMatchMode.X_IS_NOT_NULL});
+                filterMatchModeOptions.push({label: xLocaleOption('xIsNull'), value: XFilterMatchMode.X_IS_NULL});
                 if (isAutoCompleteInFilterEnabled(childColumn.props)) {
                     filterMatchModeOptions.push({label: xLocaleOption('xAutoComplete'), value: XFilterMatchMode.X_AUTO_COMPLETE});
                 }
@@ -1528,7 +1581,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
 
             return <Column field={childColumn.props.field} header={header} footer={footer} filter={true} sortable={true}
                            filterElement={filterElement} dataType={dataType} showFilterMenu={showFilterMenu}
-                           filterMatchModeOptions={filterMatchModeOptions} showClearButton={showClearButton} onFilterMatchModeChange={undefined /*onFilterMatchModeChange*/}
+                           filterMatchModeOptions={filterMatchModeOptions} showClearButton={showClearButton} onFilterMatchModeChange={onFilterMatchModeChange}
                            body={body} headerStyle={headerStyle} align={align}/>;
         }
     );
