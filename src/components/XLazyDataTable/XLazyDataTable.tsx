@@ -268,11 +268,15 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         let columns = props.children;
         for (let column of columns) {
             const xLazyColumn = column as {props: XLazyColumnProps}; // nevedel som to krajsie...
-            const field: string = xLazyColumn.props.field;
-            const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
-            // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
-            const filterMatchMode: FilterMatchMode = getInitFilterMatchMode(xLazyColumn.props, xField);
-            filtersInit[field] = createFilterItem(props.filterDisplay!, {value: null, matchMode: filterMatchMode});
+            // in some situations, this would be suitable, but for dynamic hide/show columns it can cause crash
+            // better place for initializing filters is probably creating columns - function(child)
+            //if (XUtils.xViewStatus(xLazyColumn.props.columnViewStatus) !== XViewStatus.Hidden) {
+                const field: string = xLazyColumn.props.field;
+                const xField: XField = XUtilsMetadataCommon.getXFieldByPath(xEntity, field);
+                // TODO column.props.dropdownInFilter - pre "menu" by bolo fajn mat zoznam "enumov"
+                const filterMatchMode: FilterMatchMode = getInitFilterMatchMode(xLazyColumn.props, xField);
+                filtersInit[field] = createFilterItem(props.filterDisplay!, {value: null, matchMode: filterMatchMode});
+            //}
         }
 
         filtersInit = overrideFilters(filtersInit, props.filters);

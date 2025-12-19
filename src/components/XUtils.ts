@@ -491,7 +491,9 @@ export class XUtils {
             // if the length of field is 2 or more, then readOnly
             isReadOnly = true;
         }
-            // formReadOnlyBase is called on the level XFormDataTable2
+            // formReadOnlyBase is called on the level XFormDataTable2 and XFormPanelList
+            // the reason is (probably) that in XFormDataTable2 and XFormPanelList we know the assoc name whereas here in component we know only field name
+            // (assoc name is param of formReadOnlyBase)
             // else if (this.props.form.formReadOnlyBase("xxx")) {
             //     isReadOnly = true;
         // }
