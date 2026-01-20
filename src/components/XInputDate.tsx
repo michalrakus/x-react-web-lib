@@ -4,7 +4,7 @@ import {XFormComponentProps} from "./XFormComponent";
 import {XInput} from "./XInput";
 import {dateFromModel, XDateScale} from "../serverApi/XUtilsConversions";
 
-export interface XInputDateProps extends XFormComponentProps<number> {
+export interface XInputDateProps extends XFormComponentProps<Date> {
     field: string;
     scale?: XDateScale;
 }

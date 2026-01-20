@@ -83,6 +83,11 @@ export interface XOptionalCustomFilter {
     filter: XCustomFilter;
 }
 
+export interface XAssocToSort {
+    assoc: string;
+    sortField: string;
+}
+
 export interface XEditModeHandlers {
     onStart: () => void;
     onSave: () => void;
@@ -170,6 +175,7 @@ export interface XLazyDataTableProps {
     sortField?: string | DataTableSortMeta[];
     fullTextSearch?: boolean | string[]; // false - nemame full-text search, true - mame full-text search na default stlpcoch, string[] - full-text search na danych stlpcoch
     fields?: string[]; // ak chceme nacitat aj asociovane objekty mimo tych ktore sa nacitavaju koli niektoremu zo stlpcov
+    assocsToSort?: XAssocToSort[]; // oneToMany assocs for sorting detail rows of after fetching data from backend (only first level assocs are supported, only default asc order supported)
     multilineSwitch?: boolean; // default false, ak true tak zobrazi switch, ktorym sa da vypnut zobrazenie viacriadkovych textov v sirokom riadku
     multilineSwitchInitValue?: XMultilineRenderType; // default "allLines"
     multilineSwitchFewLinesCount?: number; // max count of rendered lines for render type "fewLines" (default 2)
@@ -685,6 +691,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         //console.log("zavolany loadDataBase - startIndex = " + findParam.first + ", endIndex = " + ((findParam.first ?? 0) + (findParam.rows ?? 0)) + ", filters = " + JSON.stringify(findParam.filters) + ", multiSortMeta = " + JSON.stringify(findParam.multiSortMeta) + ", fields = " + JSON.stringify(findParam.fields));
         setLoading(true);
         const findResult = await findByFilter(findParam);
+        sortAssocsToSort(findResult);
         setValue(findResult);
         setupExpandedRows(findResult, multilineSwitchValue);
         setLoading(false);
@@ -697,6 +704,22 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         // async check for new version - the purpose is to get new version of app to the browser (if available) in short time (10 minutes)
         // (if there is no new version, the check will run async (as the last operation) and nothing will happen)
         XUtils.reloadIfNewVersion();
+    }
+
+    const sortAssocsToSort = (findResult: FindResult) => {
+        if (props.assocsToSort) {
+            if (findResult.rowList) {
+                for (const row of findResult.rowList) {
+                    // sorting in javascript (avoid of sorting in DB)
+                    for (const assocToSort of props.assocsToSort) {
+                        const assocRowList: any[] = row[assocToSort.assoc];
+                        if (assocRowList) {
+                            row[assocToSort.assoc] = XUtilsCommon.arraySort(assocRowList, assocToSort.sortField);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     const setupExpandedRows = (findResult: FindResult, multilineSwitchValue: XMultilineRenderType) => {
@@ -1185,6 +1208,9 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         }
         else {
             bodyValue = valueAsUI(rowDataValue, xField, columnProps.contentType, columnProps.fieldSetId);
+        }
+        if (columnProps.className || columnProps.style) {
+            bodyValue = <div className={columnProps.className} style={columnProps.style}>{bodyValue}</div>;
         }
         return bodyValue;
     }
@@ -1695,6 +1721,8 @@ export interface XLazyColumnProps {
     aggregateType?: XAggregateFunction;
     columnViewStatus: XViewStatusOrBoolean; // aby sme mohli mat Hidden stlpec (nedarilo sa mi priamo v kode "o-if-ovat" stlpec), zatial netreba funkciu, vola sa columnViewStatus lebo napr. v Edit tabulke moze byt viewStatus na row urovni
     filterElement?: XFilterElementProp;
+    className?: string; // wraps the content of the column cell with div element with this className (prop is not applied if prop body is used)
+    style?: React.CSSProperties; // wraps the content of the column cell with div element with this style (prop is not applied if prop body is used)
     body?: React.ReactNode | ((data: any, options: ColumnBodyOptions) => React.ReactNode); // the same type as type of property Column.body
 }
 
