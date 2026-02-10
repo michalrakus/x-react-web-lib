@@ -12,6 +12,7 @@ export interface XtDocTemplate {
     templateId: string | null;
     templateType: XEnum;
     templateXFile: XFile;
+    fileNameTemplate: string | null;
     availableInForms: boolean;
     modifDate: Date | null;
     modifXUser: XUser | null;
