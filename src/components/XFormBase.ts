@@ -398,7 +398,7 @@ export abstract class XFormBase extends Component<XFormProps> {
             object = await this.saveRow();
         }
         catch (e) {
-            XUtils.showErrorMessage("Save row failed.", e);
+            XUtils.showErrorMessage("Save row failed.", e, this.entity);
             return; // zostavame vo formulari
         }
 
