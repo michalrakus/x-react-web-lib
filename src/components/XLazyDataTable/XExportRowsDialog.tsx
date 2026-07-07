@@ -3,7 +3,7 @@ import {
     CsvEncoding,
     CsvSeparator,
     ExcelCsvParam,
-    ExportColumn,
+    ExportColumnParam,
     ExportCsvParam,
     ExportExcelParam,
     ExportJsonParam,
@@ -26,7 +26,7 @@ export interface XExportParams {
     rowCount: number; // parameter pre dialog
     existsToManyAssoc: boolean; // parameter pre dialog - ak true, zobrazi option "Detail rows export"
     queryParam: LazyDataTableQueryParam | any; // parametre specificke pre konkretny export (zvycajne hodnoty filtra)
-    columns: ExportColumn[];
+    columns: ExportColumnParam[];
     fieldsToDuplicateValues?: string[]; // pouziva sa pri exporte do excelu a csv
     fileName: string; // fileName without extension
 }

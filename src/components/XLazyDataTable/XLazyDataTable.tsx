@@ -33,7 +33,7 @@ import {
 import {XButtonIconSmall} from "../XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../../serverApi/XUtilsCommon";
-import {ExportColumn, LazyDataTableQueryParam} from "../../serverApi/ExportImportParam";
+import {ExportColumnParam, LazyDataTableQueryParam} from "../../serverApi/ExportImportParam";
 import {XExportParams, XExportRowsDialog, XExportRowsDialogState} from "./XExportRowsDialog";
 import PrimeReact, {APIOptions, FilterMatchMode, FilterOperator, PrimeReactContext} from "primereact/api";
 import {XOnSaveOrCancelProp} from "../XFormBase";
@@ -819,14 +819,14 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
     //     return widths;
     // }
 
-    const createExportColumns = (): ExportColumn[] => {
+    const createExportColumns = (): ExportColumnParam[] => {
 
         // krasne zobrazi cely objekt!
         //console.log(dataTableEl.current);
 
         // warning note: props.children are used to get props of XLazyColumn whereas dataTableEl.current.props.children are used to get props of Primereact DataTable
 
-        const exportColumns: ExportColumn[] = [];
+        const exportColumns: ExportColumnParam[] = [];
         const columnsDataTable = dataTableEl.current.props.children;
         const columnsLazyDataTable: XLazyColumnType[] = props.children as XLazyColumnType[];
         for (const [index, columnDataTable] of columnsDataTable.entries()) {
