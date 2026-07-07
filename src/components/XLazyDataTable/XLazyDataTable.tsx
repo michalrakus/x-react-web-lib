@@ -33,7 +33,7 @@ import {
 import {XButtonIconSmall} from "../XButtonIconSmall";
 import {TriStateCheckbox} from "primereact/tristatecheckbox";
 import {XUtilsCommon} from "../../serverApi/XUtilsCommon";
-import {LazyDataTableQueryParam} from "../../serverApi/ExportImportParam";
+import {ExportColumn, LazyDataTableQueryParam} from "../../serverApi/ExportImportParam";
 import {XExportParams, XExportRowsDialog, XExportRowsDialogState} from "./XExportRowsDialog";
 import PrimeReact, {APIOptions, FilterMatchMode, FilterOperator, PrimeReactContext} from "primereact/api";
 import {XOnSaveOrCancelProp} from "../XFormBase";
@@ -58,6 +58,7 @@ import * as _ from "lodash";
 import {XtDocTemplate} from "../../modules/docTemplates/xt-doc-template";
 import {XDocTemplateButton} from "../../modules/docTemplates/XDocTemplateButton";
 import {XFormDialog, XFormDialogState} from "../XFormDialog";
+import {XContentType} from "../../serverApi/x-lib-api";
 
 // typ pouzivany len v XLazyDataTable
 interface XFieldSetMaps {
@@ -793,29 +794,53 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         return fields;
     }
 
-    const getHeaders = (): string[] => {
+    // const getHeaders = (): string[] => {
+    //
+    //     // krasne zobrazi cely objekt!
+    //     //console.log(dataTableEl.current);
+    //
+    //     let headers = [];
+    //     let columns = dataTableEl.current.props.children;
+    //     for (let column of columns) {
+    //         // pozor! headers tahame z primereact DataTable a napr. pri editacii nemusi byt v atribute header string
+    //         headers.push(column.props.header);
+    //     }
+    //     return headers;
+    // }
+
+    // const getWidths = (): string[] => {
+    //     // vrati sirky stlpcov napr. ['7.75rem', '20rem', '8.5rem', '8.5rem', '6rem']
+    //     // nevracia aktualne sirky stlpcov (po manualnom rozsireni) ale tie ktore boli nastavene/vypocitane v kode
+    //     let widths = [];
+    //     let columns = dataTableEl.current.props.children;
+    //     for (let column of columns) {
+    //         widths.push(column.props.headerStyle?.width);
+    //     }
+    //     return widths;
+    // }
+
+    const createExportColumns = (): ExportColumn[] => {
 
         // krasne zobrazi cely objekt!
         //console.log(dataTableEl.current);
 
-        let headers = [];
-        let columns = dataTableEl.current.props.children;
-        for (let column of columns) {
-            // pozor! headers tahame z primereact DataTable a napr. pri editacii nemusi byt v atribute header string
-            headers.push(column.props.header);
-        }
-        return headers;
-    }
+        // warning note: props.children are used to get props of XLazyColumn whereas dataTableEl.current.props.children are used to get props of Primereact DataTable
 
-    const getWidths = (): string[] => {
-        // vrati sirky stlpcov napr. ['7.75rem', '20rem', '8.5rem', '8.5rem', '6rem']
-        // nevracia aktualne sirky stlpcov (po manualnom rozsireni) ale tie ktore boli nastavene/vypocitane v kode
-        let widths = [];
-        let columns = dataTableEl.current.props.children;
-        for (let column of columns) {
-            widths.push(column.props.headerStyle?.width);
+        const exportColumns: ExportColumn[] = [];
+        const columnsDataTable = dataTableEl.current.props.children;
+        const columnsLazyDataTable: XLazyColumnType[] = props.children as XLazyColumnType[];
+        for (const [index, columnDataTable] of columnsDataTable.entries()) {
+            const columnLazyDataTable: XLazyColumnType = columnsLazyDataTable[index];
+            exportColumns.push({
+                // pozor! headers tahame z primereact DataTable a napr. pri editacii nemusi byt v atribute header string
+                header: columnDataTable.props.header,
+                // returns the width of the column e.g. '7.75rem', '20rem', '125px'
+                // does not return the current widths (after manual extending by user) but those widths that were set/computed in source code
+                width: columnDataTable.props.headerStyle?.width,
+                contentType: columnLazyDataTable.props.contentType
+            });
         }
-        return widths;
+        return exportColumns;
     }
 
     const getFieldSetIds = (): string[] => {
@@ -1016,8 +1041,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
             rowCount: rowCount,
             existsToManyAssoc: existsToManyAssoc(fields),
             queryParam: queryParam,
-            headers: getHeaders(),
-            widths: getWidths(),
+            columns: createExportColumns(),
             fieldsToDuplicateValues: props.exportFieldsToDuplicateValues,
             fileName: `${props.entity}`
         };
@@ -1704,8 +1728,6 @@ export type XAutoCompleteInFilterProps = {
     minLength?: number; // Minimum number of characters to initiate a search (default 1)
     scrollHeight?: string; // Maximum height of the suggestions panel.
 };
-
-export type XContentType = "multiline" | "html" | undefined;
 
 export interface XLazyColumnProps {
     field: string;

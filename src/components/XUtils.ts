@@ -7,7 +7,7 @@ import {
     CsvEncoding,
     CsvSeparator,
     ExportType,
-    XMultilineExportType
+    ToManyAssocExportType
 } from "../serverApi/ExportImportParam";
 import {XResponseError} from "./XResponseError";
 import React from "react";
@@ -82,7 +82,8 @@ export class XUtils {
     static exportTypeOptions = [ExportType.Excel, ExportType.Csv, ExportType.Json];
 
     // moznost Off zatial nie je implementovana
-    static multilineExportTypeOptions = [XMultilineExportType.Multiline, XMultilineExportType.Singleline/*, XMultilineExportType.Off*/];
+    static toManyAssocExportTypeExcelOptions = [ToManyAssocExportType.Singleline, ToManyAssocExportType.Multiline, ToManyAssocExportType.Multirow/*, ToManyAssocExportType.Off*/];
+    static toManyAssocExportTypeCsvOptions = [ToManyAssocExportType.Singleline, ToManyAssocExportType.Multirow/*, ToManyAssocExportType.Off*/];
 
     static csvSeparatorOptions = [CsvSeparator.Semicolon, CsvSeparator.Comma];
 

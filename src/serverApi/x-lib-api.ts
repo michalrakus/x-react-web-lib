@@ -44,3 +44,11 @@ export interface XLockRowRequest {
     lockDate: Date;
     lockXUser: XUser;
 }
+
+/**
+ * used in LazyDataTable and also in export to excel in backend,
+ * describes the text content of some string attributes (type varchar in DB),
+ * contentType is declared in column of the LazyDataTable, more correct would be to declare the content type in the model in the backend,
+ * in chilibase changed to TextFormat and placed to types.ts
+ */
+export type XContentType = "multiline" | "html" | undefined;
