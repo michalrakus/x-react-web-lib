@@ -731,7 +731,8 @@ export class XFormDataTable2 extends Component<XFormDataTableProps> {
                     headerStyle = {width: width};
                 }
 
-                return <Column field={fieldParam} header={header} filter={thisLocal.props.filterDisplay !== "none"} sortable={thisLocal.props.sortable}
+                return <Column field={fieldParam} header={header} footer={childColumnProps.footer}
+                               filter={thisLocal.props.filterDisplay !== "none"} sortable={thisLocal.props.sortable}
                                filterElement={filterElement} showFilterMenu={showFilterMenu} showClearButton={showClearButton}
                                headerStyle={headerStyle} align={align} body={body}/>;
             }
@@ -796,6 +797,7 @@ export type XTableFieldFilterProp = XCustomFilter | ((object: any, rowData: any)
 export interface XFormColumnBaseProps {
     type: "inputSimple" | "dropdown" | "autoComplete" | "searchButton" | "textarea" | "custom";
     header?: any;
+    footer?: React.ReactNode;
     readOnly?: XTableFieldReadOnlyProp;
     dropdownInFilter?: boolean; // moze byt len na stlpcoch ktore zobrazuju asociavany atribut (dlzka path >= 2)
     showFilterMenu?: boolean;
