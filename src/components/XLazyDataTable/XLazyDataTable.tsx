@@ -59,6 +59,7 @@ import {XtDocTemplate} from "../../modules/docTemplates/xt-doc-template";
 import {XDocTemplateButton} from "../../modules/docTemplates/XDocTemplateButton";
 import {XFormDialog, XFormDialogState} from "../XFormDialog";
 import {XContentType} from "../../serverApi/x-lib-api";
+import {XColumnToggleDialog, XColumnToggleDialogItem} from "./XColumnToggleDialog";
 
 // typ pouzivany len v XLazyDataTable
 interface XFieldSetMaps {
@@ -128,7 +129,8 @@ export enum XStateKeySuffix {
     multiSortMeta = 'multi-sort-meta',
     pagingFirst = 'paging-first',
     selectedRow = 'selected-row',
-    multilineSwitchValue = 'multiline-switch-value'
+    multilineSwitchValue = 'multiline-switch-value',
+    columnToggles = 'column-toggles'
 }
 
 // exposed methods
@@ -378,6 +380,11 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         return {value: null, matchMode: "contains"};
     }
 
+    const createInitColumnToggles = (): boolean[] => {
+        const columns: XLazyColumnType[] = props.children as XLazyColumnType[];
+        return columns.map((column: XLazyColumnType) => column.props.initColumnToggle !== false);
+    }
+
 /*
     // TODO turn off/on storage
     const saveValueIntoStorage = (stateKeySuffix: XStateKeySuffix, value: any) => {
@@ -443,6 +450,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
     const [multilineSwitchValue, setMultilineSwitchValue] = props.multilineSwitchValue ?? useXStateStorage<XMultilineRenderType>(props.stateStorage!, getStateKey(XStateKeySuffix.multilineSwitchValue), props.multilineSwitchInitValue!);
     const [multiSortMeta, setMultiSortMeta] = useXStateStorage<DataTableSortMeta[] | undefined>(props.stateStorage!, getStateKey(XStateKeySuffix.multiSortMeta), XUtilsCommon.createMultiSortMeta(props.sortField));
     const [selectedRow, setSelectedRow] = useXStateStorage<any>(props.stateStorage!, getStateKey(XStateKeySuffix.selectedRow), null);
+    const [columnToggles, setColumnToggles] = useXStateStorage<boolean[]>(props.stateStorage!, getStateKey(XStateKeySuffix.columnToggles), createInitColumnToggles());
     /**
      * @deprecated was used to reread data after save/cancel of the form when using XFormNavigator (deprecated)
      */
@@ -453,6 +461,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
     const [ftsInputValueAfterFiltering, setFtsInputValueAfterFiltering] = useState<XFtsInputValue | undefined>(ftsInputValue); // tak isto ako filtersAfterFiltering
     const [optionalCustomFilterAfterFiltering, setOptionalCustomFilterAfterFiltering] = useState<XOptionalCustomFilter | undefined>(optionalCustomFilter); // tak isto ako filtersAfterFiltering
     const [formDialogState, setFormDialogState] = useState<XFormDialogState>({opened: false});
+    const [columnToggleDialogOpened, setColumnToggleDialogOpened] = useState<boolean>(false);
 
     // parameter [] zabezpeci ze sa metoda zavola len po prvom renderingu (a nie po kazdej zmene stavu (zavolani setNieco()))
     useEffect(() => {
@@ -646,6 +655,15 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         loadDataBase(findParam);
     };
 
+    const onColumnTogglesOk = (columnTogglesLocal: boolean[]) => {
+        setColumnToggles(columnTogglesLocal);
+
+        // fields depend on columnToggles - override, setState does not update columnToggles immediately
+        const findParam: FindParam = createFindParam();
+        findParam.fields = getFields(true, columnTogglesLocal);
+        loadDataBase(findParam);
+    };
+
     // API function
     const reread = () => {
         loadData();
@@ -776,14 +794,19 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         return XUtilsCommon.filterAnd(customFilterItems, optionalCustomFilter?.filter);
     }
 
-    const getFields = (addPropsFields: boolean): string[] => {
+    const getFields = (addPropsFields: boolean, columnTogglesParam?: boolean[]): string[] => {
 
-        // krasne zobrazi cely objekt!
-        //console.log(dataTableEl.current);
-
-        let fields = [];
-        let columns = dataTableEl.current.props.children;
-        for (let column of columns) {
+        const toggles: boolean[] = columnTogglesParam ?? columnToggles;
+        const fields = [];
+        const columns: XLazyColumnType[] = props.children as XLazyColumnType[];
+        for (let index = 0; index < columns.length; index++) {
+            const column: XLazyColumnType = columns[index];
+            if (XUtils.xViewStatus(column.props.columnViewStatus) === XViewStatus.Hidden) {
+                continue;
+            }
+            if (toggles[index] === false) {
+                continue;
+            }
             fields.push(column.props.field);
         }
         if (addPropsFields) {
@@ -829,15 +852,18 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         const exportColumns: ExportColumnParam[] = [];
         const columnsDataTable = dataTableEl.current.props.children;
         const columnsLazyDataTable: XLazyColumnType[] = props.children as XLazyColumnType[];
-        for (const [index, columnDataTable] of columnsDataTable.entries()) {
-            const columnLazyDataTable: XLazyColumnType = columnsLazyDataTable[index];
+        for (const columnDataTable of columnsDataTable) {
+            // match by field - indexes may differ when some columns are hidden (columnViewStatus / columnToggles)
+            const columnLazyDataTable: XLazyColumnType | undefined = columnsLazyDataTable.find(
+                (column: XLazyColumnType) => column.props.field === columnDataTable.props.field
+            );
             exportColumns.push({
                 // pozor! headers tahame z primereact DataTable a napr. pri editacii nemusi byt v atribute header string
                 header: columnDataTable.props.header,
                 // returns the width of the column e.g. '7.75rem', '20rem', '125px'
                 // does not return the current widths (after manual extending by user) but those widths that were set/computed in source code
                 width: columnDataTable.props.headerStyle?.width,
-                contentType: columnLazyDataTable.props.contentType
+                contentType: columnLazyDataTable?.props.contentType
             });
         }
         return exportColumns;
@@ -859,6 +885,22 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
 
         const columns: XLazyColumnType[] = props.children as XLazyColumnType[];
         return columns.some((column: XLazyColumnType) => column.props.contentType === "html");
+    }
+
+    const createColumnToggleDialogItems = (): XColumnToggleDialogItem[] => {
+        const items: XColumnToggleDialogItem[] = [];
+        const columns: XLazyColumnType[] = props.children as XLazyColumnType[];
+        for (let index = 0; index < columns.length; index++) {
+            const column: XLazyColumnType = columns[index];
+            if (XUtils.xViewStatus(column.props.columnViewStatus) === XViewStatus.Hidden) {
+                continue;
+            }
+            items.push({
+                index: index,
+                label: column.props.header !== undefined ? column.props.header : column.props.field
+            });
+        }
+        return items;
     }
 
     const onSelectionChange = (event: any) => {
@@ -1382,7 +1424,14 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
 
     // pre lepsiu citatelnost vytvarame stlpce uz tu
     const columnElemList: JSX.Element[] = React.Children.map(
-        props.children.filter((child: React.ReactChild) => XUtils.xViewStatus((child as {props: XLazyColumnProps}).props.columnViewStatus) !== XViewStatus.Hidden),
+        props.children.filter((child: React.ReactChild, index: number) => {
+            const xLazyColumnProps: XLazyColumnProps = (child as {props: XLazyColumnProps}).props;
+            if (XUtils.xViewStatus(xLazyColumnProps.columnViewStatus) === XViewStatus.Hidden) {
+                return false;
+            }
+            // columnToggles[index] === undefined -> treat as displayed (e.g. shorter array from older session)
+            return columnToggles[index] !== false;
+        }),
         function(child) {
             // ak chceme zmenit child element, tak treba bud vytvorit novy alebo vyklonovat
             // priklad je na https://soshace.com/building-react-components-using-children-props-and-context-api/
@@ -1666,6 +1715,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
                     }} className="m-1"/> : null}
                 {props.headerBodyRight}
                 {props.label && !isMobile ? <div className="x-lazy-datatable-label-right-compensation"/> : null}
+                <XButtonIconSmall key="columnToggle" icon="pi pi-table" onClick={() => setColumnToggleDialogOpened(true)} tooltip={xLocaleOption('columnToggle')} tooltipShowDelay={2000}/>
             </div>
             <div className="flex justify-content-center">
                 <DataTable value={value.rowList} dataKey={dataKey}
@@ -1694,6 +1744,11 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
                 {props.searchBrowseParams !== undefined ? <XButton key="choose" label={xLocaleOption('chooseRow')} onClick={onClickChoose}/> : null}
                 {props.editForm != undefined ? <XFormDialog key="formDialog" dialogState={formDialogState}/> : null}
                 {exportRows ? <XExportRowsDialog key="exportRowsDialog" dialogState={exportRowsDialogState} hideDialog={() => setExportRowsDialogState({dialogOpened: false})}/> : null}
+                <XColumnToggleDialog key="columnToggleDialog" dialogOpened={columnToggleDialogOpened}
+                                     items={createColumnToggleDialogItems()} columnToggles={columnToggles}
+                                     initColumnToggles={createInitColumnToggles()}
+                                     onOk={onColumnTogglesOk}
+                                     onHide={() => setColumnToggleDialogOpened(false)}/>
             </div>
             {hasContentTypeHtml() ? <Editor style={{display: 'none'}} showHeader={false}/> : null /* we want to import css if needed (<style type="text/css" data-primereact-style-id="editor">) */}
         </div>
@@ -1747,6 +1802,7 @@ export interface XLazyColumnProps {
                         // note: better solution would be take fieldSetId from json attribute from model, but we would have to create decorator for this purpose...
     aggregateType?: XAggregateFunction;
     columnViewStatus: XViewStatusOrBoolean; // aby sme mohli mat Hidden stlpec (nedarilo sa mi priamo v kode "o-if-ovat" stlpec), zatial netreba funkciu, vola sa columnViewStatus lebo napr. v Edit tabulke moze byt viewStatus na row urovni
+    initColumnToggle: boolean; // initial value for column toggle - if false, column is not displayed initially (user can display it via column toggle dialog) (default true)
     filterElement?: XFilterElementProp;
     className?: string; // wraps the content of the column cell with div element with this className (prop is not applied if prop body is used)
     style?: React.CSSProperties; // wraps the content of the column cell with div element with this style (prop is not applied if prop body is used)
@@ -1764,5 +1820,6 @@ export const XLazyColumn = (props: XLazyColumnProps) => {
 XLazyColumn.defaultProps = {
     //autoCompleteEnabled: "forStringOnly",
     columnViewStatus: true,  // XViewStatus.ReadWrite
+    initColumnToggle: true,
     autoFilter: false
 };

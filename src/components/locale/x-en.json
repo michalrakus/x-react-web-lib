@@ -3,6 +3,8 @@
     "searchInAllFields": "Search in all fields",
     "filter": "Filter",
     "resetTable": "Reset filter",
+    "columnToggle": "Columns",
+    "resetColumns": "Reset columns",
     "addRow": "Add",
     "editRow": "Edit",
     "removeRow": "Remove",

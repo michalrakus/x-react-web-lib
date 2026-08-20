@@ -8,6 +8,8 @@ export interface XLocaleOptions {
     searchInAllFields?: string;
     filter?: string;
     resetTable?: string;
+    columnToggle?: string;
+    resetColumns?: string;
     addRow?: string;
     editRow?: string;
     removeRow?: string;
@@ -18,6 +20,7 @@ export interface XLocaleOptions {
     removeRowConfirm?: string;
     removeRowFailed?: string;
     // XFormBase, XFormFooter
+    ok?: string;
     save?: string;
     cancel?: string;
     optimisticLockFailed?: string;
