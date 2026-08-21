@@ -154,6 +154,7 @@ export interface XLazyDataTableProps {
     betweenFilter?: XBetweenFilterProp; // umiestnenie inputov od do: "row" - vedla seba, "column" - pod sebou; plati pre vsetky stlpce typu date/datetime/decimal/number ak nemaju definovany svoj betweenFilter
     autoFilter?: boolean; // if true, filtering starts immediately after setting filter value (button Filter is not used/rendered) (default false)
     showFilterButtons?: boolean; // if true, Filter/Clear filter buttons are rendered (default true)
+    showColumnToggleButton?: boolean; // if true, column toggle button is rendered (default true) (for mobile the button can take too much space)
     showExportRows?: boolean; // true - export button rendered, false - export button not rendered, undefined (default) - Export button rendered only on desktop (not on mobile)
     scrollable?: boolean; // default true, ak je false, tak je scrollovanie vypnute (scrollWidth/scrollHeight/formFooterHeight su ignorovane)
     scrollWidth?: string; // hodnota "none" vypne horizontalne scrollovanie
@@ -179,6 +180,7 @@ export interface XLazyDataTableProps {
     optionalCustomFilters?: XOptionalCustomFilter[]; // programatorom predpripravene filtre, user si moze vybrat predpripraveny filter v dropdown-e vedla Filter/Clear buttonov
     sortField?: string | DataTableSortMeta[];
     fullTextSearch?: boolean | string[]; // false - nemame full-text search, true - mame full-text search na default stlpcoch, string[] - full-text search na danych stlpcoch
+    fullTextSearchWidth?: string; // width of the full text search input (sometimes we need to save the space on mobile)
     fields?: string[]; // ak chceme nacitat aj asociovane objekty mimo tych ktore sa nacitavaju koli niektoremu zo stlpcov
     assocsToSort?: XAssocToSort[]; // oneToMany assocs for sorting detail rows of after fetching data from backend (only first level assocs are supported, only default asc order supported)
     multilineSwitch?: boolean; // default false, ak true tak zobrazi switch, ktorym sa da vypnut zobrazenie viacriadkovych textov v sirokom riadku
@@ -213,6 +215,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         filterDisplay = "row",
         autoFilter = false,
         showFilterButtons = true,
+        showColumnToggleButton = true,
         fullTextSearch = true,
         multilineSwitch = false,
         multilineSwitchInitValue = "allLines",
@@ -233,6 +236,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
         filterDisplay,
         autoFilter,
         showFilterButtons,
+        showColumnToggleButton,
         fullTextSearch,
         multilineSwitch,
         multilineSwitchInitValue,
@@ -1705,7 +1709,7 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
             <div className="flex justify-content-center align-items-center">
                 {props.label ? <div className="x-lazy-datatable-label" style={props.labelStyle}>{props.label}</div> : null}
                 {props.headerBodyLeft}
-                {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)}/> : null}
+                {ftsInputValue ? <XFtsInput value={ftsInputValue} onChange={(value: XFtsInputValue) => setFtsInputValue(value)} width={props.fullTextSearchWidth}/> : null}
                 {props.showFilterButtons ? <XButton key="filter" icon={isMobile ? "pi pi-search" : undefined} label={!isMobile ? xLocaleOption('filter') : undefined} onClick={onClickFilter} /> : null}
                 {props.showFilterButtons ? <XButton key="resetTable" icon={isMobile ? "pi pi-ban" : undefined} label={!isMobile ? xLocaleOption('resetTable') : undefined} onClick={onClickResetTable} /> : null}
                 {props.optionalCustomFilters ? <XOcfDropdown optionalCustomFilters={props.optionalCustomFilters} value={optionalCustomFilter} onChange={(value: XOptionalCustomFilter | undefined) => setOptionalCustomFilter(value)} className="m-1"/> : null}
@@ -1715,7 +1719,12 @@ export const XLazyDataTable = forwardRef<XLazyDataTableRef, XLazyDataTableProps>
                     }} className="m-1"/> : null}
                 {props.headerBodyRight}
                 {props.label && !isMobile ? <div className="x-lazy-datatable-label-right-compensation"/> : null}
-                <XButtonIconSmall key="columnToggle" icon="pi pi-table" onClick={() => setColumnToggleDialogOpened(true)} tooltip={xLocaleOption('columnToggle')} tooltipShowDelay={2000}/>
+                {props.showColumnToggleButton ? [
+                    <div className="m-1"/>,
+                    <XButtonIconSmall key="columnToggle" icon="pi pi-table" onClick={() => setColumnToggleDialogOpened(true)}
+                                      tooltip={!XUtils.isMobile() ? xLocaleOption('columnToggle') : undefined}
+                                      tooltipShowDelay={!XUtils.isMobile() ? 1000 : undefined}/>
+                ] : null}
             </div>
             <div className="flex justify-content-center">
                 <DataTable value={value.rowList} dataKey={dataKey}

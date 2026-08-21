@@ -10,7 +10,7 @@ export interface XFtsInputValue {
     matchMode: 'startsWith' | 'contains' | 'endsWith' | 'equals'; // zatial tieto (podmnozina z DataTableFilterMetaData), default bude 'contains'
 }
 
-export const XFtsInput = (props: {value: XFtsInputValue; onChange: (value: XFtsInputValue) => void;}) => {
+export const XFtsInput = (props: {value: XFtsInputValue; onChange: (value: XFtsInputValue) => void; width?: string;}) => {
 
     const onChange = (value: string | null) => {
         props.value.value = value;
@@ -20,7 +20,7 @@ export const XFtsInput = (props: {value: XFtsInputValue; onChange: (value: XFtsI
     // TODO - pridat input na zmenu matchMode
     // we use XInputTextBase - we save onChange calls
     return (
-        <XInputTextBase value={props.value.value} onChange={onChange} style={{height: '2.5rem', width: XUtils.isMobile() ? '7rem' : '17rem'}} className="m-1"
+        <XInputTextBase value={props.value.value} onChange={onChange} style={{height: '2.5rem', width: props.width ?? (XUtils.isMobile() ? '7rem' : '17rem')}} className="m-1"
         placeholder={xLocaleOption('searchInAllFields')}/>
     );
 }

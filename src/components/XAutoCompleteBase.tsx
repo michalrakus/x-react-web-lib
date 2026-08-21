@@ -480,7 +480,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         buttonItems.push(
             {
                 icon: 'pi pi-plus',
-                tooltip: this.props.insertButtonTooltip,
+                tooltip: !XUtils.isMobile() ? this.props.insertButtonTooltip : undefined,
                 command: (e: any) => {
                     if (this.props.onAddRow) {
                         // mame custom handler pre "plus" button
@@ -514,7 +514,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         buttonItems.push(
             {
                 icon: 'pi pi-pencil',
-                tooltip: this.props.updateButtonTooltip,
+                tooltip: !XUtils.isMobile() ? this.props.updateButtonTooltip : undefined,
                 command: (e: any) => {
                     if (this.state.inputChanged) {
                         alert(`Value "${this.state.inputValueState}" was not found among valid values, please enter some valid value.`);
@@ -542,7 +542,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
         buttonItems.push(
             {
                 icon: 'pi pi-search',
-                tooltip: this.props.searchButtonTooltip,
+                tooltip: !XUtils.isMobile() ? this.props.searchButtonTooltip : undefined,
                 command: (e: any) => {
                         this.setState({searchDialogOpened: true});
                 }
@@ -694,7 +694,7 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
                 }
 
                 if (this.props.buttonsLayout === "buttons") {
-                    buttons = buttonItems.map((value: XButtonItem, index: number) => <Button key={`button${index}`} icon={value.icon} tooltip={value.tooltip} tooltipOptions={{position: 'top'}}
+                    buttons = buttonItems.map((value: XButtonItem, index: number) => <Button key={`button${index}`} icon={value.icon} tooltip={value.tooltip} tooltipOptions={value.tooltip ? {position: 'top'} : undefined}
                                                                               onClick={(e: any) => value.command!(e)} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>);
                 }
                 else {
@@ -713,7 +713,9 @@ export class XAutoCompleteBase extends Component<XAutoCompleteBaseProps> {
             // readOnly
             // ak mame valueForm a mame asociovany objekt, umoznime editovat asociovany objekt
             if (this.props.valueForm && this.props.value !== null) {
-                buttons = [<Button icon="pi pi-pencil" tooltip={this.props.updateButtonTooltip} tooltipOptions={{position: 'top'}}
+                buttons = [<Button icon="pi pi-pencil"
+                                   tooltip={!XUtils.isMobile() ? this.props.updateButtonTooltip : undefined}
+                                   tooltipOptions={!XUtils.isMobile() ? {position: 'top'} : undefined}
                                    onClick={(e: any) => this.onEditAssocValue()} className={'x-dropdownbutton' + XUtils.mobileCssSuffix()}/>];
             }
             else {
