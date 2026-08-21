@@ -1,6 +1,7 @@
 import React from "react";
 import {XMultilineRenderType} from "./XLazyDataTable";
 import {SelectButton, SelectButtonChangeEvent} from "primereact/selectbutton";
+import {XUtils} from "../XUtils";
 
 interface Option {
     icon: string;
@@ -23,8 +24,10 @@ export const XMultilineSwitch = (props: {
         return <i className={option.icon}></i>;
     }
 
+    // for mobile version we use p-button-icon-only -> the buttons are smaller
     return (
         <SelectButton value={props.value} onChange={(e: SelectButtonChangeEvent) => props.onChange(e.value)}
-                      options={options} optionValue="value" itemTemplate={itemTemplate} allowEmpty={false} className={props.className}/>
+                      options={options} optionValue="value" itemTemplate={itemTemplate} allowEmpty={false} className={props.className}
+                      pt={XUtils.isMobile() ? {button: {className: 'p-button-icon-only'}} : undefined}/>
     );
 }
